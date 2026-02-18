@@ -6,8 +6,8 @@ set(CMAKE_CXX_STANDARD 20)
 #Set SDL3 include and lib paths
 
 if (WIN32)
-    set(SDL3_PATH "D:/NextCloud/Game Dev/Game Architecture/Dev/SDL3.4")
-    set(SDL_IMAGE_PATH "D:/NextCloud/Game Dev/Game Architecture/Dev/SDL_Image 3.26")
+    set(SDL3_PATH "D:/NextCloud Files/Game Dev/Game Architecture/Dev/SDL3.4")
+    set(SDL_IMAGE_PATH "D:/NextCloud Files/Game Dev/Game Architecture/Dev/SDL_Image 3.26")
     include_directories(
             ${SDL3_PATH}/include
             ${SDL_IMAGE_PATH}/include
