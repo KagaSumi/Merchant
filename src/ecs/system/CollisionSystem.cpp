@@ -24,6 +24,7 @@ void CollisionSystem::update(World &world) {
         c.rect.y =t.position.y;
     }
 
+    std::set<CollisionKey> currentCollisions;
 
 
     //outer loop
@@ -40,10 +41,22 @@ void CollisionSystem::update(World &world) {
 
             if (Collision::AABB(colliderA.rect, colliderB.rect)) {
                 //std::cout << colliderA.tag << " Hit " << colliderB.tag << std::endl;
-                world.getEventManager().emit(CollisionEvent{entityA,entityB});
+                CollisionKey key = makeKey(entityA,entityB);
+                currentCollisions.insert(key);
+                if (!activeCollisions.contains(key)) {
+                    world.getEventManager().emit(CollisionEvent{entityA,entityB, CollisionState::Enter});
+                }
+                world.getEventManager().emit(CollisionEvent{entityA,entityB, CollisionState::Stay});
             }
         }
     }
+    for (auto& key: activeCollisions) {
+        if (!currentCollisions.contains(key)) {
+            world.getEventManager().emit(CollisionEvent{key.first,key.second, CollisionState::Exit});
+        }
+    }
+
+    activeCollisions = std::move(currentCollisions); //Updates with Current Collisions
 }
 
 std::vector<Entity*> CollisionSystem::queryCollidables(const std::vector<std::unique_ptr<Entity>>& entities) {

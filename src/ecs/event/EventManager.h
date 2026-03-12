@@ -5,18 +5,13 @@
 #ifndef PROJECT_EVENTMANAGER_H
 #define PROJECT_EVENTMANAGER_H
 #include <functional>
-
-#include "Entity.h"
-
-struct CollisionEvent {
-    Entity* entityA = nullptr;
-    Entity* entityB = nullptr;
-};
+#include "BaseEvent.h"
 
 
 //observer pattern
 class EventManager {
 public:
+    using Handler = std::function<void(const BaseEvent&)>;
     // template<typename EventType>
     // void emit(const EventType& event) {
     //     //retrieve the list of subscribers to certain events
@@ -27,8 +22,8 @@ public:
     //     }
     // }
 
-    void emit(const CollisionEvent& event) const{
-        for (const auto& listener : collisionListeners) {
+    void emit(const BaseEvent& event) const{
+        for (const auto& listener : listeners) {
             listener(event);
         }
     }
@@ -39,8 +34,8 @@ public:
         getListeners<EventType>().push_back(callback);
     }*/
 
-    void subscribe(std::function<void(const CollisionEvent&)> callback) {
-        collisionListeners.emplace_back(callback);
+    void subscribe(const Handler& callback) {
+        listeners.emplace_back(callback);
     }
 
 private:
@@ -54,6 +49,6 @@ private:
     //     return listeners;
     } */
 
-    std::vector<std::function<void(const CollisionEvent&)>> collisionListeners;
+    std::vector<Handler> listeners;
 };
 #endif //PROJECT_EVENTMANAGER_H
