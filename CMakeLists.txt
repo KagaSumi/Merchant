@@ -36,6 +36,7 @@ add_executable(Project src/main.cpp
         src/ecs/system/MouseInputSystem.cpp
         src/ecs/system/EventResponseSystem.cpp
         src/ecs/system/MainMenuSystem.cpp
+        src/ecs/system/DayCycleSystem.h
 )
 
 target_link_libraries(Project

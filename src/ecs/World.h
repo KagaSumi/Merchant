@@ -10,6 +10,7 @@
 #include "AnimationSystem.h"
 #include "CameraSystem.h"
 #include "CollisionSystem.h"
+#include "DayCycleSystem.h"
 #include "DestructionSystem.h"
 #include "Entity.h"
 #include "EventResponseSystem.h"
@@ -43,6 +44,7 @@ class World {
     MainMenuSystem mainMenuSystem;
     UIRenderSystem uiRenderSystem;
     MouseInputSystem mouseInputSystem;
+    DayCycleSystem  dayCycleSystem;
 
     public:
     World() = default;
@@ -58,6 +60,7 @@ class World {
             cameraSystem.update(entities);
             spawnTimerSystem.update(entities, dt);
             destructionSystem.update(entities);
+            dayCycleSystem.ApplyEveningShade(entities);
         }
 
         mouseInputSystem.update(*this,event);
