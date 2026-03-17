@@ -60,7 +60,7 @@ class World {
             cameraSystem.update(entities);
             spawnTimerSystem.update(entities, dt);
             destructionSystem.update(entities);
-            dayCycleSystem.ApplyEveningShade(entities);
+            dayCycleSystem.update(entities);
         }
 
         mouseInputSystem.update(*this,event);

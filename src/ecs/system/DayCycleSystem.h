@@ -10,29 +10,32 @@
 #include "Components.h"
 #include "Entity.h"
 
+struct rgba {
+    int r, g, b, a;
+};
+
 class DayCycleSystem {
 public:
-    void ApplyEveningShade(std::vector<std::unique_ptr<Entity> > &entities) {
+    void update(const std::vector<std::unique_ptr<Entity>> &entities);
+
+    void applyTint(const std::vector<std::unique_ptr<Entity> > &entities, const rgba rgba) {
         for (auto &entity: entities) {
             if (entity->hasComponent<Sprite>()) {
-                auto &Texture = entity->getComponent<Sprite>().Texture;
-                SDL_SetTextureColorMod(Texture,
-                                       255,
-                                       180,
-                                       120);
+                if (entity->getComponent<Sprite>().renderLayer == RenderLayer::World){
+                    auto &Texture = entity->getComponent<Sprite>().Texture;
+                    SDL_SetTextureColorMod(Texture,
+                                           rgba.r,
+                                           rgba.g,
+                                           rgba.b);
+                    SDL_SetTextureAlphaMod(Texture, rgba.a);
+                }
             }
         }
     }
-    void RemoveEveningShade(std::vector<std::unique_ptr<Entity> > &entities) {
-        for (auto &entity: entities) {
-            if (entity->hasComponent<Sprite>()) {
-                auto &Texture = entity->getComponent<Sprite>().Texture;
-                SDL_SetTextureColorMod(Texture,
-                                       255,
-                                       255,
-                                       255);
-            }
-        }
-    }
+private:
+    rgba evening_target = {255,180,120,220};
+    rgba morning_target = {255,255,255,255};
+    rgba steps = {};
+    int* customerCount = nullptr;
 };
 #endif //PROJECT_DAYCYCLESYSTEM_H
