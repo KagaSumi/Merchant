@@ -38,6 +38,9 @@ add_executable(Project src/main.cpp
         src/ecs/system/MainMenuSystem.cpp
         src/ecs/system/DayCycleSystem.h
         src/ecs/system/DayCycleSystem.cpp
+        src/ecs/system/CustomerAISystem.cpp
+        src/ecs/system/PathfindingSystem.cpp
+        src/ecs/system/TransactionSystem.cpp
 )
 
 target_link_libraries(Project

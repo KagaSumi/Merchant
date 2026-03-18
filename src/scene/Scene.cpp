@@ -52,6 +52,10 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
         e.addComponent<Sprite>(tex,colSrc,colDst);
     }
 
+    //PathFinding:
+    //Find Non-Walkable layer
+    world.getMap().
+    PathfindingSystem::InitMap(windowWidth,windowHeight,);
 
     //add coins
     for (auto& coin : world.getMap().coins) {

@@ -117,9 +117,9 @@ struct Debt {
 };
 
 struct DisplayStand {
-    std::string name;
-    int quantity;
-    int reserved_quantity; //incremented to prevent more than 1 customer buying the same item.
+    std::string name = "Empty";
+    int quantity = 0 ;
+    int reserved_quantity = 0; //incremented to prevent more than 1 customer buying the same item.
 };
 
 struct Customer {
@@ -133,9 +133,20 @@ struct Customer {
 struct CustomerAIState {
     enum state {
         Browsing,
-        Heading_To_Register,
-        Leaving_Store
+        HeadingToRegister,
+        LeavingStore
     };
+};
+
+struct CustomerAI {
+    CustomerAIState::state currentState = CustomerAIState::Browsing;
+    // Pathfinding data
+    std::vector<SDL_Point> path; // List of grid coordinates from A*
+    int pathIndex = 0;                  // Which node we are currently walking toward
+
+    // Logic Timers
+    float stateTimer = 0.0f;           // Stay in "Browsing" for 5 seconds
+    SDL_Point targetGridpos; // Current heading
 };
 
 struct Inventory {

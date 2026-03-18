@@ -10,6 +10,7 @@
 #include "AnimationSystem.h"
 #include "CameraSystem.h"
 #include "CollisionSystem.h"
+#include "CustomerAISystem.h"
 #include "DayCycleSystem.h"
 #include "DestructionSystem.h"
 #include "Entity.h"
@@ -45,6 +46,8 @@ class World {
     UIRenderSystem uiRenderSystem;
     MouseInputSystem mouseInputSystem;
     DayCycleSystem  dayCycleSystem;
+    CustomerAISystem customerAISystem;
+    PathfindingSystem pathfindingSystem;
 
     public:
     World() = default;
@@ -54,6 +57,7 @@ class World {
             mainMenuSystem.update(event);
         }else {
             keyboardInputSystem.update(entities, event);
+            customerAISystem.update(entities,dt);
             movementSystem.update(entities, dt);
             collisionSystem.update(*this);
             animationSystem.update(entities, dt);

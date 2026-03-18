@@ -22,5 +22,6 @@ class Map {
     std::vector<std::vector<int>> tileData;
     std::vector<Collider> colliders;
     std::vector<Collider> coins;
+    std::vector<Collider> AINonWalkable;
 };
 #endif //PROJECT_MAP_H
