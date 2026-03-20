@@ -24,23 +24,23 @@ struct PathNode {
 
 class PathfindingSystem {
 public:
-    // Call this ONCE when you load your map to give the pathfinder the grid boundaries/collisions
-    static void InitMap(int width, int height, const std::vector<int> &collisionLayer);
-
-    // The main function your AI calls
+    static void InitMap(int width, int height, int tSize, const std::vector<int>& collisionLayer);
     static std::vector<SDL_Point> FindPath(SDL_Point start, SDL_Point target);
+
+    static void GenerateBrowsePoints(int numberOfPoints);
+    static SDL_Point GetRandomBrowsePoint();
+    static int GetTile(int x, int y);
+    static bool IsValid(int x, int y);
 
 private:
     static int mapWidth;
     static int mapHeight;
-    static std::vector<int> grid; // 1D array representing 2D Tiled map (0 = walkable, 1 = wall)
-
-    // Helper functions
-    static bool IsValid(int x, int y);
+    static int tileSize;
+    static std::vector<int> grid;
+    static std::vector<SDL_Point> walkableNodes;
+    static std::vector<SDL_Point> browseNodes;
 
     static int GetHeuristic(SDL_Point a, SDL_Point b);
-
-    static std::vector<SDL_Point> RetracePath(const std::unordered_map<int, PathNode> &allNodes, SDL_Point start,
-                                              SDL_Point target);
+    static std::vector<SDL_Point> RetracePath(const std::unordered_map<int, PathNode>& allNodes, SDL_Point start, SDL_Point target);
 };
 #endif //PROJECT_PATHFINDING_H

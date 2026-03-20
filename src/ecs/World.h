@@ -57,7 +57,7 @@ class World {
             mainMenuSystem.update(event);
         }else {
             keyboardInputSystem.update(entities, event);
-            customerAISystem.update(entities,dt);
+            customerAISystem.update(entities, dt);
             movementSystem.update(entities, dt);
             collisionSystem.update(*this);
             animationSystem.update(entities, dt);

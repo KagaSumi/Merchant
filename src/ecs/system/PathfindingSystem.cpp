@@ -1,49 +1,108 @@
-//
-// Created by Curry on 2026-03-17.
-//
-#include <algorithm>
-#include <queue>
-
 #include "PathfindingSystem.h"
+#include <queue>
+#include <unordered_map>
+#include <algorithm>
+#include <iostream>
+#include <cmath>
+#include <random>
+#include <ctime>
 
-// Static variable definitions
+// --- Static Variable Definitions ---
 int PathfindingSystem::mapWidth = 0;
 int PathfindingSystem::mapHeight = 0;
+int PathfindingSystem::tileSize = 32;
 std::vector<int> PathfindingSystem::grid;
+std::vector<SDL_Point> PathfindingSystem::walkableNodes;
+std::vector<SDL_Point> PathfindingSystem::browseNodes;
 
-void PathfindingSystem::InitMap(int width, int height, const std::vector<int>& collisionLayer) {
+// --- Initialization ---
+void PathfindingSystem::InitMap(int width, int height, int tSize, const std::vector<int>& collisionLayer) {
     mapWidth = width;
     mapHeight = height;
+    tileSize = tSize;
     grid = collisionLayer;
+    int expectedSize = width * height;
+    if (grid.size() != expectedSize) {
+        std::cerr << "\nCRITICAL WARNING: Map Size Mismatch!\n"
+                  << "Expected " << expectedSize << " tiles, but the array only has "
+                  << grid.size() << " tiles.\n"
+                  << "Your CSV Map Parser is missing data!\n\n";
+    }
+
+    walkableNodes.clear();
+
+    // Scan the map for walkable floor tiles (Value: 3)
+    for (int y = 0; y < mapHeight; y++) {
+        for (int x = 0; x < mapWidth; x++) {
+            if (IsValid(x, y)) {
+                walkableNodes.push_back({x, y});
+            }
+        }
+    }
+
+    // Automatically pick 5 random spots around the store for customers to browse
+    GenerateBrowsePoints(5);
+}
+
+// --- Helper Functions ---
+int PathfindingSystem::GetTile(int x, int y) {
+    // 1. Check if the X/Y coordinates are outside the map bounds
+    if (x < 0 || y < 0 || x >= mapWidth || y >= mapHeight) return 0;
+
+    int index = y * mapWidth + x;
+
+    // --- THE CRASH PREVENTER ---
+    // 2. Check if the index is larger than the actual array size!
+    if (index >= grid.size()) {
+        return 0; // Treat missing data as a wall, rather than crashing
+    }
+    return grid[index];
 }
 
 bool PathfindingSystem::IsValid(int x, int y) {
-    if (x < 0 || y < 0 || x >= mapWidth || y >= mapHeight) return false; // Out of bounds
-    int index = y * mapWidth + x;
-    return grid[index] == 0; // Assuming 0 is walkable in your Tiled map
+    if (grid.empty()) return false;
+    return GetTile(x, y) != 0; // Anything not 0 is considered walkable
 }
 
-// Manhattan Distance (perfect for 4-way grid movement)
 int PathfindingSystem::GetHeuristic(SDL_Point a, SDL_Point b) {
-    return std::abs(a.x - b.x) + std::abs(a.y - b.y);
+    return (std::abs(a.x - b.x) + std::abs(a.y - b.y)) * 10;
 }
 
-// Helper to generate a unique 1D key for a 2D coordinate
 int GetKey(int x, int y, int width) {
     return y * width + x;
 }
 
+// --- Random Point Generation ---
+void PathfindingSystem::GenerateBrowsePoints(int numberOfPoints) {
+    browseNodes.clear();
+    if (walkableNodes.empty()) return;
+
+    static std::mt19937 gen(static_cast<unsigned int>(std::time(nullptr)));
+    std::uniform_int_distribution<> dist(0, walkableNodes.size() - 1);
+
+    for (int i = 0; i < numberOfPoints; i++) {
+        browseNodes.push_back(walkableNodes[dist(gen)]);
+    }
+}
+
+SDL_Point PathfindingSystem::GetRandomBrowsePoint() {
+    if (browseNodes.empty()) return {1, 1}; // Fallback
+
+    static std::mt19937 gen(static_cast<unsigned int>(std::time(nullptr)));
+    std::uniform_int_distribution<> dist(0, browseNodes.size() - 1);
+
+    return browseNodes[dist(gen)];
+}
+
+// --- Core A* Pathfinder ---
 std::vector<SDL_Point> PathfindingSystem::FindPath(SDL_Point start, SDL_Point target) {
     std::vector<SDL_Point> path;
 
-    // If start or target is solid wall, bail immediately
+    if (grid.empty() || mapWidth <= 0 || mapHeight <= 0) return path;
     if (!IsValid(start.x, start.y) || !IsValid(target.x, target.y)) return path;
     if (start.x == target.x && start.y == target.y) return path;
 
-    // Open list (tiles to evaluate)
     std::priority_queue<PathNode, std::vector<PathNode>, std::greater<PathNode>> openSet;
-
-    // Tracks all node data and whether they've been closed
     std::unordered_map<int, PathNode> allNodes;
     std::vector<bool> closedSet(mapWidth * mapHeight, false);
 
@@ -51,23 +110,21 @@ std::vector<SDL_Point> PathfindingSystem::FindPath(SDL_Point start, SDL_Point ta
     openSet.push(startNode);
     allNodes[GetKey(start.x, start.y, mapWidth)] = startNode;
 
-    // 4-way movement directions (Right, Left, Down, Up)
+    // Strictly Up, Down, Left, Right (No diagonals possible)
     SDL_Point directions[4] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
     while (!openSet.empty()) {
         PathNode current = openSet.top();
         openSet.pop();
-        int currentKey = GetKey(current.pos.x, current.pos.y, mapWidth);
 
-        if (closedSet[currentKey]) continue; // Skip if already evaluated
+        int currentKey = GetKey(current.pos.x, current.pos.y, mapWidth);
+        if (closedSet[currentKey]) continue;
         closedSet[currentKey] = true;
 
-        // Path found!
         if (current.pos.x == target.x && current.pos.y == target.y) {
             return RetracePath(allNodes, start, target);
         }
 
-        // Check neighbors
         for (const auto& dir : directions) {
             SDL_Point neighborPos = {current.pos.x + dir.x, current.pos.y + dir.y};
 
@@ -76,36 +133,32 @@ std::vector<SDL_Point> PathfindingSystem::FindPath(SDL_Point start, SDL_Point ta
             int neighborKey = GetKey(neighborPos.x, neighborPos.y, mapWidth);
             if (closedSet[neighborKey]) continue;
 
-            int newGCost = current.gCost + 10; // Cost of moving 1 tile
+            int newGCost = current.gCost + 10;
 
-            // If neighbor isn't in allNodes, or we found a faster way to it
             if (allNodes.find(neighborKey) == allNodes.end() || newGCost < allNodes[neighborKey].gCost) {
-                PathNode neighborNode;
-                neighborNode.pos = neighborPos;
-                neighborNode.gCost = newGCost;
-                neighborNode.hCost = GetHeuristic(neighborPos, target) * 10; // Scale heuristic to match G cost
-                neighborNode.parent = current.pos;
-
+                PathNode neighborNode{neighborPos, newGCost, GetHeuristic(neighborPos, target), current.pos};
                 allNodes[neighborKey] = neighborNode;
                 openSet.push(neighborNode);
             }
         }
     }
-
-    return path; // Return empty path if no route exists
+    return path;
 }
 
 std::vector<SDL_Point> PathfindingSystem::RetracePath(const std::unordered_map<int, PathNode>& allNodes, SDL_Point start, SDL_Point target) {
     std::vector<SDL_Point> path;
     SDL_Point current = target;
+    int safetyCounter = 0;
+    int maxCells = mapWidth * mapHeight;
 
-    while (current.x != start.x || current.y != start.y) {
+    while ((current.x != start.x || current.y != start.y) && safetyCounter < maxCells) {
         path.push_back(current);
-        int key = current.y * mapWidth + current.x;
-        current = allNodes.at(key).parent;
+        int key = GetKey(current.x, current.y, mapWidth);
+        auto it = allNodes.find(key);
+        if (it == allNodes.end()) break;
+        current = it->second.parent;
+        safetyCounter++;
     }
-
-    // Reverse the path so it goes from Start -> Target
     std::reverse(path.begin(), path.end());
     return path;
 }

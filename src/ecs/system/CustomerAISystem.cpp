@@ -3,6 +3,8 @@
 //
 #include "CustomerAISystem.h"
 #include <cmath>
+#include <iostream>
+#include <random>
 
 // Helper to convert pixel position to grid position (assuming 32x32 tiles)
 SDL_Point GetGridPos(const Transform& t) {
@@ -14,42 +16,99 @@ void CustomerAISystem::HandleHeadingToRegister(CustomerAI& ai, Transform& t, Vel
     if (ai.path.empty()) {
         // Use the class member Register!
         SDL_Point startPos = GetGridPos(t);
-        ai.path = PathfindingSystem::FindPath(startPos, Register);
+
+        // Convert the target pixel position (367, 424) to grid coordinates:
+        // x: 367 / 32 = 11
+        // y: 424 / 32 = 13
+
+        ai.path = PathfindingSystem::FindPath(startPos,Register);
         ai.pathIndex = 0;
     }
 
     // Follow the path
-    MoveAlongPath(ai, t, v);
+    CustomerAISystem::MoveAlongPath(ai, t, v);
+}
+
+void CustomerAISystem::HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v,float deltaTime) {
+    // 1. ARE WE CURRENTLY WAITING?
+    if (ai.isWaiting) {
+        ai.stateTimer -= deltaTime; // Tick the timer down
+
+        if (ai.stateTimer <= 0.0f) {
+            ai.isWaiting = false; // 5 seconds are up! Let them move again.
+        } else {
+            return; // Still waiting. Exit the function so they stand completely still.
+        }
+    }
+
+    // 2. DID WE JUST ARRIVE AT A SHELF?
+    if (!ai.path.empty() && ai.pathIndex >= ai.path.size()) {
+        ai.path.clear();       // Throw away the finished path
+        v.direction.x = 0.0f;  // Stop their physical movement
+        v.direction.y = 0.0f;
+
+        // --- TRIGGER THE PAUSE ---
+        ai.isWaiting = true;
+        ai.stateTimer = 5.0f;  // Set the timer for 5 seconds
+        return;                // Exit so they don't instantly find a new path
+    }
+
+    // 3. FIND A NEW PATH
+    if (ai.path.empty() && !ai.isWaiting) {
+        SDL_Point startPos = GetGridPos(t);
+        SDL_Point randomTarget = PathfindingSystem::GetRandomBrowsePoint();
+
+        if (startPos.x != randomTarget.x || startPos.y != randomTarget.y) {
+            ai.path = PathfindingSystem::FindPath(startPos, randomTarget);
+            ai.pathIndex = 0;
+        }
+    }
+
+    // 4. WALK
+    CustomerAISystem::MoveAlongPath(ai, t, v);
+
+}
+
+void CustomerAISystem::HandleLeavingStore(CustomerAI &ai, Transform &t, Velocity &v) {
+    if (ai.path.empty()) {
+        SDL_Point startPos = GetGridPos(t);
+        ai.path = PathfindingSystem::FindPath(startPos,Door);
+        ai.pathIndex = 0;
+    }
+    CustomerAISystem::MoveAlongPath(ai, t, v);
 }
 
 void CustomerAISystem::MoveAlongPath(CustomerAI& ai, Transform& t, Velocity& v) {
-    // 1. Check if we have reached the end of the path
     if (ai.pathIndex >= ai.path.size()) {
         v.direction.x = 0.0f;
-        v.direction.y = 0.0f; // Stop moving
+        v.direction.y = 0.0f;
         return;
     }
 
-    // 2. Get the target tile and convert to world pixels
-    // (+16 offsets to center the AI on the 32x32 tile)
-    SDL_Point targetTile = ai.path[ai.pathIndex];
-    float targetX = (targetTile.x * 32.0f) + 16.0f;
-    float targetY = (targetTile.y * 32.0f) + 16.0f;
+    // 1. Get the target grid tile and convert to dead-center PIXELS
+    SDL_Point targetGrid = ai.path[ai.pathIndex];
+    float targetX = (targetGrid.x * 32.0f) + 16.0f;
+    float targetY = (targetGrid.y * 32.0f) + 16.0f;
 
-    // 3. Calculate Direction vector
+    // 2. Math to find direction and distance
     float dirX = targetX - t.position.x;
     float dirY = targetY - t.position.y;
-
-    // 4. Calculate Distance
     float distance = std::sqrt(dirX * dirX + dirY * dirY);
 
-    // 5. If we are far away, move towards it. If we are close, move to next node.
-    if (distance > 2.0f) {
-        // Normalize the direction vector so we don't move faster diagonally
+    // 3. Move or Snap!
+    // IMPORTANT: If your AI moves 2 pixels per frame, this number MUST be > 2.0f.
+    // 3.0f is a safe sweet spot to prevent overshooting.
+    if (distance > 3.0f) {
         v.direction.x = dirX / distance;
         v.direction.y = dirY / distance;
     } else {
-        // We reached this specific tile, target the next one in the list
+        // --- THE DRIFT KILLER ---
+        // Violently snap the AI to the exact center of the tile before turning.
+        // This guarantees they never cut corners through your shelves.
+        t.position.x = targetX;
+        t.position.y = targetY;
+
+        // Target the next tile in the path
         ai.pathIndex++;
     }
 }

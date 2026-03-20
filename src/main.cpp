@@ -5,27 +5,6 @@
 
 //global Variable
 Game *game = nullptr;
-int testVector2D() {
-    Vector2D a(3, 4);
-    Vector2D b(1, 2);
-
-    std::cout << "Prior to addition a = " << a << '\n';
-    a += b;              // a is now (4, 6)
-    Vector2D c = a - b;  // c is (3, 4)
-    Vector2D d = a * 2;  // d is (8, 12)
-    Vector2D e = 2 * a;  // e is also (8, 12)
-    Vector2D f = -a;     // f is (-4, -6)
-    bool same = (a == b); // false
-    std::cout << "a = " << a << '\n';
-    std::cout << "b = " << b << '\n';
-    std::cout << "c = " << c << '\n';
-    std::cout << "d = " << d << '\n';
-    std::cout << "e = " << e << '\n';
-    std::cout << "f = " << f << '\n';
-    std::cout << "a == b ? " << std::boolalpha << same << '\n';
-
-    return 0;
-}
 
 int main(){
     //testVector2D();

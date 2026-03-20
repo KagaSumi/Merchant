@@ -146,6 +146,7 @@ struct CustomerAI {
 
     // Logic Timers
     float stateTimer = 0.0f;           // Stay in "Browsing" for 5 seconds
+    bool isWaiting = false;
     SDL_Point targetGridpos; // Current heading
 };
 
