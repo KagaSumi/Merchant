@@ -27,6 +27,7 @@ public:
     // Call this ONCE when you load your map to give the pathfinder the grid boundaries/collisions
     static void InitMap(int width, int height, const std::vector<int> &collisionLayer);
 
+    static void PrintMap();
     // The main function your AI calls
     static std::vector<SDL_Point> FindPath(SDL_Point start, SDL_Point target);
 

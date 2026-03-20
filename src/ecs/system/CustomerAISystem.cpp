@@ -3,6 +3,7 @@
 //
 #include "CustomerAISystem.h"
 #include <cmath>
+#include <iostream>
 
 // Helper to convert pixel position to grid position (assuming 32x32 tiles)
 SDL_Point GetGridPos(const Transform& t) {
@@ -19,7 +20,26 @@ void CustomerAISystem::HandleHeadingToRegister(CustomerAI& ai, Transform& t, Vel
     }
 
     // Follow the path
-    MoveAlongPath(ai, t, v);
+    CustomerAISystem::MoveAlongPath(ai, t, v);
+}
+
+void CustomerAISystem::HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v) {
+    if (ai.path.empty()) {
+        SDL_Point startPos = GetGridPos(t);
+        //Get misc point
+        ai.path = PathfindingSystem::FindPath(startPos,SDL_Point{367,424});
+        ai.pathIndex = 0;
+    }
+    CustomerAISystem::MoveAlongPath(ai, t, v);
+}
+
+void CustomerAISystem::HandleLeavingStore(CustomerAI &ai, Transform &t, Velocity &v) {
+    if (ai.path.empty()) {
+        SDL_Point startPos = GetGridPos(t);
+        ai.path = PathfindingSystem::FindPath(startPos,Door);
+        ai.pathIndex = 0;
+    }
+    CustomerAISystem::MoveAlongPath(ai, t, v);
 }
 
 void CustomerAISystem::MoveAlongPath(CustomerAI& ai, Transform& t, Velocity& v) {

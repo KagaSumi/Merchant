@@ -7,6 +7,7 @@
 #ifndef CUSTOMER_AI_SYSTEM_H
 #define CUSTOMER_AI_SYSTEM_H
 
+#include <iostream>
 #include <memory>
 #include <vector>
 
@@ -15,7 +16,7 @@
 
 class CustomerAISystem {
 public:
-    void update(std::vector<std::unique_ptr<Entity>>& entities, float deltaTime) {
+    void update(std::vector<std::unique_ptr<Entity>>& entities) {
         for (auto &entity: entities) {
             if (entity->hasComponent<CustomerAI>() && entity->hasComponent<Transform>() && entity->hasComponent<Velocity>()) {
                 auto &ai = entity->getComponent<CustomerAI>();
@@ -56,7 +57,7 @@ private:
     void MoveAlongPath(CustomerAI &ai, Transform &t, Velocity &v);
 
     SDL_Point Register{};
-    SDL_Point Door{};
+    SDL_Point Door{20,11};
 };
 
 #endif

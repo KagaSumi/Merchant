@@ -35,7 +35,7 @@ void Scene::initMainMenu(int windowWidth, int windowHeight) {
 
 void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight) {
     //load map
-    world.getMap().load(mapPath,TextureManager::load("../asset/tileset.png"));
+    world.getMap().load(mapPath,TextureManager::load("../asset/Sprite-0002.png"));
     for (auto& collider : world.getMap().colliders) {
         auto& e = world.createEntity();
         e.addComponent<Transform>(Vector2D(collider.rect.x,collider.rect.y),0.0f,1.0f);
@@ -54,23 +54,23 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
 
     //PathFinding:
     //Find Non-Walkable layer
-    world.getMap().
-    PathfindingSystem::InitMap(windowWidth,windowHeight,);
+    PathfindingSystem::InitMap(windowWidth,windowHeight,world.getMap().AIWalkable);
+
 
     //add coins
-    for (auto& coin : world.getMap().coins) {
-        auto& item = world.createEntity();
-        item.addComponent<Transform>(Vector2D(coin.rect.x,coin.rect.y),0.0f,1.0f);
-        auto& c = item.addComponent<Collider>("item");
-
-        c.rect.x = coin.rect.x;
-        c.rect.y = coin.rect.y;
-
-        SDL_Texture* tex = TextureManager::load("../asset/coin.png");
-        SDL_FRect colSrc {0,0,32,32};
-        SDL_FRect colDst {c.rect.x,c.rect.y,32,32};
-        item.addComponent<Sprite>(tex,colSrc,colDst);
-    }
+    // for (auto& coin : world.getMap().coins) {
+    //     auto& item = world.createEntity();
+    //     item.addComponent<Transform>(Vector2D(coin.rect.x,coin.rect.y),0.0f,1.0f);
+    //     auto& c = item.addComponent<Collider>("item");
+    //
+    //     c.rect.x = coin.rect.x;
+    //     c.rect.y = coin.rect.y;
+    //
+    //     SDL_Texture* tex = TextureManager::load("../asset/coin.png");
+    //     SDL_FRect colSrc {0,0,32,32};
+    //     SDL_FRect colDst {c.rect.x,c.rect.y,32,32};
+    //     item.addComponent<Sprite>(tex,colSrc,colDst);
+    // }
     // auto& item(world.createEntity());
     // auto& itemTransform = item.addComponent<Transform>(Vector2D(100,200), 0.0f,1.0f);
     //
@@ -111,6 +111,14 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
     player.addComponent<PlayerTag>();
     player.addComponent<Health>(Game::gameState.playerHealth);
 
+    auto & customer (world.createEntity());
+    customer.addComponent<Transform>(Vector2D(651,369),1.0f);
+    customer.addComponent<Velocity>(Vector2D(0,0), 120.0f);
+    customer.addComponent<CustomerAI>();
+    SDL_Texture* texture = TextureManager::load("../asset/animations/bird_anim.png");
+    SDL_FRect src = {0,0,32,32};
+    SDL_FRect dst {651,369,32,32};
+    customer.addComponent<Sprite>(texture,src,dst);
 
     auto& spawner(world.createEntity());
     Transform t = spawner.addComponent<Transform>(Vector2D(windowWidth/2,windowHeight - 5),0.0f,1.0f);
