@@ -7,5 +7,5 @@
 void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity> > &entities) {
     //Need to calculate how much each customer will "advance time"
 
-    DayCycleSystem::applyTint(entities,evening_target);
+    DayCycleSystem::applyTint(entities,morning_target);
 }

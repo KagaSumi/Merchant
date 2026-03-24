@@ -59,6 +59,7 @@ struct Animation {
     float time{}; //time is accumulated for the current frame
     int currentFrame{}; //index of current frame in the clip
     float speed = 0.1f; //Time per frame
+    int direction = 2; //1,2,3,4 (N,S,W,E)
 };
 
 struct Camera {
@@ -117,9 +118,9 @@ struct Debt {
 };
 
 struct DisplayStand {
-    std::string name;
-    int quantity;
-    int reserved_quantity; //incremented to prevent more than 1 customer buying the same item.
+    std::string name = "Empty";
+    int quantity = 0 ;
+    int reserved_quantity = 0; //incremented to prevent more than 1 customer buying the same item.
 };
 
 struct Customer {
@@ -133,9 +134,24 @@ struct Customer {
 struct CustomerAIState {
     enum state {
         Browsing,
-        Heading_To_Register,
-        Leaving_Store
+        HeadingToRegister,
+        LeavingStore
     };
+};
+
+struct CustomerAI {
+    CustomerAIState::state currentState = CustomerAIState::Browsing;
+    // Pathfinding data
+    std::vector<SDL_Point> path; // List of grid coordinates from A*
+    int pathIndex = 0;                  // Which node we are currently walking toward
+
+    // Logic Timers
+    float stateTimer = 0.0f;           // Stay in "Browsing" for 5 seconds
+    bool isWaiting = false;
+    SDL_Point targetGridpos; // Current heading
+
+    int itemsToBrowse = 3; // How many shelves to visit before paying
+    int itemsBrowsed = 0; // How many they have visited so far
 };
 
 struct Inventory {

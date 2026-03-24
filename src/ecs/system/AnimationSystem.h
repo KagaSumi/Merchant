@@ -19,7 +19,6 @@ Playback System: advances the animations
 
 class AnimationSystem {
     //Default Spawn facing down
-    int direction = 2; //1,2,3,4 (N,S,W,E)
 public:
     void update(const std::vector<std::unique_ptr<Entity> > &entities, float dt) {
         for (auto &e: entities) {
@@ -33,35 +32,25 @@ public:
 
                 if (velocity.direction.x > 0.0f) {
                     newClip = "walk_right";
-                    direction = 4;
+                    anim.direction = 4;
                 } else if (velocity.direction.x < 0.0f) {
                     newClip = "walk_left";
-                    direction = 3;
+                    anim.direction = 3;
                 } else if (velocity.direction.y > 0.0f) {
                     newClip = "walk_down";
-                    direction = 2;
+                    anim.direction = 2;
                 } else if (velocity.direction.y < 0.0f) {
                     newClip = "walk_up";
-                    direction = 1;
+                    anim.direction = 1;
                 } else {
-                    switch (direction) {
-                        case 1:
-                            newClip = "idle_up";
-                            break;
-                        case 2:
-                            newClip = "idle_down";
-                            break;
-                        case 3:
-                            newClip = "idle_left";
-                            break;
-                        case 4:
-                            newClip = "idle_right";
-                            break;
-                        default:
-                            newClip = "idle_down";
+                    switch (anim.direction) {
+                        case 1: newClip = "idle_up"; break;
+                        case 2: newClip = "idle_down"; break;
+                        case 3: newClip = "idle_left"; break;
+                        case 4: newClip = "idle_right"; break;
+                        default: newClip = "idle_down";
                     }
                 }
-                if (e->hasComponent<ProjectileTag>()) newClip = "idle_right";
                 //Check if the animations has switched
                 //if the chosen clip is different from the current one, switch to new clip, reset time and frame index
                 if (newClip != anim.currentClip) {
