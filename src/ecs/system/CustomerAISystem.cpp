@@ -12,70 +12,120 @@ SDL_Point GetGridPos(const Transform& t) {
 }
 
 void CustomerAISystem::HandleHeadingToRegister(CustomerAI& ai, Transform& t, Velocity& v) {
-    // If we haven't calculated a path yet, do it once.
+    // 1. ARE WE CURRENTLY IN THE MINI-GAME?
+    if (ai.isWaiting) {
+
+        // ==========================================
+        // WAIT FOR MINI-GAME TO FINISH
+        // ==========================================
+        // Instead of a timer, check a boolean from your HaggleSystem.
+        // e.g., if (HaggleSystem::IsComplete(ai.customerID)) {
+        //     ai.isWaiting = false;
+        //     ai.currentState = CustomerAIState::LeavingStore;
+        // }
+        // ==========================================
+
+        ai.isWaiting = false;
+        ai.currentState = CustomerAIState::LeavingStore;
+
+        return; // Lock the AI in place while the player plays the mini-game
+    }
+
+    // 2. GET PATH TO REGISTER
     if (ai.path.empty()) {
-        // Use the class member Register!
         SDL_Point startPos = GetGridPos(t);
-
-        // Convert the target pixel position (367, 424) to grid coordinates:
-        // x: 367 / 32 = 11
-        // y: 424 / 32 = 13
-
-        ai.path = PathfindingSystem::FindPath(startPos,Register);
+        ai.path = PathfindingSystem::FindPath(startPos, Register);
         ai.pathIndex = 0;
     }
 
-    // Follow the path
+    // 3. WALK
     CustomerAISystem::MoveAlongPath(ai, t, v);
+
+    // 4. DID WE JUST ARRIVE AT THE REGISTER?
+    if (!ai.path.empty() && ai.pathIndex >= ai.path.size()) {
+        ai.path.clear();
+        v.direction.x = 0.0f;
+        v.direction.y = 0.0f;
+
+        ai.isWaiting = true; // Freeze the customer
+
+        // ==========================================
+        // TRIGGER HAGGLE MINI-GAME HERE
+        // ==========================================
+        std::cout << "Customer reached register! Press 'E' to Haggle!" << std::endl;
+        // e.g., HaggleSystem::QueueCustomer(entity);
+        // ==========================================
+    }
 }
 
 void CustomerAISystem::HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v,float deltaTime) {
     // 1. ARE WE CURRENTLY WAITING?
     if (ai.isWaiting) {
-        ai.stateTimer -= deltaTime; // Tick the timer down
-
+        ai.stateTimer -= deltaTime;
         if (ai.stateTimer <= 0.0f) {
-            ai.isWaiting = false; // 5 seconds are up! Let them move again.
+            ai.isWaiting = false;
+            ai.itemsBrowsed++; // <--- THEY FINISHED LOOKING AT AN ITEM!
+            // std::cout << "Finished looking at item " << ai.itemsBrowsed
+            //           << " out of " << ai.itemsToBrowse << std::endl;
         } else {
-            return; // Still waiting. Exit the function so they stand completely still.
+            return;
         }
     }
 
-    // 2. DID WE JUST ARRIVE AT A SHELF?
+    // 2. DID WE JUST ARRIVE?
     if (!ai.path.empty() && ai.pathIndex >= ai.path.size()) {
-        ai.path.clear();       // Throw away the finished path
-        v.direction.x = 0.0f;  // Stop their physical movement
+        ai.path.clear();
+        v.direction.x = 0.0f;
         v.direction.y = 0.0f;
-
-        // --- TRIGGER THE PAUSE ---
         ai.isWaiting = true;
-        ai.stateTimer = 5.0f;  // Set the timer for 5 seconds
-        return;                // Exit so they don't instantly find a new path
+        ai.stateTimer = 5.0f;
+        return;
     }
 
     // 3. FIND A NEW PATH
     if (ai.path.empty() && !ai.isWaiting) {
-        SDL_Point startPos = GetGridPos(t);
-        SDL_Point randomTarget = PathfindingSystem::GetRandomBrowsePoint();
 
-        if (startPos.x != randomTarget.x || startPos.y != randomTarget.y) {
-            ai.path = PathfindingSystem::FindPath(startPos, randomTarget);
-            ai.pathIndex = 0;
+        // --- CHECK IF DONE SHOPPING ---
+        if (ai.itemsBrowsed >= ai.itemsToBrowse) {
+            ai.currentState = CustomerAIState::HeadingToRegister;
+            return; // Exit this function. The system will run HandleHeadingToRegister on the next frame!
         }
+
+        SDL_Point startPos = GetGridPos(t);
+        SDL_Point randomTarget;
+
+        // --- SAFE PATH SELECTION ---
+        // Pick a random shelf. If it's the exact one we are standing on, pick again!
+        // We limit it to 10 attempts just in case the map only has 1 shelf, preventing an infinite loop freeze.
+        int attempts = 0;
+        do {
+            randomTarget = PathfindingSystem::GetRandomBrowsePoint();
+            attempts++;
+        } while (startPos.x == randomTarget.x && startPos.y == randomTarget.y && attempts < 10);
+
+        // Generate the path to the new shelf
+        ai.path = PathfindingSystem::FindPath(startPos, randomTarget);
+        ai.pathIndex = 0;
     }
 
     // 4. WALK
     CustomerAISystem::MoveAlongPath(ai, t, v);
-
 }
 
-void CustomerAISystem::HandleLeavingStore(CustomerAI &ai, Transform &t, Velocity &v) {
+void CustomerAISystem::HandleLeavingStore(Entity& entity,CustomerAI &ai, Transform &t, Velocity &v) {
     if (ai.path.empty()) {
         SDL_Point startPos = GetGridPos(t);
-        ai.path = PathfindingSystem::FindPath(startPos,Door);
+        ai.path = PathfindingSystem::FindPath(startPos, Door);
         ai.pathIndex = 0;
     }
+
     CustomerAISystem::MoveAlongPath(ai, t, v);
+
+    if (!ai.path.empty() && ai.pathIndex >= ai.path.size()) {
+        std::cout << "Customer left the store!" << std::endl;
+        // DO NOT FORGET TO DESTROY THE ENTITY HERE!
+        entity.destroy();
+    }
 }
 
 void CustomerAISystem::MoveAlongPath(CustomerAI& ai, Transform& t, Velocity& v) {

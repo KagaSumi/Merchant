@@ -111,39 +111,42 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
     player.addComponent<PlayerTag>();
     player.addComponent<Health>(Game::gameState.playerHealth);
 
-    auto & customer (world.createEntity());
-    customer.addComponent<Transform>(Vector2D(12,369),1.0f);
-    customer.addComponent<Velocity>(Vector2D(0,0), 120.0f);
-    customer.addComponent<CustomerAI>();
-    SDL_Texture* texture = TextureManager::load("../asset/animations/bird_anim.png");
-    SDL_FRect src = {0,0,32,32};
-    SDL_FRect dst {651,369,32,32};
-    customer.addComponent<Sprite>(texture,src,dst);
+    //Test Customer
+    // auto & customer (world.createEntity());
+    // customer.addComponent<Transform>(Vector2D(12,369),1.0f);
+    // customer.addComponent<Velocity>(Vector2D(0,0), 120.0f);
+    // customer.addComponent<CustomerAI>();
+    // SDL_Texture* texture = TextureManager::load("../asset/animations/bird_anim.png");
+    // SDL_FRect src = {0,0,32,32};
+    // SDL_FRect dst {651,369,32,32};
+    // customer.addComponent<Sprite>(texture,src,dst);
 
-    // auto& spawner(world.createEntity());
-    // Transform t = spawner.addComponent<Transform>(Vector2D(windowWidth/2,windowHeight - 5),0.0f,1.0f);
-    // spawner.addComponent<TimedSpawner>(2.0f,[this,t] {
-    //
-    //     //create projectiles
-    //     auto& e(world.createDeferredEntity());
-    //     e.addComponent<Transform>(Vector2D(t.position.x,t.position.y),0.0f,1.0f);
-    //     e.addComponent<Velocity>(Vector2D(0,-1),100.0f);
-    //
-    //     Animation anim = AssetManager::getAnimation("enemy");
-    //     e.addComponent<Animation>(anim);
-    //
-    //     SDL_Texture* tex = TextureManager::load("../asset/animations/bird_anim.png");
-    //     SDL_FRect src = {0,0,32,32};
-    //     SDL_FRect dst {t.position.x,t.position.y,32,32};
-    //     e.addComponent<Sprite>(tex,src,dst);
-    //
-    //     Collider c = e.addComponent<Collider>("projectile");
-    //     c.rect.w = dst.w;
-    //     c.rect.h = dst.h;
-    //
-    //     e.addComponent<ProjectileTag>();
-    //
-    // });
+    std::vector<SDL_Texture*> customerTextures = {
+        TextureManager::load("../asset/animations/CustomerA.png"),
+        TextureManager::load("../asset/animations/CustomerF.png"),
+        TextureManager::load("../asset/animations/CustomerM.png")
+    };
+    int customerIndexCount = 0;
+
+    auto& spawner(world.createEntity());
+    Transform t = spawner.addComponent<Transform>(Vector2D(657,372),1.0f);
+    spawner.addComponent<TimedSpawner>(15.0f,[this,t,customerTextures,customerIndexCount]()mutable  {
+
+        //create projectiles
+        auto& e(world.createDeferredEntity());
+        e.addComponent<Transform>(Vector2D(t.position.x,t.position.y),1.0f);
+        e.addComponent<Velocity>(Vector2D(0,0),100.0f);
+        e.addComponent<CustomerAI>();
+
+        Animation anim = AssetManager::getAnimation("customer");
+        e.addComponent<Animation>(anim);
+
+
+        SDL_Texture* tex = customerTextures[customerIndexCount++ % customerTextures.size()];
+        SDL_FRect src = {0,0,32,32};
+        SDL_FRect dst {t.position.x,t.position.y,64,64};
+        e.addComponent<Sprite>(tex,src,dst);
+    });
 
 
     //add scene state

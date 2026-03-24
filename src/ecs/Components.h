@@ -59,6 +59,7 @@ struct Animation {
     float time{}; //time is accumulated for the current frame
     int currentFrame{}; //index of current frame in the clip
     float speed = 0.1f; //Time per frame
+    int direction = 2; //1,2,3,4 (N,S,W,E)
 };
 
 struct Camera {
@@ -148,6 +149,9 @@ struct CustomerAI {
     float stateTimer = 0.0f;           // Stay in "Browsing" for 5 seconds
     bool isWaiting = false;
     SDL_Point targetGridpos; // Current heading
+
+    int itemsToBrowse = 3; // How many shelves to visit before paying
+    int itemsBrowsed = 0; // How many they have visited so far
 };
 
 struct Inventory {
