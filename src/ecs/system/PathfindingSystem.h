@@ -4,6 +4,7 @@
 
 #ifndef PROJECT_PATHFINDING_H
 #define PROJECT_PATHFINDING_H
+#include <random>
 #include <unordered_map>
 #include <vector>
 #include <SDL3/SDL_rect.h>
@@ -36,6 +37,7 @@ private:
     static int mapWidth;
     static int mapHeight;
     static int tileSize;
+    static std::mt19937 rng;
     static std::vector<int> grid;
     static std::vector<SDL_Point> walkableNodes;
     static std::vector<SDL_Point> browseNodes;

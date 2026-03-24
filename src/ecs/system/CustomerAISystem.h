@@ -33,7 +33,7 @@ public:
                         break;
                     case CustomerAIState::LeavingStore:
                         // Set velocity toward the shop exit
-                        HandleLeavingStore(ai,transform,velocity);
+                        HandleLeavingStore(*entity,ai,transform,velocity);
                         break;
                 }
             }
@@ -52,12 +52,12 @@ private:
 
     // Removed EntityAdmin, added Velocity
     void HandleHeadingToRegister(CustomerAI &ai, Transform &t, Velocity &v);
-    void HandleLeavingStore(CustomerAI &ai, Transform &t, Velocity &v);
+    void HandleLeavingStore(Entity& entity, CustomerAI &ai, Transform &t, Velocity &v);
 
     void MoveAlongPath(CustomerAI &ai, Transform &t, Velocity &v);
 
-    SDL_Point Register{};
-    SDL_Point Door{20,11};
+    SDL_Point Register{20,16};
+    SDL_Point Door{20,10};
 };
 
 #endif

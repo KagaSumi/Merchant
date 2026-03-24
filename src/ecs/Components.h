@@ -148,6 +148,9 @@ struct CustomerAI {
     float stateTimer = 0.0f;           // Stay in "Browsing" for 5 seconds
     bool isWaiting = false;
     SDL_Point targetGridpos; // Current heading
+
+    int itemsToBrowse = 3; // How many shelves to visit before paying
+    int itemsBrowsed = 0; // How many they have visited so far
 };
 
 struct Inventory {

@@ -14,6 +14,7 @@ int PathfindingSystem::tileSize = 32;
 std::vector<int> PathfindingSystem::grid;
 std::vector<SDL_Point> PathfindingSystem::walkableNodes;
 std::vector<SDL_Point> PathfindingSystem::browseNodes;
+std::mt19937 PathfindingSystem::rng(static_cast<unsigned int>(std::time(nullptr)));
 
 // --- Initialization ---
 void PathfindingSystem::InitMap(int width, int height, int tSize, const std::vector<int>& collisionLayer) {
@@ -77,21 +78,21 @@ void PathfindingSystem::GenerateBrowsePoints(int numberOfPoints) {
     browseNodes.clear();
     if (walkableNodes.empty()) return;
 
-    static std::mt19937 gen(static_cast<unsigned int>(std::time(nullptr)));
     std::uniform_int_distribution<> dist(0, walkableNodes.size() - 1);
 
     for (int i = 0; i < numberOfPoints; i++) {
-        browseNodes.push_back(walkableNodes[dist(gen)]);
+        // Use the shared rng!
+        browseNodes.push_back(walkableNodes[dist(rng)]);
     }
 }
 
 SDL_Point PathfindingSystem::GetRandomBrowsePoint() {
-    if (browseNodes.empty()) return {1, 1}; // Fallback
+    if (browseNodes.empty()) return {1, 1};
 
-    static std::mt19937 gen(static_cast<unsigned int>(std::time(nullptr)));
     std::uniform_int_distribution<> dist(0, browseNodes.size() - 1);
 
-    return browseNodes[dist(gen)];
+    // Use the shared rng!
+    return browseNodes[dist(rng)];
 }
 
 // --- Core A* Pathfinder ---
