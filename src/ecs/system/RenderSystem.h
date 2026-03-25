@@ -46,7 +46,7 @@ class RenderSystem {
                     sprite.src = anim.clips[anim.currentClip].frameIndicies[anim.currentFrame];
                 }
 
-                TextureManager::draw(sprite.Texture,sprite.src,sprite.dst);
+                TextureManager::draw(sprite.Texture,&sprite.src,&sprite.dst);
             }
         }
     }

@@ -7,6 +7,7 @@
 #include <functional>
 #include <queue>
 #include <SDL3/SDL_render.h>
+#include "SDL3_ttf/SDL_ttf.h"
 
 #include "Vector2D.h"
 #include <string>
@@ -96,6 +97,25 @@ struct Parent {
 
 struct Children {
     std::vector<Entity*> children{};
+};
+
+enum class LabelType {
+    PlayerPosition,
+    Damage,
+    Health
+
+};
+struct Label {
+    std::string text;
+    TTF_Font* font = nullptr;
+    SDL_Color color{};
+    LabelType type = LabelType::PlayerPosition;
+    std::string textureCacheKey{};
+    SDL_Texture* texture = nullptr;
+    SDL_FRect dst{};
+    bool visible = true;
+    bool dirty = false;
+
 };
 
 struct PlayerTag{};

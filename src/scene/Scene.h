@@ -39,6 +39,8 @@ private:
     Entity& createCogButton(int windowWidth, int windowHeight, Entity& overlay);
     void createSettingsUIComponents(Entity& overlay);
     void toggleSettingsOverlayVisibility(Entity& overlay);
+
+    Entity& createPlayerPosLabel();
 };
 
 #endif //PROJECT_SCENE_H

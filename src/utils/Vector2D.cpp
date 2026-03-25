@@ -5,7 +5,6 @@
 #include "Vector2D.h"
 
 #include <math.h>
-#include <ostream>
 
 //Member for right Left
 Vector2D Vector2D::operator*(float scaler) const {
@@ -65,10 +64,6 @@ Vector2D Vector2D::operator-() const {
     return Vector2D(-x, -y);
 }
 
-std::ostream& operator<<(std::ostream& os, const Vector2D& vec) {
-    os << "(" << vec.x << ", " << vec.y << ")";
-    return os;
-}
 Vector2D &Vector2D::normalize() {
     float length = std::sqrt(x * x + y * y);
 

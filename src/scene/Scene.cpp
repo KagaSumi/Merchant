@@ -69,7 +69,7 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
     //     SDL_Texture* tex = TextureManager::load("../asset/coin.png");
     //     SDL_FRect colSrc {0,0,32,32};
     //     SDL_FRect colDst {c.rect.x,c.rect.y,32,32};
-    //     item.addComponent<Sprite>(tex,colSrc,colDst);
+    //     item.addComponent<Sprite>(tex,colSrc,colDs);
     // }
     // auto& item(world.createEntity());
     // auto& itemTransform = item.addComponent<Transform>(Vector2D(100,200), 0.0f,1.0f);
@@ -152,6 +152,9 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
     //add scene state
     auto &state(world.createEntity());
     state.addComponent<SceneState>();
+
+    //Add Label
+    createPlayerPosLabel();
 }
 
 Entity& Scene::createSettingsOverlay(int windowWidth, int windowHeight) {
@@ -248,5 +251,22 @@ void Scene::toggleSettingsOverlayVisibility(Entity& overlay) {
             }
         }
     }
+
+}
+
+Entity &Scene::createPlayerPosLabel() {
+    auto & playerPosLabel(world.createEntity());
+    Label label = {
+        "Text String",
+        AssetManager::getFont("arial"),
+        {255,255,255,255},
+        LabelType::PlayerPosition,
+        "playerPos"
+    };
+    TextureManager::loadLabel(label);
+    playerPosLabel.addComponent<Label>(label);
+    playerPosLabel.addComponent<Transform>(Vector2D(10,10), 0.0f,1.0f);
+    return playerPosLabel;
+
 
 }

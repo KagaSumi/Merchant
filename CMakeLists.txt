@@ -8,9 +8,11 @@ set(CMAKE_CXX_STANDARD 20)
 if (WIN32)
     set(SDL3_PATH "D:/NextCloud Files/Game Dev/Game Architecture/Dev/SDL3.4")
     set(SDL_IMAGE_PATH "D:/NextCloud Files/Game Dev/Game Architecture/Dev/SDL_Image 3.26")
+    set(SDL_ttf_PATH "D:/NextCloud Files/Game Dev/Game Architecture/Dev/SDL3_ttf")
     include_directories(
             ${SDL3_PATH}/include
             ${SDL_IMAGE_PATH}/include
+            ${SDL_ttf_PATH}/include
             ${PROJECT_SOURCE_DIR}/src
             ${PROJECT_SOURCE_DIR}/src/ecs
             ${PROJECT_SOURCE_DIR}/src/ecs/system
@@ -20,6 +22,7 @@ if (WIN32)
     link_directories(
             ${SDL3_PATH}/lib
             ${SDL_IMAGE_PATH}/lib
+            ${SDL_ttf_PATH}/lib
     )
 endif ()
 
@@ -46,4 +49,5 @@ add_executable(Project src/main.cpp
 target_link_libraries(Project
     SDL3
     SDL3_image
+    SDL3_ttf
 )

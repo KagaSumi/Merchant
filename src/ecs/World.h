@@ -15,6 +15,7 @@
 #include "DestructionSystem.h"
 #include "Entity.h"
 #include "EventResponseSystem.h"
+#include "HUDSystem.h"
 #include "event/EventManager.h"
 #include "KeyboardInputSystem.h"
 #include "MainMenuSystem.h"
@@ -25,6 +26,7 @@
 #include "scene/SceneType.h"
 #include  "UIRenderSystem.h"
 #include  "MouseInputSystem.h"
+#include "PreRenderSystem.h"
 
 void printCollision(const CollisionEvent& collision);
 
@@ -48,6 +50,9 @@ class World {
     DayCycleSystem  dayCycleSystem;
     CustomerAISystem customerAISystem;
     PathfindingSystem pathfindingSystem;
+    HUDSystem hudSystem;
+    PreRenderSystem preRenderSystem;
+
 
     public:
     World() = default;
@@ -64,10 +69,12 @@ class World {
             cameraSystem.update(entities);
             spawnTimerSystem.update(entities, dt);
             destructionSystem.update(entities);
+            hudSystem.update(entities);
             dayCycleSystem.update(entities);
         }
 
         mouseInputSystem.update(*this,event);
+        preRenderSystem.update(entities);
 
         synchronizeEntities();
         cleanup();
