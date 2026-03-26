@@ -30,19 +30,33 @@ public:
                 //state system
                 std::string newClip;
 
-                if (velocity.direction.x > 0.0f) {
-                    newClip = "walk_right";
-                    anim.direction = 4;
-                } else if (velocity.direction.x < 0.0f) {
-                    newClip = "walk_left";
-                    anim.direction = 3;
-                } else if (velocity.direction.y > 0.0f) {
-                    newClip = "walk_down";
-                    anim.direction = 2;
-                } else if (velocity.direction.y < 0.0f) {
-                    newClip = "walk_up";
-                    anim.direction = 1;
+                // Get the absolute values to see which direction they are moving the most
+                float absX = std::abs(velocity.direction.x);
+                float absY = std::abs(velocity.direction.y);
+
+                // Use a tiny threshold to ignore microscopic physics jitters
+                float deadzone = 0.01f;
+
+                if (absX > absY && absX > deadzone) {
+                    // Horizontal movement is dominant
+                    if (velocity.direction.x > 0.0f) {
+                        newClip = "walk_right";
+                        anim.direction = 4;
+                    } else {
+                        newClip = "walk_left";
+                        anim.direction = 3;
+                    }
+                } else if (absY > absX && absY > deadzone) {
+                    // Vertical movement is dominant
+                    if (velocity.direction.y > 0.0f) {
+                        newClip = "walk_down";
+                        anim.direction = 2;
+                    } else {
+                        newClip = "walk_up";
+                        anim.direction = 1;
+                    }
                 } else {
+                    // Entity is practically stopped, revert to idle based on last known direction
                     switch (anim.direction) {
                         case 1: newClip = "idle_up"; break;
                         case 2: newClip = "idle_down"; break;
