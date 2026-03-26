@@ -95,12 +95,13 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
     int customerIndexCount = 0; // Index on which Texture ^
 
     auto& spawner(world.createEntity());
-    Transform t = spawner.addComponent<Transform>(Vector2D(657,372),1.0f);
+    Transform t = spawner.addComponent<Transform>(Vector2D(640,320),1.0f);
     spawner.addComponent<Spawner>([this,t,customerTextures,customerIndexCount]() mutable {
         auto& e = world.createDeferredEntity();
         e.addComponent<Transform>(Vector2D(t.position.x, t.position.y), 1.0f);
         e.addComponent<Velocity>(Vector2D(0, 0), 100.0f);
         e.addComponent<CustomerAI>(); // The AI takes over from here!
+        e.addComponent<Customer>();
 
         Animation anim = AssetManager::getAnimation("customer");
         e.addComponent<Animation>(anim);
@@ -113,6 +114,23 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
         e.addComponent<Sprite>(tex, src, dst);
 
     });
+    //Display Case: (Test)
+
+    auto& displayCase = world.createEntity();
+    displayCase.addComponent<Transform>(Vector2D(704,480),0.0f,1.0f);
+    displayCase.addComponent<DisplayStand>();
+    displayCase.addComponent<Collider>("wall");
+    SDL_FRect src = {64,32,32,32};
+    SDL_FRect dst = {704,480,32,32};
+    displayCase.addComponent<Sprite>(tilemapTex,src,dst);
+    displayCase.addComponent<Interaction>(); // -> Interact to place item
+
+    //Cash Register
+    auto& cashRegister = world.createEntity();
+    cashRegister.addComponent<Transform>(Vector2D());
+    cashRegister.addComponent<Collider>("wall");
+    cashRegister.addComponent<Interaction>(); // -> Interact to start morning
+
 
     //Store:
     auto &store(world.createEntity());

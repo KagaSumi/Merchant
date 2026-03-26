@@ -156,6 +156,7 @@ struct Debt {
 
 struct DisplayStand {
     std::string name = "Empty";
+    int currentItemID = -1;
     int quantity = 0 ;
     int reserved_quantity = 0; //incremented to prevent more than 1 customer buying the same item.
 };

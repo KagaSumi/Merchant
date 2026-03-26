@@ -64,7 +64,7 @@ public:
                                            rgba.r,
                                            rgba.g,
                                            rgba.b);
-                    if (entity->hasComponent<PlayerTag>()|| entity->hasComponent<Customer>()) {
+                    if (entity->hasComponent<PlayerTag>() || entity->hasComponent<Customer>() || entity->hasComponent<DisplayStand>()) {
                         SDL_SetTextureAlphaMod(Texture, 255);
                     }else {
                         SDL_SetTextureAlphaMod(Texture, rgba.a);
