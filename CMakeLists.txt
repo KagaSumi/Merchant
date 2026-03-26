@@ -44,6 +44,8 @@ add_executable(Project src/main.cpp
         src/ecs/system/CustomerAISystem.cpp
         src/ecs/system/PathfindingSystem.cpp
         src/ecs/system/TransactionSystem.cpp
+        src/ecs/system/DebtSystem.cpp
+        src/ecs/system/CustomerSpawnerSystem.cpp
 )
 
 target_link_libraries(Project

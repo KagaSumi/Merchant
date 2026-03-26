@@ -11,6 +11,7 @@
 #include "CameraSystem.h"
 #include "CollisionSystem.h"
 #include "CustomerAISystem.h"
+#include "CustomerSpawnerSystem.h"
 #include "DayCycleSystem.h"
 #include "DestructionSystem.h"
 #include "Entity.h"
@@ -51,8 +52,8 @@ class World {
     CustomerAISystem customerAISystem;
     PathfindingSystem pathfindingSystem;
     HUDSystem hudSystem;
+    CustomerSpawnerSystem customerSpawnerSystem;
     PreRenderSystem preRenderSystem;
-
 
     public:
     World() = default;
@@ -62,15 +63,15 @@ class World {
             mainMenuSystem.update(event);
         }else {
             keyboardInputSystem.update(entities, event);
-            customerAISystem.update(entities, dt);
+            customerAISystem.update(entities, dt,dayCycleSystem);
             movementSystem.update(entities, dt);
             collisionSystem.update(*this);
             animationSystem.update(entities, dt);
+            dayCycleSystem.update(entities);
             cameraSystem.update(entities);
-            spawnTimerSystem.update(entities, dt);
+            customerSpawnerSystem.update(entities, dt);
             destructionSystem.update(entities);
             hudSystem.update(entities);
-            dayCycleSystem.update(entities);
         }
 
         mouseInputSystem.update(*this,event);

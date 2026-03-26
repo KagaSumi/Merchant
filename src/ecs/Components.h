@@ -75,6 +75,13 @@ struct TimedSpawner {
     float timer{};
 };
 
+struct Spawner {
+    std::function<void()> spawnCallback{};
+    bool isFinished = (bool) spawnCount;
+    int spawnCount = 0;
+
+};
+
 //Game State, scene because might have multiple scenes
 struct SceneState {
     int coinsCollected = 0;
@@ -121,8 +128,18 @@ struct Label {
 struct PlayerTag{};
 struct ProjectileTag{};
 
+enum class DayPhase {
+    Morning,
+    ShopOpen,
+    Evening,
+    GameOver
+};
+
 struct DayCycle {
-    enum TimeofDay {Morning, Shop_Open, Evening};
+    DayPhase currentPhase = DayPhase::ShopOpen;
+    int date={};
+    int weekDay=0; //0 Sunday, 6 =Saturday
+    SDL_Texture* mapTilesetTexture = nullptr;
 };
 
 struct MarketTrend {
@@ -130,11 +147,11 @@ struct MarketTrend {
 };
 
 struct Wallet {
-    int wallet;
+    int balance;
 };
 
 struct Debt {
-    int debt;
+    int amount;
 };
 
 struct DisplayStand {
@@ -170,7 +187,7 @@ struct CustomerAI {
     bool isWaiting = false;
     SDL_Point targetGridpos; // Current heading
 
-    int itemsToBrowse = 3; // How many shelves to visit before paying
+    int itemsToBrowse = 0; // How many shelves to visit before paying
     int itemsBrowsed = 0; // How many they have visited so far
 };
 

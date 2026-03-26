@@ -66,19 +66,6 @@ void Map::load(const char *path, SDL_Texture *ts) {
         }
     }
 
-    // auto *layer = mapNode->FirstChildElement("layer");
-    // auto *data = layer->FirstChildElement("data");
-    // std::string csv = data->GetText();
-    // std::stringstream ss(csv);
-    // tileData = std::vector(height, std::vector<int>(width));
-    // for (int i = 0; i < height; i++) {
-    //     for (int j = 0; j < width; j++) {
-    //         std::string val;
-    //         //read characters from a ss into val until hits comma or end of string
-    //         if (!std::getline(ss, val, ',')) { break; }
-    //         tileData[i][j] = std::stoi(val); //stoi is a string to integer converter
-    //     }
-    // }
 
     //for each object group after ^ then use name to determine
     for (auto *objectGroup = mapNode->FirstChildElement("objectgroup");
@@ -181,51 +168,4 @@ void Map::draw(const Camera &cam) {
             TextureManager::draw(tileset, &src, &dest);
         }
     }
-
-    // void Map::draw(const Camera &cam) {
-    //     SDL_FRect src{}, dest{};
-    //
-    //     dest.w = dest.h = 32;
-    //
-    //     for (int row = 0; row < height; row++) {
-    //         for (int col = 0; col < width; col++) {
-    //             int type = tileData[row][col];
-    //
-    //
-    //             float worldX = static_cast<float>(col) * dest.w;
-    //             float worldY = static_cast<float>(row) * dest.h;
-    //
-    //             //Move map relative to the Camera
-    //             //Convert from world space to screen space
-    //             dest.x = std::round(worldX - cam.view.x);
-    //             dest.y = std::round(worldY - cam.view.y);
-    //
-    //             switch (type) {
-    //                 case 1:
-    //                     //Dirt
-    //                     src.x = 0;
-    //                     src.y = 0;
-    //                     src.w = 32;
-    //                     src.h = 32;
-    //                     break;
-    //                 case 2:
-    //                     //Grass
-    //                     src.x = 32;
-    //                     src.y = 0;
-    //                     src.w = 32;
-    //                     src.h = 32;
-    //                     break;
-    //                 case 4:
-    //                     //Water
-    //                     src.x = 32;
-    //                     src.y = 32;
-    //                     src.w = 32;
-    //                     src.h = 32;
-    //                     break;
-    //                 default:
-    //                     break;
-    //             }
-    //             TextureManager::draw(tileset, src, dest);
-    //         }
-    //     }
 }

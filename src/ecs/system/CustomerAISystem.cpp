@@ -6,6 +6,8 @@
 #include <iostream>
 #include <random>
 
+#include "DayCycleSystem.h"
+
 // Helper to convert pixel position to grid position (assuming 32x32 tiles)
 SDL_Point GetGridPos(const Transform& t) {
     return { static_cast<int>(t.position.x / 32), static_cast<int>(t.position.y / 32) };
@@ -112,7 +114,7 @@ void CustomerAISystem::HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v,
     CustomerAISystem::MoveAlongPath(ai, t, v);
 }
 
-void CustomerAISystem::HandleLeavingStore(Entity& entity,CustomerAI &ai, Transform &t, Velocity &v) {
+void CustomerAISystem::HandleLeavingStore(Entity& entity,CustomerAI &ai,DayCycleSystem& dayCycleSystem, Transform &t, Velocity &v) {
     if (ai.path.empty()) {
         SDL_Point startPos = GetGridPos(t);
         ai.path = PathfindingSystem::FindPath(startPos, Door);
@@ -124,6 +126,7 @@ void CustomerAISystem::HandleLeavingStore(Entity& entity,CustomerAI &ai, Transfo
     if (!ai.path.empty() && ai.pathIndex >= ai.path.size()) {
         std::cout << "Customer left the store!" << std::endl;
         // DO NOT FORGET TO DESTROY THE ENTITY HERE!
+        dayCycleSystem.customerDeparted();
         entity.destroy();
     }
 }

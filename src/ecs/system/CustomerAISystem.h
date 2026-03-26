@@ -12,11 +12,12 @@
 #include <vector>
 
 #include "Components.h"
+#include "DayCycleSystem.h"
 #include "PathfindingSystem.h"
 
 class CustomerAISystem {
 public:
-    void update(std::vector<std::unique_ptr<Entity>>& entities,float deltaTime) {
+    void update(std::vector<std::unique_ptr<Entity>>& entities,float deltaTime, DayCycleSystem& dayCycleSystem) {
         for (auto &entity: entities) {
             if (entity->hasComponent<CustomerAI>() && entity->hasComponent<Transform>() && entity->hasComponent<Velocity>()) {
                 auto &ai = entity->getComponent<CustomerAI>();
@@ -33,7 +34,7 @@ public:
                         break;
                     case CustomerAIState::LeavingStore:
                         // Set velocity toward the shop exit
-                        HandleLeavingStore(*entity,ai,transform,velocity);
+                        HandleLeavingStore(*entity,ai,dayCycleSystem,transform,velocity);
                         break;
                 }
             }
@@ -52,7 +53,7 @@ private:
 
     // Removed EntityAdmin, added Velocity
     void HandleHeadingToRegister(CustomerAI &ai, Transform &t, Velocity &v);
-    void HandleLeavingStore(Entity& entity, CustomerAI &ai, Transform &t, Velocity &v);
+    void HandleLeavingStore(Entity& entity, CustomerAI &ai,DayCycleSystem& dayCycleSystem, Transform &t, Velocity &v);
 
     void MoveAlongPath(CustomerAI &ai, Transform &t, Velocity &v);
 

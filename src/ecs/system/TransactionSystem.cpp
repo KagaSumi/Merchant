@@ -35,7 +35,7 @@ void TransactionSystem::ProcessSale(std::vector<std::unique_ptr<Entity>>& entiti
     // --- EXECUTE THE TRANSACTION ---
 
     // 1. Add money to the player
-    playerWallet->wallet += agreedPrice;
+    playerWallet->balance += agreedPrice;
 
     // 2. Remove the item from physical stock
     stand.quantity -= 1;
@@ -48,5 +48,5 @@ void TransactionSystem::ProcessSale(std::vector<std::unique_ptr<Entity>>& entiti
         stand.name = "Empty";
     }
 
-    std::cout << "Sold 1 " << stand.name << " for " << agreedPrice << "G. New Balance: " << playerWallet->wallet << "G" << std::endl;
+    std::cout << "Sold 1 " << stand.name << " for " << agreedPrice << "G. New Balance: " << playerWallet->balance << "G" << std::endl;
 }

@@ -35,7 +35,8 @@ void Scene::initMainMenu(int windowWidth, int windowHeight) {
 
 void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight) {
     //load map
-    world.getMap().load(mapPath,TextureManager::load("../asset/Sprite-0002.png"));
+    SDL_Texture* tilemapTex =TextureManager::load("../asset/Sprite-0002.png");
+    world.getMap().load(mapPath,tilemapTex);
     for (auto& collider : world.getMap().colliders) {
         auto& e = world.createEntity();
         e.addComponent<Transform>(Vector2D(collider.rect.x,collider.rect.y),0.0f,1.0f);
@@ -57,33 +58,7 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
     PathfindingSystem::InitMap(25,19,32, world.getMap().AIWalkable);
 
 
-    //add coins
-    // for (auto& coin : world.getMap().coins) {
-    //     auto& item = world.createEntity();
-    //     item.addComponent<Transform>(Vector2D(coin.rect.x,coin.rect.y),0.0f,1.0f);
-    //     auto& c = item.addComponent<Collider>("item");
-    //
-    //     c.rect.x = coin.rect.x;
-    //     c.rect.y = coin.rect.y;
-    //
-    //     SDL_Texture* tex = TextureManager::load("../asset/coin.png");
-    //     SDL_FRect colSrc {0,0,32,32};
-    //     SDL_FRect colDst {c.rect.x,c.rect.y,32,32};
-    //     item.addComponent<Sprite>(tex,colSrc,colDs);
-    // }
-    // auto& item(world.createEntity());
-    // auto& itemTransform = item.addComponent<Transform>(Vector2D(100,200), 0.0f,1.0f);
-    //
-    // SDL_Texture*  itemTex = TextureManager::load("../asset/coin.png");
-    // SDL_FRect itemSrc{0,0,32,32};
-    //
-    // SDL_FRect itemDest {itemTransform.position.x, itemTransform.position.y,32,32};
-    // item.addComponent<Sprite>(itemTex,itemSrc,itemDest);
-    //
-    // auto& itemCollider = item.addComponent<Collider>("item");
-    // itemCollider.rect.w = itemDest.w;
-    // itemCollider.rect.h = itemDest.h;
-
+    //Create Camera:
     auto& cam = world.createEntity();
     SDL_FRect camView{};
     camView.w = windowWidth;
@@ -91,6 +66,7 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
     cam.addComponent<Camera>(camView, static_cast<float>(world.getMap().width * 32), static_cast<float>(world.getMap().height * 32));
 
 
+    //Create Player
     auto& player(world.createEntity());
     auto& playerTransform = player.addComponent<Transform>(Vector2D(0,0),1.0f);
     player.addComponent<Velocity>(Vector2D(0,0), 120.0f);
@@ -99,7 +75,6 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
     player.addComponent<Animation>(anim);
 
     SDL_Texture* tex = TextureManager::load("../asset/animations/fox_anim.png");
-    // SDL_FRect playerSrc {0,0,32,44};
     SDL_FRect playerSrc = anim.clips[anim.currentClip].frameIndicies[0];
     SDL_FRect playerDst {playerTransform.position.x,playerTransform.position.y,64,64};
     player.addComponent<Sprite>(tex,playerSrc,playerDst);
@@ -109,44 +84,42 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
     playerCollider.rect.h = playerDst.h;
 
     player.addComponent<PlayerTag>();
-    player.addComponent<Health>(Game::gameState.playerHealth);
 
-    //Test Customer
-    // auto & customer (world.createEntity());
-    // customer.addComponent<Transform>(Vector2D(12,369),1.0f);
-    // customer.addComponent<Velocity>(Vector2D(0,0), 120.0f);
-    // customer.addComponent<CustomerAI>();
-    // SDL_Texture* texture = TextureManager::load("../asset/animations/bird_anim.png");
-    // SDL_FRect src = {0,0,32,32};
-    // SDL_FRect dst {651,369,32,32};
-    // customer.addComponent<Sprite>(texture,src,dst);
 
+    //Customers:
     std::vector<SDL_Texture*> customerTextures = {
         TextureManager::load("../asset/animations/CustomerA.png"),
         TextureManager::load("../asset/animations/CustomerF.png"),
         TextureManager::load("../asset/animations/CustomerM.png")
     };
-    int customerIndexCount = 0;
+    int customerIndexCount = 0; // Index on which Texture ^
 
     auto& spawner(world.createEntity());
     Transform t = spawner.addComponent<Transform>(Vector2D(657,372),1.0f);
-    spawner.addComponent<TimedSpawner>(15.0f,[this,t,customerTextures,customerIndexCount]()mutable  {
-
-        //create projectiles
-        auto& e(world.createDeferredEntity());
-        e.addComponent<Transform>(Vector2D(t.position.x,t.position.y),1.0f);
-        e.addComponent<Velocity>(Vector2D(0,0),100.0f);
-        e.addComponent<CustomerAI>();
+    spawner.addComponent<Spawner>([this,t,customerTextures,customerIndexCount]() mutable {
+        auto& e = world.createDeferredEntity();
+        e.addComponent<Transform>(Vector2D(t.position.x, t.position.y), 1.0f);
+        e.addComponent<Velocity>(Vector2D(0, 0), 100.0f);
+        e.addComponent<CustomerAI>(); // The AI takes over from here!
 
         Animation anim = AssetManager::getAnimation("customer");
         e.addComponent<Animation>(anim);
 
-
+        // Your texture cycling logic here is excellent.
+        // Because the lambda is 'mutable', customerIndexCount will correctly increment across spawns.
         SDL_Texture* tex = customerTextures[customerIndexCount++ % customerTextures.size()];
-        SDL_FRect src = {0,0,32,32};
-        SDL_FRect dst {t.position.x,t.position.y,64,64};
-        e.addComponent<Sprite>(tex,src,dst);
+        SDL_FRect src = {0, 0, 32, 32};
+        SDL_FRect dst {t.position.x, t.position.y, 64, 64};
+        e.addComponent<Sprite>(tex, src, dst);
+
     });
+
+    //Store:
+    auto &store(world.createEntity());
+    store.addComponent<ShopReputation>(Game::gameState.shopReputation);
+    store.addComponent<Wallet>(Game::gameState.Wallet);
+    store.addComponent<Debt>(Game::gameState.Debt);
+    store.addComponent<DayCycle>();
 
 
     //add scene state

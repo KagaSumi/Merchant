@@ -17,6 +17,7 @@ public:
     static SDL_Texture* load(const char* path);
     static void loadLabel(Label& label);
     static void updateLabel(Label& label);
+    static SDL_Texture* get(const char* path);
 
     static void draw(SDL_Texture* texture, const SDL_FRect* src, const SDL_FRect* dst);
     static void clean();
