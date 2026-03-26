@@ -202,6 +202,10 @@ struct ShopReputation {
 };
 
 struct Interaction {
+    std::function<void()> onInteract;
+
+    Interaction() = default;
+    Interaction(std::function<void()> callback) : onInteract(callback) {}
 };
 
 struct PathFinding {

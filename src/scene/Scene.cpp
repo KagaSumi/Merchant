@@ -76,7 +76,7 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
 
     SDL_Texture* tex = TextureManager::load("../asset/animations/fox_anim.png");
     SDL_FRect playerSrc = anim.clips[anim.currentClip].frameIndicies[0];
-    SDL_FRect playerDst {playerTransform.position.x,playerTransform.position.y,64,64};
+    SDL_FRect playerDst {playerTransform.position.x,playerTransform.position.y,32,32};
     player.addComponent<Sprite>(tex,playerSrc,playerDst);
 
     auto& playerCollider = player.addComponent<Collider>("player");
@@ -119,11 +119,37 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
     auto& displayCase = world.createEntity();
     displayCase.addComponent<Transform>(Vector2D(704,480),0.0f,1.0f);
     displayCase.addComponent<DisplayStand>();
-    displayCase.addComponent<Collider>("wall");
+    auto& c = displayCase.addComponent<Collider>("wall");
+    c.rect.w = 32;
+    c.rect.h = 32;
     SDL_FRect src = {64,32,32,32};
-    SDL_FRect dst = {704,480,32,32};
+    SDL_FRect dst = {0,0,32,32};
     displayCase.addComponent<Sprite>(tilemapTex,src,dst);
-    displayCase.addComponent<Interaction>(); // -> Interact to place item
+    displayCase.addComponent<Interaction>([&displayCase]() {
+        auto& dc = displayCase.getComponent<DisplayStand>();
+
+    if (dc.quantity >0) {
+        std::cout << "Display case has an item! Opening modification UI...\n";
+    } else {
+        std::cout << "Display case 1 is empty. Opening inventory UI to place item...\n";
+    }
+    }); // -> Interact to place item
+    auto& displayCase2 = world.createEntity();
+    displayCase2.addComponent<Transform>(Vector2D(640,480),0.0f,1.0f);
+    displayCase2.addComponent<DisplayStand>();
+    auto& c2 = displayCase2.addComponent<Collider>("wall");
+    c2.rect.w = 32;
+    c2.rect.h = 32;
+    displayCase2.addComponent<Sprite>(tilemapTex,src,dst);
+    displayCase2.addComponent<Interaction>([&displayCase]() {
+        auto& dc = displayCase.getComponent<DisplayStand>();
+
+    if (dc.quantity >0) {
+        std::cout << "Display case has an item! Opening modification UI...\n";
+    } else {
+        std::cout << "Display case 2 is empty. Opening inventory UI to place item...\n";
+    }
+    }); // -> Interact to place item
 
     //Cash Register
     auto& cashRegister = world.createEntity();

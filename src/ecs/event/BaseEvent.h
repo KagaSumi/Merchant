@@ -36,10 +36,7 @@ struct CollisionEvent : BaseEvent {
 };
 
 enum class PlayerAction {
-    Attack,
     Interact,
-    UseItem,
-    Jump
 };
 
 struct PlayerActionEvent : BaseEvent {

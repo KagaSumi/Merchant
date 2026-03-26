@@ -62,7 +62,7 @@ class World {
             //Main Menu Scene Update
             mainMenuSystem.update(event);
         }else {
-            keyboardInputSystem.update(entities, event);
+            keyboardInputSystem.update(entities, event,eventManager);
             customerAISystem.update(entities, dt,dayCycleSystem);
             movementSystem.update(entities, dt);
             collisionSystem.update(*this);
@@ -73,6 +73,7 @@ class World {
             destructionSystem.update(entities);
             hudSystem.update(entities);
         }
+
 
         mouseInputSystem.update(*this,event);
         preRenderSystem.update(entities);

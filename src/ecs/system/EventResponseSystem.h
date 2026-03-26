@@ -20,8 +20,7 @@ private:
     bool getCollisionEntities(const CollisionEvent& e, const char* otherTag, Entity*& player, Entity*& other);
 
     //player action
-    void onPlayerAction(const PlayerActionEvent& e,
-        const std::function<void(Entity* player, PlayerAction action)>& callback);
+    void onPlayerAction(Entity* player, PlayerAction action,World& world);
 
 
     //Mouse Interaction
