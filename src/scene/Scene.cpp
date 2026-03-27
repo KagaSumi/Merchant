@@ -37,21 +37,22 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
     //load map
     SDL_Texture* tilemapTex =TextureManager::load("../asset/Sprite-0002.png");
     world.getMap().load(mapPath,tilemapTex);
-    for (auto& collider : world.getMap().colliders) {
-        auto& e = world.createEntity();
-        e.addComponent<Transform>(Vector2D(collider.rect.x,collider.rect.y),0.0f,1.0f);
-        auto& c = e.addComponent<Collider>("wall");
 
-        c.rect.x = collider.rect.x;
-        c.rect.y = collider.rect.y;
-        c.rect.w = collider.rect.w;
-        c.rect.h = collider.rect.h;
+     for (auto& collider : world.getMap().colliders) {
+         auto& e = world.createEntity();
+         e.addComponent<Transform>(Vector2D(collider.rect.x,collider.rect.y),0.0f,1.0f);
+         auto& c = e.addComponent<Collider>("wall");
 
-        SDL_Texture* tex = TextureManager::load("../asset/tileset.png");
-        SDL_FRect colSrc {0,32,32,32};
-        SDL_FRect colDst {c.rect.x,c.rect.y,c.rect.w,c.rect.h};
-        e.addComponent<Sprite>(tex,colSrc,colDst);
-    }
+         c.rect.x = collider.rect.x;
+         c.rect.y = collider.rect.y;
+         c.rect.w = collider.rect.w;
+         c.rect.h = collider.rect.h;
+
+         // SDL_Texture* tex = TextureManager::load("../asset/tileset.png");
+         // SDL_FRect colSrc {0,32,32,32};
+         // SDL_FRect colDst {c.rect.x,c.rect.y,c.rect.w,c.rect.h};
+         // e.addComponent<Sprite>(tex,colSrc,colDst);
+     }
 
     //PathFinding:
     //Find Non-Walkable layer
@@ -65,10 +66,16 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
     camView.h = windowHeight;
     cam.addComponent<Camera>(camView, static_cast<float>(world.getMap().width * 32), static_cast<float>(world.getMap().height * 32));
 
+    //Store:
+    auto &store(world.createEntity());
+    store.addComponent<ShopReputation>(Game::gameState.shopReputation);
+    store.addComponent<Wallet>(Game::gameState.Wallet);
+    store.addComponent<Debt>(Game::gameState.Debt);
+    auto& dayCycle = store.addComponent<DayCycle>();
 
     //Create Player
     auto& player(world.createEntity());
-    auto& playerTransform = player.addComponent<Transform>(Vector2D(0,0),1.0f);
+    auto& playerTransform = player.addComponent<Transform>(Vector2D(12*32,14*32),1.0f);
     player.addComponent<Velocity>(Vector2D(0,0), 120.0f);
 
     Animation anim = AssetManager::getAnimation("player");
@@ -109,62 +116,29 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
         // Your texture cycling logic here is excellent.
         // Because the lambda is 'mutable', customerIndexCount will correctly increment across spawns.
         SDL_Texture* tex = customerTextures[customerIndexCount++ % customerTextures.size()];
-        SDL_FRect src = {0, 0, 32, 32};
+        SDL_FRect src= anim.clips[anim.currentClip].frameIndicies[0];
         SDL_FRect dst {t.position.x, t.position.y, 64, 64};
         e.addComponent<Sprite>(tex, src, dst);
 
     });
     //Display Case: (Test)
-
-    auto& displayCase = world.createEntity();
-    displayCase.addComponent<Transform>(Vector2D(704,480),0.0f,1.0f);
-    displayCase.addComponent<DisplayStand>();
-    auto& c = displayCase.addComponent<Collider>("wall");
-    c.rect.w = 32;
-    c.rect.h = 32;
     SDL_FRect src = {64,32,32,32};
     SDL_FRect dst = {0,0,32,32};
-    displayCase.addComponent<Sprite>(tilemapTex,src,dst);
-    displayCase.addComponent<Interaction>([&displayCase]() {
-        auto& dc = displayCase.getComponent<DisplayStand>();
-
-    if (dc.quantity >0) {
-        std::cout << "Display case has an item! Opening modification UI...\n";
-    } else {
-        std::cout << "Display case 1 is empty. Opening inventory UI to place item...\n";
-    }
-    }); // -> Interact to place item
-    auto& displayCase2 = world.createEntity();
-    displayCase2.addComponent<Transform>(Vector2D(640,480),0.0f,1.0f);
-    displayCase2.addComponent<DisplayStand>();
-    auto& c2 = displayCase2.addComponent<Collider>("wall");
-    c2.rect.w = 32;
-    c2.rect.h = 32;
-    displayCase2.addComponent<Sprite>(tilemapTex,src,dst);
-    displayCase2.addComponent<Interaction>([&displayCase]() {
-        auto& dc = displayCase.getComponent<DisplayStand>();
-
-    if (dc.quantity >0) {
-        std::cout << "Display case has an item! Opening modification UI...\n";
-    } else {
-        std::cout << "Display case 2 is empty. Opening inventory UI to place item...\n";
-    }
-    }); // -> Interact to place item
+    createDisplaycase(Vector2D(21*32,15*32),tilemapTex ,{64,32,32,32},{0,0,32,32});
+    createDisplaycase(Vector2D(22*32,15*32),tilemapTex ,{64,32,32,32},{0,0,32,32});
 
     //Cash Register
     auto& cashRegister = world.createEntity();
-    cashRegister.addComponent<Transform>(Vector2D());
-    cashRegister.addComponent<Collider>("wall");
-    cashRegister.addComponent<Interaction>(); // -> Interact to start morning
+    cashRegister.addComponent<Transform>(Vector2D(20*32,17*32));
+    auto& c = cashRegister.addComponent<Collider>("wall");
+    c.rect = {20*32,17 * 32,32,32};
+    cashRegister.addComponent<Interaction>([&dayCycle]() {
+        if (dayCycle.currentPhase == DayPhase::Morning) {
+            std::cout << "Start the day ..." << std::endl;
+            dayCycle.phaseSwapReady = true;
+        }
 
-
-    //Store:
-    auto &store(world.createEntity());
-    store.addComponent<ShopReputation>(Game::gameState.shopReputation);
-    store.addComponent<Wallet>(Game::gameState.Wallet);
-    store.addComponent<Debt>(Game::gameState.Debt);
-    store.addComponent<DayCycle>();
-
+    }); // -> Interact to start morning
 
     //add scene state
     auto &state(world.createEntity());
@@ -172,6 +146,27 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
 
     //Add Label
     createPlayerPosLabel();
+}
+Entity& Scene::createDisplaycase(Vector2D location, SDL_Texture* texture,SDL_FRect src, SDL_FRect dst) {
+    auto& displayCase (world.createEntity());
+    displayCase.addComponent<Transform>(location,0.0f,1.0f);
+    displayCase.addComponent<DisplayStand>();
+    auto& c = displayCase.addComponent<Collider>("wall");
+    c.rect.w = 32;
+    c.rect.h = 32;
+    c.rect.x = location.x;
+    c.rect.y = location.y;
+    displayCase.addComponent<Sprite>(texture,src,dst);
+    displayCase.addComponent<Interaction>([&displayCase]() {
+        auto& dc = displayCase.getComponent<DisplayStand>();
+
+    if (dc.quantity >0) {
+        std::cout << "Display case has an item! Opening modification UI...\n";
+    } else {
+        std::cout << "Display case is empty. Opening inventory UI to place item...\n";
+    }
+    });
+    return displayCase;
 }
 
 Entity& Scene::createSettingsOverlay(int windowWidth, int windowHeight) {

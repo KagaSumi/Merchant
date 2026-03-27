@@ -16,7 +16,7 @@ struct rgba {
 
 class DayCycleSystem {
 public:
-    DayCycle cycle;
+    DayCycle* cycle;
     SDL_Texture* mapTilesetTexture = nullptr;
     std::function<void()> onMorningStart;
     std::function<void()> onShopOpenStart;
@@ -26,31 +26,32 @@ public:
     void update(const std::vector<std::unique_ptr<Entity>> &entities);
 
     void openStore() {
-        if (cycle.currentPhase != DayPhase::Morning) return;
+        if (cycle->currentPhase != DayPhase::Morning) return;
 
-        cycle.currentPhase = DayPhase::ShopOpen;
+        cycle->currentPhase = DayPhase::ShopOpen;
         if (onShopOpenStart) onShopOpenStart();
     }
 
     // Called automatically when all customers have finished
     void finishShop() {
-        if (cycle.currentPhase != DayPhase::ShopOpen) return;
+        if (cycle->currentPhase != DayPhase::ShopOpen) return;
 
-        cycle.currentPhase = DayPhase::Evening;
+        cycle->currentPhase = DayPhase::Evening;
         if (onEveningStart) onEveningStart();
     }
     void finishEvening() {
-        if (cycle.currentPhase != DayPhase::Evening) return;
+        if (cycle->currentPhase != DayPhase::Evening) return;
 
-        cycle.currentPhase = DayPhase::Morning;
-        cycle.date++;
-        cycle.weekDay = (cycle.weekDay + 1) % 7;
+        cycle->currentPhase = DayPhase::Morning;
+        cycle->date++;
+        cycle->weekDay = (cycle->weekDay + 1) % 7;
 
         if (onMorningStart) onMorningStart();
 
         // Trigger weekly events
-        if (cycle.weekDay == 0 && onWeekPassed) onWeekPassed();
+        if (cycle->weekDay == 0 && onWeekPassed) onWeekPassed();
     }
+
     void customerDeparted() {
         customersServed++;
     }

@@ -61,4 +61,5 @@ struct MouseInteractionEvent : BaseEvent {
     }
 };
 
+
 #endif //PROJECT_BASEEVENT_H

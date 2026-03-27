@@ -73,7 +73,7 @@ void Map::load(const char *path, SDL_Texture *ts) {
          objectGroup = objectGroup->NextSiblingElement("objectgroup")
     ) {
         std::string groupName = objectGroup->Attribute("name");
-        if (groupName == "Collision") {
+        if (groupName == "Collider") {
             //parse collider data
             //create a for loop with initialization, condition and an increment
             for (auto *obj = objectGroup->FirstChildElement("object");

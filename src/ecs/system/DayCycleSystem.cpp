@@ -10,13 +10,20 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
     for (auto &e: entities) {
         if (e->hasComponent<Spawner>()) {
             spawnerRef = &e->getComponent<Spawner>();
-            break; // Found it, stop searching
+        }
+        if (e->hasComponent<DayCycle>()) {
+            cycle = &e->getComponent<DayCycle>();
+
         }
     }
 
-    switch (cycle.currentPhase) {
+    switch (cycle->currentPhase) {
         case DayPhase::Morning:
             applyTint(entities, morning_target);
+            if (cycle->phaseSwapReady == true) {
+                cycle->phaseSwapReady = false;
+                openStore();
+            }
             break;
 
         case DayPhase::ShopOpen: {
@@ -53,6 +60,11 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
 
         case DayPhase::Evening:
             applyTint(entities, evening_target);
+            if (cycle->phaseSwapReady == true) {
+                cycle->phaseSwapReady = false;
+                finishEvening();
+            }
+
             break;
 
         case DayPhase::GameOver:

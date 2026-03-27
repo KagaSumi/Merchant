@@ -136,10 +136,12 @@ enum class DayPhase {
 };
 
 struct DayCycle {
-    DayPhase currentPhase = DayPhase::ShopOpen;
+    DayPhase currentPhase = DayPhase::Morning;
     int date={};
     int weekDay=0; //0 Sunday, 6 =Saturday
     SDL_Texture* mapTilesetTexture = nullptr;
+
+    bool phaseSwapReady = false;
 };
 
 struct MarketTrend {
