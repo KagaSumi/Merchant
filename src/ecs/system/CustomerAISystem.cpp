@@ -67,8 +67,6 @@ void CustomerAISystem::HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v,
         if (ai.stateTimer <= 0.0f) {
             ai.isWaiting = false;
             ai.itemsBrowsed++; // <--- THEY FINISHED LOOKING AT AN ITEM!
-            // std::cout << "Finished looking at item " << ai.itemsBrowsed
-            //           << " out of " << ai.itemsToBrowse << std::endl;
         } else {
             return;
         }
@@ -140,8 +138,8 @@ void CustomerAISystem::MoveAlongPath(CustomerAI& ai, Transform& t, Velocity& v) 
 
     // 1. Get the target grid tile and convert to dead-center PIXELS
     SDL_Point targetGrid = ai.path[ai.pathIndex];
-    float targetX = (targetGrid.x * 32.0f) - 16.0f;
-    float targetY = (targetGrid.y * 32.0f) - 16.0f;
+    float targetX = (targetGrid.x * 32.0f) - 16.0f; //Off set 16 pixels because scaling 32 sprite -> 64 pixel
+    float targetY = (targetGrid.y * 32.0f) - 16.0f; //Off set 16 pixels because scaling 32 sprite -> 64 pixel
 
     // 2. Math to find direction and distance
     float dirX = targetX - t.position.x;
@@ -155,9 +153,6 @@ void CustomerAISystem::MoveAlongPath(CustomerAI& ai, Transform& t, Velocity& v) 
         v.direction.x = dirX / distance;
         v.direction.y = dirY / distance;
     } else {
-        // --- THE DRIFT KILLER ---
-        // Violently snap the AI to the exact center of the tile before turning.
-        // This guarantees they never cut corners through your shelves.
         t.position.x = targetX;
         t.position.y = targetY;
 

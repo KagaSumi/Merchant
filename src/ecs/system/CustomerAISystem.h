@@ -40,6 +40,13 @@ public:
             }
         }
     }
+    //TODO Setup auto polling for register or door
+ void setRegister(int x,int y) {
+        Register = {x,y};
+    }
+void setDoor(int x,int y) {
+        Door = {x,y};
+    }
 
 private:
     void HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v,float deltaTime);

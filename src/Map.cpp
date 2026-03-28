@@ -11,6 +11,8 @@
 #include <sstream>
 #include <tinyxml2.h>
 
+#include "CustomerAISystem.h"
+
 void Map::load(const char *path, SDL_Texture *ts) {
     tileset = ts;
     tinyxml2::XMLDocument doc;
@@ -21,7 +23,7 @@ void Map::load(const char *path, SDL_Texture *ts) {
     width = mapNode->IntAttribute("width");
     height = mapNode->IntAttribute("height");
 
-    //parse terraindata
+    //parse terrain data
     for (auto *layer = mapNode->FirstChildElement("layer");
          layer != nullptr;
          layer = layer->NextSiblingElement("layer")
@@ -98,6 +100,15 @@ void Map::load(const char *path, SDL_Texture *ts) {
                 c.rect.y = obj->FloatAttribute("y");
                 coins.push_back(c);
             }
+        // TODO Figure out how to store this for CustomerAI system
+        // if (groupName =="Door") {
+        //     auto *obj = objectGroup->FirstChildElement("object");
+        //     Door = {obj->IntAttribute("x"),obj->IntAttribute("y")};
+        // }
+        // if (groupName =="Register") {
+        //     auto *obj = objectGroup->FirstChildElement("object");
+        //     Register = {obj->IntAttribute("x"),obj->IntAttribute("y")};
+        // }
     }
 }
 
