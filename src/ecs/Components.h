@@ -15,13 +15,13 @@
 
 #include "AnimationClip.h"
 #include "Entity.h"
+#include "Items.h"
 
 struct Transform {
     Vector2D position{};
     float rotation{};
     float scale{};
     Vector2D oldPosition{};
-
 };
 
 //direction and speed
@@ -41,7 +41,7 @@ enum class RenderLayer {
 };
 
 struct Sprite {
-    SDL_Texture* Texture = nullptr;
+    SDL_Texture *Texture = nullptr;
     SDL_FRect src{};
     SDL_FRect dst{};
     RenderLayer renderLayer = RenderLayer::World;
@@ -79,7 +79,6 @@ struct Spawner {
     std::function<void()> spawnCallback{};
     bool isFinished = (bool) spawnCount;
     int spawnCount = 0;
-
 };
 
 //Game State, scene because might have multiple scenes
@@ -99,33 +98,33 @@ struct Clickable {
 };
 
 struct Parent {
-    Entity* parent = nullptr;
+    Entity *parent = nullptr;
 };
 
 struct Children {
-    std::vector<Entity*> children{};
+    std::vector<Entity *> children{};
 };
 
 enum class LabelType {
     PlayerPosition,
     Damage,
     Health
-
 };
+
 struct Label {
     std::string text;
-    TTF_Font* font = nullptr;
+    TTF_Font *font = nullptr;
     SDL_Color color{};
     LabelType type = LabelType::PlayerPosition;
     std::string textureCacheKey{};
-    SDL_Texture* texture = nullptr;
+    SDL_Texture *texture = nullptr;
     SDL_FRect dst{};
     bool visible = true;
     bool dirty = false;
-
 };
 
-struct PlayerTag{};
+struct PlayerTag {
+};
 
 enum class DayPhase {
     Morning,
@@ -136,15 +135,15 @@ enum class DayPhase {
 
 struct DayCycle {
     DayPhase currentPhase = DayPhase::Morning;
-    int date={};
-    int weekDay=0; //0 Sunday, 6 =Saturday
-    SDL_Texture* mapTilesetTexture = nullptr;
+    int date = {};
+    int weekDay = 0; //0 Sunday, 6 =Saturday
+    SDL_Texture *mapTilesetTexture = nullptr;
 
     bool phaseSwapReady = false;
 };
 
 struct MarketTrend {
-    std::unordered_map<std::string,float> Trend;
+    std::unordered_map<std::string, float> Trend;
 };
 
 struct Wallet {
@@ -156,18 +155,16 @@ struct Debt {
 };
 
 struct DisplayStand {
-    std::string name = "Empty";
-    int currentItemID = -1;
-    int quantity = 0 ;
+    ItemDef item = {};
+    int quantity = 0;
     int reserved_quantity = 0; //incremented to prevent more than 1 customer buying the same item.
 };
 
 struct Customer {
-    DisplayStand* DisplayStand{};
+    DisplayStand *DisplayStand{};
     int budget{}; // Maybe simplify and remove budget rng, and just deal with basevalue manip
     float mood{}; // Maybe simplify and remove budget rng, and just deal with basevalue manip
     int patience = 3;
-
 };
 
 struct CustomerAIState {
@@ -178,29 +175,30 @@ struct CustomerAIState {
     };
 };
 
-//Break out Customer AI with Pathfinding Component
-struct PathFinding {
-    std::vector<SDL_Point> path; // List of grid coordinates from A*
-    int pathIndex = 0;                  // Which node we are currently walking toward
-};
+// TODO: Break out Customer AI with Pathfinding Component
+// struct PathFinding {
+//     std::vector<SDL_Point> path; // List of grid coordinates from A*
+//     int pathIndex = 0;           // Which node we are currently walking toward
+// };
+
 struct CustomerAI {
     CustomerAIState::state currentState = CustomerAIState::Browsing;
     // Pathfinding data
     std::vector<SDL_Point> path; // List of grid coordinates from A*
-    int pathIndex = 0;                  // Which node we are currently walking toward
+    int pathIndex = 0; // Which node we are currently walking toward
 
     // Logic Timers
-    float stateTimer = 0.0f;           // Stay in "Browsing" for 5 seconds
+    float stateTimer = 0.0f; // Stay in "Browsing" for 5 seconds
     bool isWaiting = false;
     SDL_Point targetGridpos; // Current heading
 
-    int itemsToBrowse = 0; // How many shelves to visit before paying
+    int itemsToBrowse = 3; // How many shelves to visit before paying
     int itemsBrowsed = 0; // How many they have visited so far
 };
 
 struct Inventory {
     //Iron Sword : 100g
-    std::unordered_map<std::string,int> inventory;
+    std::unordered_map<std::string, int> inventory;
 };
 
 struct ShopReputation {
@@ -211,11 +209,14 @@ struct Interaction {
     std::function<void()> onInteract;
 
     Interaction() = default;
-    Interaction(std::function<void()> callback) : onInteract(callback) {}
+
+    Interaction(std::function<void()> callback) : onInteract(callback) {
+    }
 };
 
 
-struct Dialogue { //Defunct: Label
+struct Dialogue {
+    //Defunct: Label
     std::string text;
 };
 

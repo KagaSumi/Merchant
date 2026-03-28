@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include "CollisionSystem.h"
-#include "Collission.h"
+#include "Collision.h"
 #include "World.h"
 
 //has two important functions
