@@ -102,7 +102,7 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
     int customerIndexCount = 0; // Index on which Texture ^
 
     auto& spawner(world.createEntity());
-    Transform t = spawner.addComponent<Transform>(Vector2D(640,320),1.0f);
+    Transform t = spawner.addComponent<Transform>(Vector2D(20*32,4*32),1.0f);
     spawner.addComponent<Spawner>([this,t,customerTextures,customerIndexCount]() mutable {
         auto& e = world.createDeferredEntity();
         e.addComponent<Transform>(Vector2D(t.position.x, t.position.y), 1.0f);

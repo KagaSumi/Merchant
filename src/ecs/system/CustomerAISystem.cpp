@@ -140,8 +140,8 @@ void CustomerAISystem::MoveAlongPath(CustomerAI& ai, Transform& t, Velocity& v) 
 
     // 1. Get the target grid tile and convert to dead-center PIXELS
     SDL_Point targetGrid = ai.path[ai.pathIndex];
-    float targetX = (targetGrid.x * 32.0f) + 16.0f;
-    float targetY = (targetGrid.y * 32.0f) + 16.0f;
+    float targetX = (targetGrid.x * 32.0f) - 16.0f;
+    float targetY = (targetGrid.y * 32.0f) - 16.0f;
 
     // 2. Math to find direction and distance
     float dirX = targetX - t.position.x;

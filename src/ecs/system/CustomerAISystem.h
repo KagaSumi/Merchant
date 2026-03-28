@@ -41,13 +41,6 @@ public:
         }
     }
 
-    void SetDoorLocation(int gridX, int gridY) {
-        Door = {gridX, gridY};
-    }
-    void SetRegisterLocation(int gridX, int gridY) {
-        Register = {gridX, gridY};
-    }
-
 private:
     void HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v,float deltaTime);
 
@@ -58,7 +51,7 @@ private:
     void MoveAlongPath(CustomerAI &ai, Transform &t, Velocity &v);
 
     SDL_Point Register{20,16};
-    SDL_Point Door{20,10};
+    SDL_Point Door{20,4};
 };
 
 #endif

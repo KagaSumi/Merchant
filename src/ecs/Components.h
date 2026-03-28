@@ -126,7 +126,6 @@ struct Label {
 };
 
 struct PlayerTag{};
-struct ProjectileTag{};
 
 enum class DayPhase {
     Morning,
@@ -165,8 +164,8 @@ struct DisplayStand {
 
 struct Customer {
     DisplayStand* DisplayStand{};
-    int budget{};
-    float mood{};
+    int budget{}; // Maybe simplify and remove budget rng, and just deal with basevalue manip
+    float mood{}; // Maybe simplify and remove budget rng, and just deal with basevalue manip
     int patience = 3;
 
 };
@@ -179,6 +178,11 @@ struct CustomerAIState {
     };
 };
 
+//Break out Customer AI with Pathfinding Component
+struct PathFinding {
+    std::vector<SDL_Point> path; // List of grid coordinates from A*
+    int pathIndex = 0;                  // Which node we are currently walking toward
+};
 struct CustomerAI {
     CustomerAIState::state currentState = CustomerAIState::Browsing;
     // Pathfinding data
@@ -210,11 +214,8 @@ struct Interaction {
     Interaction(std::function<void()> callback) : onInteract(callback) {}
 };
 
-struct PathFinding {
-    std::queue<Vector2D> path;
-};
 
-struct Dialogue {
+struct Dialogue { //Defunct: Label
     std::string text;
 };
 
