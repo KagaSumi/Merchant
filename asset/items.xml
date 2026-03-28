@@ -1,0 +1,12 @@
+<items>
+    <item>
+        <name>Long Sword</name>
+        <basePrice>100</basePrice>
+        <source x="0" y="0" w="32" h="32" />
+        <tags>
+            <tag>Weapon</tag>
+            <tag>Sword</tag>
+        </tags>
+        <requiredRep rep="1"/>
+    </item>
+</items>

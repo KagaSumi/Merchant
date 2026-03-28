@@ -37,6 +37,8 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
     //load map
     SDL_Texture* tilemapTex =TextureManager::load("../asset/Sprite-0002.png");
     world.getMap().load(mapPath,tilemapTex);
+    SDL_Texture* itemsTex = TextureManager::load("../asset/items.png");
+    world.getItems().load("../asset/items.xml");
 
      for (auto& collider : world.getMap().colliders) {
          auto& e = world.createEntity();
@@ -160,8 +162,8 @@ Entity& Scene::createDisplaycase(Vector2D location, SDL_Texture* texture,SDL_FRe
     displayCase.addComponent<Interaction>([&displayCase]() {
         auto& dc = displayCase.getComponent<DisplayStand>();
 
-    if (dc.quantity >0) {
-        std::cout << "Display case has an item! Opening modification UI...\n";
+    if (dc.quantity > 0 && dc.item.id != -1) {
+        std::cout << "Display case has an "<< dc.item.name <<"! Opening modification UI...\n";
     } else {
         std::cout << "Display case is empty. Opening inventory UI to place item...\n";
     }

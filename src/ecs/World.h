@@ -17,6 +17,7 @@
 #include "Entity.h"
 #include "EventResponseSystem.h"
 #include "HUDSystem.h"
+#include "Items.h"
 #include "event/EventManager.h"
 #include "KeyboardInputSystem.h"
 #include "MainMenuSystem.h"
@@ -33,6 +34,7 @@ void printCollision(const CollisionEvent& collision);
 
 class World {
     Map map;
+    Items items;
     std::vector<std::unique_ptr<Entity>> entities;
     std::vector<std::unique_ptr<Entity>> deferredEntities;
     MovementSystem movementSystem;
@@ -70,7 +72,7 @@ class World {
             dayCycleSystem.update(entities);
             cameraSystem.update(entities);
             customerSpawnerSystem.update(entities, dt);
-            destructionSystem.update(entities);
+            //destructionSystem.update(entities);
             hudSystem.update(entities);
         }
 
@@ -133,6 +135,7 @@ class World {
 
     EventManager& getEventManager() {return eventManager;}
     Map& getMap(){return map;}
+    Items& getItems(){return items;}
 };
 
 #endif //PROJECT_WORLD_H

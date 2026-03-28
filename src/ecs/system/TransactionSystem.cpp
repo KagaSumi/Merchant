@@ -32,6 +32,7 @@ void TransactionSystem::ProcessSale(std::vector<std::unique_ptr<Entity>>& entiti
         return;
     }
 
+    std::string itemName = stand.item.name;
     // --- EXECUTE THE TRANSACTION ---
 
     // 1. Add money to the player
@@ -45,8 +46,9 @@ void TransactionSystem::ProcessSale(std::vector<std::unique_ptr<Entity>>& entiti
 
     // 4. (Optional) Clear the stand's name if it's completely empty
     if (stand.quantity == 0) {
-        stand.name = "Empty";
+        stand.item = {};
     }
 
-    std::cout << "Sold 1 " << stand.name << " for " << agreedPrice << "G. New Balance: " << playerWallet->balance << "G" << std::endl;
+    //find
+    std::cout << "Sold 1 " << itemName << " for " << agreedPrice << "G. New Balance: " << playerWallet->balance << "G" << std::endl;
 }
