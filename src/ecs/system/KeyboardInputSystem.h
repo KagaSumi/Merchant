@@ -11,14 +11,16 @@
 
 #include "Components.h"
 #include "Entity.h"
+enum class InputMode { World, UI };
 
 class KeyboardInputSystem {
 public:
-    void update(const std::vector<std::unique_ptr<Entity>>& entities, const SDL_Event& event,EventManager& eventManager) {
-        for (auto& e : entities) {
-            if (e-> hasComponent<Velocity>() && e-> hasComponent<PlayerTag>()) {
-                auto& v = e->getComponent<Velocity>();
-                auto& p = e->getComponent<PlayerTag>();
+    void update(const std::vector<std::unique_ptr<Entity> > &entities, const SDL_Event &event,
+                EventManager &eventManager) {
+        for (auto &e: entities) {
+            if (e->hasComponent<Velocity>() && e->hasComponent<PlayerTag>()) {
+                auto &v = e->getComponent<Velocity>();
+                auto &p = e->getComponent<PlayerTag>();
                 if (event.type == SDL_EVENT_KEY_DOWN) {
                     switch (event.key.key) {
                         case SDLK_W:
@@ -62,7 +64,6 @@ public:
                 }
             }
         }
-
     }
 };
 

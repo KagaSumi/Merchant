@@ -183,6 +183,42 @@ Entity& Scene::createSettingsOverlay(int windowWidth, int windowHeight) {
     return overlay;
 }
 
+Entity& Scene::createBaseMenuOverlay(int windowWidth, int windowHeight) {
+    auto& overlay(world.createEntity());
+    SDL_Texture* overlayTex = TextureManager::load("../asset/ui/settings.jpg");
+    SDL_FRect overlaySrc {0,0,windowWidth*0.85f,windowHeight*0.85f};
+    SDL_FRect overlayDest {(float) windowWidth/2 - overlaySrc.w /2, (float) windowHeight/2 - overlaySrc.h/2, overlaySrc.w,overlaySrc.h};
+    overlay.addComponent<Transform>(Vector2D{overlayDest.x,overlayDest.y},0.0f,1.0f);
+    overlay.addComponent<Sprite>(overlayTex,overlaySrc,overlayDest, RenderLayer::UI,false);
+    return overlay;
+}
+
+Entity& Scene::createHaggleOverlay(int windowWidth, int windowHeight, ItemDef& item) {
+    // 1. Create the background
+    auto& overlay = createBaseMenuOverlay(windowWidth, windowHeight);
+
+    // 2. Create the Item Name Label
+    auto& nameLabel = world.createEntity();
+    Label labelData = { item.name, AssetManager::getFont("arial"), {255,255,255} };
+    TextureManager::loadLabel(labelData);
+
+    // Position it relative to the overlay
+    auto& overlayT = overlay.getComponent<Transform>();
+    nameLabel.addComponent<Transform>(Vector2D(overlayT.position.x + 50, overlayT.position.y + 50));
+    nameLabel.addComponent<Label>(labelData);
+
+    // 3. Create the Item Sprite (using the source rect from XML!)
+    auto& itemIcon = world.createEntity();
+    itemIcon.addComponent<Transform>(Vector2D(overlayT.position.x + 50, overlayT.position.y + 100));
+
+    // Use the source rect we parsed from the XML!
+    SDL_Texture* itemsTex = TextureManager::get("items");
+    itemIcon.addComponent<Sprite>(itemsTex, item.src, SDL_FRect{0,0,64,64}, RenderLayer::UI);
+
+    return overlay;
+
+}
+
 Entity& Scene::createCogButton(int windowWidth, int windowHeight, Entity& overlay) {
     auto& cog = world.createEntity();
     auto& cogTransform = cog.addComponent<Transform>(Vector2D((float) windowWidth - 50,(float) windowHeight- 50), 0.0f,1.0f);

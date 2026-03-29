@@ -207,23 +207,9 @@ struct ShopReputation {
 
 struct Interaction {
     std::function<void()> onInteract;
-
     Interaction() = default;
-
     Interaction(std::function<void()> callback) : onInteract(callback) {
     }
 };
-
-
-struct Dialogue {
-    //Defunct: Label
-    std::string text;
-};
-
-struct UIElement {
-    int width;
-    int height;
-};
-
 
 #endif //PROJECT_COMPONENTS_H

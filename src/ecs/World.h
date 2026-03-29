@@ -45,7 +45,7 @@ class World {
     CameraSystem cameraSystem;
     EventManager eventManager;
     SpawnTimerSystem spawnTimerSystem;
-    DestructionSystem destructionSystem;
+    //DestructionSystem destructionSystem;
     EventResponseSystem eventResponseSystem{*this};
     MainMenuSystem mainMenuSystem;
     UIRenderSystem uiRenderSystem;
