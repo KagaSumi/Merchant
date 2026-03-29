@@ -38,7 +38,7 @@ void Scene::initMainMenu(int windowWidth, int windowHeight) {
     test.src = {0,0,32,32};
     test.requiredReputation = 1;
 
-    auto &haggleOverlay = createHaggleOverlay(windowWidth, windowHeight, test);
+    auto &haggleOverlay = createHaggleUI(windowWidth, windowHeight, test);
     createHaggleUIComponents(haggleOverlay,test.basePrice);
     createCogButton(windowWidth,windowHeight,haggleOverlay);
 }
@@ -228,76 +228,92 @@ Entity &Scene::createBaseMenuOverlay(int windowWidth, int windowHeight) {
     overlay.addComponent<Children>();
     return overlay;
 }
-Entity &Scene::createHaggleOverlay(int windowWidth, int windowHeight, ItemDef &item) {
-    // 1. Create the background (Blue scaled panel)
-    auto &overlay = createBaseMenuOverlay(windowWidth, windowHeight);
+Entity& Scene::createItemHaggleDisplay(Entity& parent, ItemDef& item) {
+    auto& subOverlay = world.createEntity();
 
-    auto &overlayT = overlay.getComponent<Transform>();
-    auto &overlayS = overlay.getComponent<Sprite>();
+    // 1. Setup Sub-Overlay Container
+    auto& parentS = parent.getComponent<Sprite>();
+    auto& parentT = parent.getComponent<Transform>();
 
-    // Ensure the main panel starts hidden so it doesn't show on the main menu
-    overlayS.visible = false;
+    // Position it at the top-left of the parent (or offset it)
+    float baseX = parentT.position.x;
+    float baseY = parentT.position.y;
+    float centerLineX = baseX + (parentS.dst.w / 2.0f);
 
-    float baseX = overlayT.position.x;
-    float baseY = overlayT.position.y;
-    float centerLineX = baseX + (overlayS.dst.w / 2.0f);
+    subOverlay.addComponent<Transform>(Vector2D(baseX, baseY), 0.0f, 1.0f);
+    subOverlay.addComponent<Parent>(&parent);
 
-    // 2. Create the Item Name Label (Top Center)
+    // OPTIONAL: Add a sub-background texture if you have one
+    SDL_Texture* subTex = TextureManager::load("../asset/ui/UI-Sub.png");
+    SDL_FRect subSrc{0, 0, 21,21};
+    subOverlay.addComponent<Sprite>(subTex,subSrc , parentS.dst, RenderLayer::UI, false);
+
+    if (!subOverlay.hasComponent<Children>()) {
+        subOverlay.addComponent<Children>();
+    }
+
+    // 2. ITEM NAME
     auto &nameLabel = world.createEntity();
     Label nameData = {item.name, AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "itemName"};
-
-    // Add first, then update to get dimensions
     auto& nameLabelComp = nameLabel.addComponent<Label>(nameData);
     nameLabelComp.visible = false;
     nameLabelComp.dirty = true;
     TextureManager::updateLabel(nameLabelComp);
 
-    // Use nameLabelComp.dst.w for perfect centering
     nameLabel.addComponent<Transform>(Vector2D(centerLineX - (nameLabelComp.dst.w / 2.0f), baseY + 40), 0.0f, 1.0f);
-    nameLabel.addComponent<Parent>(&overlay);
-    overlay.getComponent<Children>().children.push_back(&nameLabel);
+    nameLabel.addComponent<Parent>(&subOverlay);
+    subOverlay.getComponent<Children>().children.push_back(&nameLabel);
 
-    // 3. Create the Item Sprite (Using ItemDef.src)
+    // 3. ITEM ICON
     auto &itemIcon = world.createEntity();
-    float iconSize = 64.0f; // The size on the UI
+    float iconSize = 64.0f;
     float iconX = centerLineX - (iconSize / 2.0f);
     float iconY = baseY + 80.0f;
 
     itemIcon.addComponent<Transform>(Vector2D(iconX, iconY), 0.0f, 1.0f);
+    SDL_Texture *itemsTex = TextureManager::get("items");
+    if (!itemsTex) itemsTex = TextureManager::load("../asset/items.png");
 
-    // We use the 'items' texture and pass item.src as the Source Rectangle
+    SDL_FRect itemDst{iconX,iconY,iconSize,iconSize};
+    itemIcon.addComponent<Sprite>(itemsTex, item.src,itemDst,RenderLayer::UI, false);
+    itemIcon.addComponent<Parent>(&subOverlay);
+    subOverlay.getComponent<Children>().children.push_back(&itemIcon);
 
-    SDL_Texture *itemsTex;
-    itemsTex = TextureManager::get("items");
-    if (itemsTex == nullptr) {
-        itemsTex = TextureManager::load("../asset/items.png");
-    }
-    SDL_FRect iconDest = {iconX, iconY, iconSize, iconSize};
-
-    // Pass 'false' for initial visibility
-    itemIcon.addComponent<Sprite>(itemsTex, item.src, iconDest, RenderLayer::UI, false);
-    itemIcon.addComponent<Parent>(&overlay);
-    overlay.getComponent<Children>().children.push_back(&itemIcon);
-
-    // 4. Create the Base Value Label (Below the icon)
+    // 4. BASE VALUE
     auto &baseValLabel = world.createEntity();
     std::string baseValText = "Base Value: " + std::to_string(item.basePrice) + "G";
     Label valData = {baseValText, AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "itemBaseVal"};
-
     auto& valLabelComp = baseValLabel.addComponent<Label>(valData);
     valLabelComp.visible = false;
     valLabelComp.dirty = true;
     TextureManager::updateLabel(valLabelComp);
 
     baseValLabel.addComponent<Transform>(Vector2D(centerLineX - (valLabelComp.dst.w / 2.0f), baseY + 155), 0.0f, 1.0f);
-    baseValLabel.addComponent<Parent>(&overlay);
-    overlay.getComponent<Children>().children.push_back(&baseValLabel);
+    baseValLabel.addComponent<Parent>(&subOverlay);
+    subOverlay.getComponent<Children>().children.push_back(&baseValLabel);
 
-    // 5. Generate the interactive lock on the bottom half
-    createHaggleUIComponents(overlay, item.basePrice);
+    // 5. COMBO LOCK COMPONENTS
+    // We pass subOverlay as the parent so the buttons are children of the sub-menu
+    createHaggleUIComponents(subOverlay, item.basePrice);
 
-    return overlay;
+    return subOverlay;
 }
+
+Entity &Scene::createHaggleUI(int windowWidth, int windowHeight, ItemDef &item) {
+    // Step 1: Create the "Window" (The big blue/parchment background)
+    auto &mainOverlay = createBaseMenuOverlay(windowWidth, windowHeight);
+    mainOverlay.getComponent<Sprite>().visible = false;
+
+    // Step 2: Spawn the "Prefab" inside it
+    Entity &haggleContent = createItemHaggleDisplay(mainOverlay, item);
+
+    // Attach the prefab to the main overlay's children list
+    if (!mainOverlay.hasComponent<Children>()) mainOverlay.addComponent<Children>();
+    mainOverlay.getComponent<Children>().children.push_back(&haggleContent);
+
+    return mainOverlay;
+}
+
 
 Entity &Scene::createCogButton(int windowWidth, int windowHeight, Entity &overlay) {
     auto &cog = world.createEntity();
@@ -317,7 +333,7 @@ Entity &Scene::createCogButton(int windowWidth, int windowHeight, Entity &overla
 
     clickable.onReleased = [&cogTransform, this ,&overlay] {
         cogTransform.scale = 1.0f;
-        toggleSettingsOverlayVisibility(overlay);
+        toggleSettingsOverlayVisibility(overlay,nullptr);
     };
 
     clickable.onCancel = [&cogTransform] {
@@ -518,7 +534,7 @@ void Scene::createHaggleUIComponents(Entity &overlay, int basePrice) {
             multiplier /= 10;
         }
         std::cout << "Transaction Confirmed! Sold for: " << finalPrice << "G" << std::endl;
-        toggleSettingsOverlayVisibility(overlay);
+        toggleSettingsOverlayVisibility(overlay,nullptr);
     };
 
     haggleButton.addComponent<Parent>(&overlay);
@@ -552,7 +568,7 @@ void Scene::createSettingsUIComponents(Entity &overlay) {
     };
     clickable.onReleased = [this,&overlay,&closeTransform] {
         closeTransform.scale = 1.0f;
-        toggleSettingsOverlayVisibility(overlay);
+        toggleSettingsOverlayVisibility(overlay,nullptr);
     };
     clickable.onCancel = [&closeTransform] {
         closeTransform.scale = 1.0f;
@@ -563,24 +579,30 @@ void Scene::createSettingsUIComponents(Entity &overlay) {
     parentChildren.children.push_back(&closeButton);
 }
 
-void Scene::toggleSettingsOverlayVisibility(Entity &overlay) {
-    auto &sprite = overlay.getComponent<Sprite>();
-    bool newVisibility = !sprite.visible;
-    sprite.visible = newVisibility;
+void Scene::toggleSettingsOverlayVisibility(Entity &overlay, bool* forceState) {
+    // 1. Determine the new state
+    // If forceState is null, we just flip the current visibility.
+    // If we are recursing, we pass the parent's state down.
+    bool newVisibility = forceState ? *forceState : !overlay.getComponent<Sprite>().visible;
 
+    // 2. Toggle the Parent's own components
+    if (overlay.hasComponent<Sprite>()) {
+        overlay.getComponent<Sprite>().visible = newVisibility;
+    }
+    if (overlay.hasComponent<Label>()) {
+        overlay.getComponent<Label>().visible = newVisibility;
+    }
+    if (overlay.hasComponent<Collider>()) {
+        overlay.getComponent<Collider>().enabled = newVisibility;
+    }
+
+    // 3. CASCADE: Recurse through all children
     if (overlay.hasComponent<Children>()) {
         auto &c = overlay.getComponent<Children>();
-
-        for (auto &child: c.children) {
-            if (child && child->hasComponent<Sprite>()) {
-                child->getComponent<Sprite>().visible = newVisibility;
-            }
-
-            if (child && child->hasComponent<Collider>()) {
-                child->getComponent<Collider>().enabled = newVisibility;
-            }
-            if (child && child->hasComponent<Label>()) {
-                child->getComponent<Label>().visible = newVisibility;
+        for (auto &child : c.children) {
+            if (child) {
+                // We pass the newVisibility down to the child
+                toggleSettingsOverlayVisibility(*child, &newVisibility);
             }
         }
     }

@@ -11,6 +11,35 @@
 #include  "SceneType.h"
 
 class Scene {
+
+    struct HaggleSession {
+        std::shared_ptr<std::vector<int>> digits;
+        int basePrice;
+        Entity* percentageLabel;
+
+        HaggleSession(int base) : basePrice(base) {
+            digits = std::make_shared<std::vector<int>>(4, 0);
+            int temp = base;
+            for (int i = 3; i >= 0; --i) {
+                (*digits)[i] = temp % 9;
+                temp /= 9;
+            }
+        }
+
+        void calculateAndRefresh(Scene& scene) {
+            int total = 0;
+            int mult = 10000;
+            for (int d : *digits) { total += d * mult; mult /= 10; }
+
+            if (basePrice > 0 && percentageLabel) {
+                int percentage = (int)(((float)total / basePrice) * 100.0f);
+                auto& label = percentageLabel->getComponent<Label>();
+                label.text = std::to_string(percentage) + "%";
+                label.dirty = true;
+                TextureManager::updateLabel(label);
+            }
+        }
+    };
 public:
     Scene(SceneType sceneType, const char* sceneName, const char* mapPath, int windowWidth, int windowHeight);
 
@@ -51,11 +80,8 @@ private:
     Entity& createConfirmButton(int windowWidth, int windowHeight, Entity& overlay);
 
     //Haggling UI
-    Entity& createHaggleOverlay(int windowWidth, int windowHeight, ItemDef& item);
-
-    Entity& createItemHaggleOverlay(int windowWidth, int windowHeight, Entity& overlay, ItemDef& item);
-    Entity& createPlayerItemHaggleOverlay(int windowWidth, int windowHeight, Entity& overlay, ItemDef& item);
-    Entity& createHaggleButton(int windowWidth, int windowHeight, Entity& overlay);
+    Entity& createHaggleUI(int windowWidth, int windowHeight, ItemDef& item);
+    Entity& createItemHaggleDisplay(Entity& parent, ItemDef& item);
 
     //Inventory UI
     Entity& createItemInventoryOverlay(int windowWidth, int windowHeight, Entity& overlay);
@@ -70,7 +96,7 @@ private:
     void createSettingsUIComponents(Entity& overlay);
     void createHaggleUIComponents(Entity& overlay, int basePrice);
 
-    void toggleSettingsOverlayVisibility(Entity& overlay);
+    void toggleSettingsOverlayVisibility(Entity& overlay, bool* forceState);
 
     Entity& createPlayerPosLabel();
 };
