@@ -110,8 +110,7 @@ struct Children {
 
 enum class LabelType {
     PlayerPosition,
-    Damage,
-    Health
+    Static
 };
 
 struct Label {
