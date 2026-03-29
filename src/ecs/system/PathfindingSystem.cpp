@@ -62,7 +62,7 @@ int PathfindingSystem::GetTile(int x, int y) {
 
 bool PathfindingSystem::IsValid(int x, int y) {
     if (grid.empty()) return false;
-    return GetTile(x, y) != 0; // Anything not 0 is considered walkable
+    return GetTile(x, y) == 3  ; // Anything not 0 is considered walkable
 }
 
 int PathfindingSystem::GetHeuristic(SDL_Point a, SDL_Point b) {
@@ -100,7 +100,15 @@ std::vector<SDL_Point> PathfindingSystem::FindPath(SDL_Point start, SDL_Point ta
     std::vector<SDL_Point> path;
 
     if (grid.empty() || mapWidth <= 0 || mapHeight <= 0) return path;
-    if (!IsValid(start.x, start.y) || !IsValid(target.x, target.y)) return path;
+    // DEBUG: If pathfinding is failing, this will tell you exactly why.
+    if (!IsValid(start.x, start.y)) {
+        std::cout << "A* FAIL: Start (" << start.x << "," << start.y << ") is a wall! (Value: " << GetTile(start.x, start.y) << ")\n";
+        return path;
+    }
+    if (!IsValid(target.x, target.y)) {
+        std::cout << "A* FAIL: Target (" << target.x << "," << target.y << ") is a wall! (Value: " << GetTile(target.x, target.y) << ")\n";
+        return path;
+    }
     if (start.x == target.x && start.y == target.y) return path;
 
     std::priority_queue<PathNode, std::vector<PathNode>, std::greater<PathNode>> openSet;

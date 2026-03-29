@@ -10,7 +10,19 @@
 
 // Helper to convert pixel position to grid position (assuming 32x32 tiles)
 SDL_Point GetGridPos(const Transform& t) {
-    return { static_cast<int>(t.position.x / 32), static_cast<int>(t.position.y / 32) };
+    // We move the check point slightly INWARD from the edges (2 pixels)
+    // This prevents "A* FAIL" when brushing against a wall.
+    float centerX = t.position.x + 16.0f;
+
+    // Instead of 31 (the very edge), use 28 or 30.
+    // This ensures we are checking the floor the feet are ON,
+    // not the tile the feet are touching at the bottom edge.
+    float feetY = t.position.y + 28.0f;
+
+    return {
+        static_cast<int>(std::floor(centerX / 32.0f)),
+        static_cast<int>(std::floor(feetY / 32.0f))
+    };
 }
 
 void CustomerAISystem::HandleHeadingToRegister(CustomerAI& ai, Transform& t, Velocity& v) {
@@ -78,7 +90,7 @@ void CustomerAISystem::HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v,
         v.direction.x = 0.0f;
         v.direction.y = 0.0f;
         ai.isWaiting = true;
-        ai.stateTimer = 5.0f;
+        ai.stateTimer = 3.0f;
         return;
     }
 
@@ -138,8 +150,8 @@ void CustomerAISystem::MoveAlongPath(CustomerAI& ai, Transform& t, Velocity& v) 
 
     // 1. Get the target grid tile and convert to dead-center PIXELS
     SDL_Point targetGrid = ai.path[ai.pathIndex];
-    float targetX = (targetGrid.x * 32.0f) - 16.0f; //Off set 16 pixels because scaling 32 sprite -> 64 pixel
-    float targetY = (targetGrid.y * 32.0f) - 16.0f; //Off set 16 pixels because scaling 32 sprite -> 64 pixel
+    float targetX = (targetGrid.x * 32.0f) ; //Off set 16 pixels because scaling 32 sprite -> 64 pixel
+    float targetY = (targetGrid.y * 32.0f) ; //Off set 16 pixels because scaling 32 sprite -> 64 pixel
 
     // 2. Math to find direction and distance
     float dirX = targetX - t.position.x;
@@ -149,7 +161,7 @@ void CustomerAISystem::MoveAlongPath(CustomerAI& ai, Transform& t, Velocity& v) 
     // 3. Move or Snap!
     // IMPORTANT: If your AI moves 2 pixels per frame, this number MUST be > 2.0f.
     // 3.0f is a safe sweet spot to prevent overshooting.
-    if (distance > 3.0f) {
+    if (distance > 4.0f) {
         v.direction.x = dirX / distance;
         v.direction.y = dirY / distance;
     } else {

@@ -51,6 +51,9 @@ struct Sprite {
 struct Collider {
     std::string tag;
     SDL_FRect rect{};
+    // How far to push the box away from the Transform's top-left origin
+    float offsetX = 0.0f;
+    float offsetY = 0.0f;
     bool enabled = true;
 };
 
@@ -188,7 +191,7 @@ struct CustomerAI {
     int pathIndex = 0; // Which node we are currently walking toward
 
     // Logic Timers
-    float stateTimer = 0.0f; // Stay in "Browsing" for 5 seconds
+    float stateTimer = 0.0f;
     bool isWaiting = false;
     SDL_Point targetGridpos; // Current heading
 

@@ -33,13 +33,35 @@ void Map::load(const char *path, SDL_Texture *ts) {
         std::string csv = data->GetText();
         std::stringstream ss(csv);
         if (layerName == "Texture") {
-            tileData = std::vector(height, std::vector<int>(width));
+            floorData = std::vector(height, std::vector<int>(width));
             for (int i = 0; i < height; i++) {
                 for (int j = 0; j < width; j++) {
                     std::string val;
-                    //read characters from a ss into val until hits comma or end of string
                     if (!std::getline(ss, val, ',')) { break; }
-                    tileData[i][j] = std::stoi(val); //stoi is a string to integer converter
+                    floorData[i][j] = std::stoi(val);
+                }
+            }
+        }
+        if (layerName == "Walls") {
+            wallData = std::vector(height, std::vector<int>(width));
+            for (int i = 0; i < height; i++) {
+                for (int j = 0; j < width; j++) {
+                    std::string val;
+                    if (!std::getline(ss, val, ',')) { break; }
+                    // Removed the broken if(tileData[]) line
+                    wallData[i][j] = std::stoi(val);
+                }
+            }
+        }
+
+        if (layerName == "Furniture") {
+            furnitureData = std::vector(height, std::vector<int>(width));
+            for (int i = 0; i < height; i++) {
+                for (int j = 0; j < width; j++) {
+                    std::string val;
+                    if (!std::getline(ss, val, ',')) { break; }
+                    // Removed the broken if(tileData[]) line
+                    furnitureData[i][j] = std::stoi(val);
                 }
             }
         }
@@ -89,93 +111,59 @@ void Map::load(const char *path, SDL_Texture *ts) {
                 colliders.push_back(c);
             }
         }
-
-        if (groupName == "Item Layer")
-            //parse coin data
-            for (auto *obj = objectGroup->FirstChildElement("object");
-                 obj != nullptr;
-                 obj = obj->NextSiblingElement("object")) {
-                Collider c;
-                c.rect.x = obj->FloatAttribute("x");
-                c.rect.y = obj->FloatAttribute("y");
-                coins.push_back(c);
-            }
-        // TODO Figure out how to store this for CustomerAI system
-        // if (groupName =="Door") {
-        //     auto *obj = objectGroup->FirstChildElement("object");
-        //     Door = {obj->IntAttribute("x"),obj->IntAttribute("y")};
-        // }
-        // if (groupName =="Register") {
-        //     auto *obj = objectGroup->FirstChildElement("object");
-        //     Register = {obj->IntAttribute("x"),obj->IntAttribute("y")};
-        // }
+        if (groupName =="Door") {
+            auto *obj = objectGroup->FirstChildElement("object");
+            Door = {
+                static_cast<int>(obj->IntAttribute("x")/32),
+                static_cast<int>(obj->IntAttribute("y")/32)
+            };
+        }
+        if (groupName =="Register") {
+            auto *obj = objectGroup->FirstChildElement("object");
+            Register = {
+                static_cast<int>(obj->IntAttribute("x")/32),
+                static_cast<int>(obj->IntAttribute("y")/32)
+            };
+        }
     }
 }
 
-void Map::draw(const Camera &cam) {
+// Update your header file to match this signature too!
+void Map::drawLayer(const std::vector<std::vector<int> > &layer, const Camera &cam, int firstGid) {
     SDL_FRect src{}, dest{};
+    const int tileSize = 32;
+    const int tilesetColumns = 32; // 1024 width / 32 = 32 columns. Your math here is perfect.
 
-    dest.w = dest.h = 32;
+    src.w = src.h = tileSize;
+    dest.w = dest.h = tileSize;
 
     for (int row = 0; row < height; row++) {
         for (int col = 0; col < width; col++) {
-            int type = tileData[row][col];
+            int type = layer[row][col];
 
+            // 0 always means "Empty Space" in Tiled
+            if (type == 0) continue;
+
+            // SAFETY CHECK: If the tile ID is less than this tileset's starting ID,
+            // it belongs to a different tileset! Skip it so we don't get negative numbers.
+            if (type < firstGid) continue;
 
             float worldX = static_cast<float>(col) * dest.w;
             float worldY = static_cast<float>(row) * dest.h;
 
-            //Move map relative to the Camera
-            //Convert from world space to screen space
             dest.x = std::round(worldX - cam.view.x);
             dest.y = std::round(worldY - cam.view.y);
 
-            switch (type) {
-                case 1:
-                    //Floor
-                    src.x = 0;
-                    src.y = 0;
-                    src.w = 32;
-                    src.h = 32;
-                    break;
-                case 2:
-                    //Wall
-                    src.x = 32;
-                    src.y = 0;
-                    src.w = 32;
-                    src.h = 32;
-                    break;
-                case 3:
-                    //AI walk path
-                    src.x = 64;
-                    src.y = 0;
-                    src.w = 32;
-                    src.h = 32;
-                    break;
-                case 4:
-                    //Collider
-                    src.x = 0;
-                    src.y = 32;
-                    src.w = 32;
-                    src.h = 32;
-                    break;
-                case 5:
-                    //Register
-                    src.x = 32;
-                    src.y = 32;
-                    src.w = 32;
-                    src.h = 32;
-                    break;
-                case 6:
-                    //Door
-                    src.x = 64;
-                    src.y = 32;
-                    src.w = 32;
-                    src.h = 32;
-                    break;
-                default:
-                    break;
-            }
+            // --- The Fixed Math ---
+            // Subtract the actual GID offset provided by Tiled
+            int tileIndex = type - firstGid;
+
+            int sheetCol = tileIndex % tilesetColumns;
+            int sheetRow = tileIndex / tilesetColumns;
+
+            src.x = sheetCol * tileSize;
+            src.y = sheetRow * tileSize;
+
             TextureManager::draw(tileset, &src, &dest);
         }
     }

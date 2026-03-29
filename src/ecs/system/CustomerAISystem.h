@@ -40,12 +40,19 @@ public:
             }
         }
     }
-    //TODO Setup auto polling for register or door
- void setRegister(int x,int y) {
-        Register = {x,y};
+ void setRegister(SDL_Point reg) {
+        if (reg.x == -1 and reg.y == -1) {
+            std::cerr <<"Register Not Initialized" <<std::endl;
+            return;
+        }
+        Register = {reg.x,reg.y};
     }
-void setDoor(int x,int y) {
-        Door = {x,y};
+void setDoor(SDL_Point door) {
+        if (door.x == -1 and door.y == -1) {
+            std::cerr <<"Door Not Initialized" <<std::endl;
+            return;
+        }
+        Door = {door.x,door.y};
     }
 
 private:
@@ -57,8 +64,8 @@ private:
 
     void MoveAlongPath(CustomerAI &ai, Transform &t, Velocity &v);
 
-    SDL_Point Register{20,16};
-    SDL_Point Door{20,4};
+    SDL_Point Register{-1,-1};
+    SDL_Point Door{-1,-1};
 };
 
 #endif

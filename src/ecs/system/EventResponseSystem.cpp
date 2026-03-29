@@ -51,7 +51,7 @@ void EventResponseSystem::onPlayerAction(Entity* player, PlayerAction action, Wo
             auto& pAnim = player->getComponent<Animation>();
 
             // 2. Calculate target point
-            float reachDistance = 64.0f; // Tweak this for your grid!
+            float reachDistance = 32.0f; // Tweak this for your grid!
             Vector2D targetPoint = pTransform.position;
 
             switch (pAnim.direction) {

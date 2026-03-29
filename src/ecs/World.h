@@ -87,7 +87,10 @@ class World {
     void render() {
         for (auto& entity : entities) {
             if (entity->hasComponent<Camera>()) {
-                map.draw(entity->getComponent<Camera>());
+                auto& camera = entity->getComponent<Camera>();
+                map.drawLayer(map.floorData,camera,7);
+                map.drawLayer(map.wallData,camera,7);
+                map.drawLayer(map.furnitureData,camera,7);
                 break;
             }
         }
@@ -136,6 +139,7 @@ class World {
     EventManager& getEventManager() {return eventManager;}
     Map& getMap(){return map;}
     Items& getItems(){return items;}
+    CustomerAISystem& getCustomerAISystem() {return customerAISystem;}
 };
 
 #endif //PROJECT_WORLD_H
