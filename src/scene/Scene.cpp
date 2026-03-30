@@ -147,9 +147,9 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
      auto &cashRegister = world.createEntity();
      auto& cashTransform = cashRegister.addComponent<Transform>(Vector2D(regi.x * 32, (regi.y + 2) * 32));
      auto &c = cashRegister.addComponent<Collider>("wall");
-     c.rect = { regi.x*32.0f - 64.0f, (regi.y+2)*32 + 32.0f, 160.0f, 32.0f };
+     c.rect = { regi.x*32.0f - 64.0f, (regi.y+2)*32 + 32.0f, 160.0f, 62.0f };
      c.offsetX = -64.0f;
-     c.offsetY = 16.0f;
+     c.offsetY = -14.0f;
      cashRegister.addComponent<Interaction>([&dayCycle]() {
          if (dayCycle.currentPhase == DayPhase::Morning) {
              std::cout << "Start the day ..." << std::endl;
@@ -243,17 +243,26 @@ Entity& Scene::createItemHaggleDisplay(Entity& parent) {
     float parentCenterX = parentS.dst.w / 2.0f;
 
     auto& subOverlay = world.createEntity();
-    subOverlay.addComponent<Transform>(Vector2D(parentT.position.x, parentT.position.y), 0.0f, 1.0f);
     subOverlay.addComponent<Parent>(&parent);
 
-    float subWidth = 240.0f;
-    float subHeight = 195.0f;
-    float offsetX = parentCenterX - (subWidth / 2.0f);
-    float offsetY = 10.0f;
+    float subWidth = 180.0f;
+    float subHeight = 160.0f;
+
+    // 1. Calculate the exact, absolute screen position
+    // Parent Left + Half Parent Width - Half Sub Width
+    float absoluteX = parentT.position.x + parentCenterX - (subWidth / 2.0f);
+    // Parent Top + 10px down
+    float absoluteY = parentT.position.y + 30.0f;
+
+    // 2. Assign the absolute position to the Transform
+    subOverlay.addComponent<Transform>(Vector2D(absoluteX, absoluteY), 0.0f, 1.0f);
 
     SDL_Texture* subTex = TextureManager::load("../asset/ui/UI-Sub.png");
     SDL_FRect subSrc{0, 0, 21.0f, 21.0f};
-    SDL_FRect subDst{offsetX, offsetY, subWidth, subHeight};
+
+    // 3. ZERO OUT the local x/y offset so the renderer doesn't push it twice
+    SDL_FRect subDst{0.0f, 0.0f, subWidth, subHeight};
+
     subOverlay.addComponent<Sprite>(subTex, subSrc, subDst, RenderLayer::UI, false);
     subOverlay.addComponent<Children>();
 
@@ -265,6 +274,7 @@ Entity& Scene::createItemHaggleDisplay(Entity& parent) {
     nameLabelComp.dirty = true;
     TextureManager::updateLabel(nameLabelComp);
 
+    // Your nameLabel math was already perfectly centered!
     nameLabel.addComponent<Transform>(Vector2D(parentT.position.x + parentCenterX - (nameLabelComp.dst.w / 2.0f), parentT.position.y + 40), 0.0f, 1.0f);
     nameLabel.addComponent<Parent>(&subOverlay);
     subOverlay.getComponent<Children>().children.push_back(&nameLabel);
@@ -335,21 +345,6 @@ Entity& Scene::createHaggleUI(int windowWidth, int windowHeight, ItemDef& item) 
 
     return mainOverlay;
 }
-// Entity &Scene::createHaggleUI(int windowWidth, int windowHeight, ItemDef &item) {
-//     // Step 1: Create the "Window" (The big blue/parchment background)
-//     auto &mainOverlay = createBaseMenuOverlay(windowWidth, windowHeight);
-//     mainOverlay.getComponent<Sprite>().visible = false;
-//
-//     // Step 2: Spawn the "Prefab" inside it
-//     Entity &haggleContent = createItemHaggleDisplay(mainOverlay, item);
-//
-//     // Attach the prefab to the main overlay's children list
-//     if (!mainOverlay.hasComponent<Children>()) mainOverlay.addComponent<Children>();
-//     mainOverlay.getComponent<Children>().children.push_back(&haggleContent);
-//
-//     return mainOverlay;
-// }
-
 
 Entity& Scene::createPriceSelection(int windowWidth, int windowHeight, Entity& overlay) {
     auto& session = overlay.getComponent<HaggleSession>();
@@ -360,7 +355,53 @@ Entity& Scene::createPriceSelection(int windowWidth, int windowHeight, Entity& o
     float baseY = overlayTransform.position.y;
     float centerLineX = baseX + (overlaySprite.dst.w / 2.0f);
 
-    // --- THE PERCENTAGE LABEL ---
+    // --- SIZING & SPACING MATH ---
+    // Increase button size (1.5x scale of the original 32x16)
+    float btnWidth = 48.0f;
+    float btnHeight = 24.0f;
+
+    // Increase gap between columns to fit the larger buttons
+    float spacingX = 56.0f;
+
+    // Calculate the X start point so all 5 columns perfectly center
+    // 5 columns means we go -2, -1, 0, 1, 2 widths from the center line.
+    float startX = centerLineX - (2.0f * spacingX);
+
+    // Y Offsets
+    float startY = baseY + 240.0f; // Top of the UP buttons
+    float downBtnY = startY + 80.0f; // Top of the DOWN buttons (increases vertical gap for digits)
+    float textCenterY = startY + btnHeight + ((downBtnY - (startY + btnHeight)) / 2.0f); // Perfect middle for text
+
+
+    // --- 1. TITLE LABEL ("How much should I sell it for?") ---
+    auto& titleLabelEntity = world.createEntity();
+    Label tLabel = {"How much should I sell it for?", AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "haggleTitle"};
+    auto& tLabelComp = titleLabelEntity.addComponent<Label>(tLabel);
+    tLabelComp.dirty = true;
+    tLabelComp.visible = false;
+    TextureManager::updateLabel(tLabelComp);
+
+    // Centered above the buttons (40px up)
+    titleLabelEntity.addComponent<Transform>(Vector2D(centerLineX - (tLabelComp.dst.w / 2.0f), startY - 40.0f), 0.0f, 1.0f);
+    titleLabelEntity.addComponent<Parent>(&overlay);
+    overlay.getComponent<Children>().children.push_back(&titleLabelEntity);
+
+
+    // --- 2. BASE PRICE LABEL ("Base Price:") ---
+    auto& basePriceLabelEntity = world.createEntity();
+    Label bpLabel = {"Base Price:", AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "haggleBasePriceTxt"};
+    auto& bpLabelComp = basePriceLabelEntity.addComponent<Label>(bpLabel);
+    bpLabelComp.dirty = true;
+    bpLabelComp.visible = false;
+    TextureManager::updateLabel(bpLabelComp);
+
+    // Aligned to the left, below the down buttons
+    basePriceLabelEntity.addComponent<Transform>(Vector2D(startX - 20.0f, downBtnY + 40.0f), 0.0f, 1.0f);
+    basePriceLabelEntity.addComponent<Parent>(&overlay);
+    overlay.getComponent<Children>().children.push_back(&basePriceLabelEntity);
+
+
+    // --- 3. THE PERCENTAGE LABEL ---
     auto& percentLabelEntity = world.createEntity();
     Label pLabel = {"100%", AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "hagglePercent"};
     auto& pLabelComp = percentLabelEntity.addComponent<Label>(pLabel);
@@ -368,20 +409,33 @@ Entity& Scene::createPriceSelection(int windowWidth, int windowHeight, Entity& o
     pLabelComp.visible = false;
     TextureManager::updateLabel(pLabelComp);
 
-    percentLabelEntity.addComponent<Transform>(Vector2D(centerLineX + 80, baseY + 360), 0.0f, 1.0f);
+    // Aligned to the right, matching the Base Price Y coordinate
+    float rightAlignX = startX + (4 * spacingX) + btnWidth - pLabelComp.dst.w;
+    percentLabelEntity.addComponent<Transform>(Vector2D(rightAlignX, downBtnY + 40.0f), 0.0f, 1.0f);
     percentLabelEntity.addComponent<Parent>(&overlay);
     overlay.getComponent<Children>().children.push_back(&percentLabelEntity);
 
     session.percentLabelRef = &percentLabelEntity; // Cache reference
 
-    // --- GENERATE THE 5 COLUMNS ---
-    float spacingX = 48.0f;
-    float startX = centerLineX - 112.0f;
-    float startY = baseY + 240.0f;
 
+    // --- 4. CURRENCY LABEL ("G") ---
+    auto& currencyLabelEntity = world.createEntity();
+    Label gLabel = {"G", AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "haggleCurrencyTxt"};
+    auto& gLabelComp = currencyLabelEntity.addComponent<Label>(gLabel);
+    gLabelComp.dirty = true;
+    gLabelComp.visible = false;
+    TextureManager::updateLabel(gLabelComp);
+
+    // Placed to the right of the last column, vertically centered with the digits
+    currencyLabelEntity.addComponent<Transform>(Vector2D(startX + (4 * spacingX) + btnWidth + 15.0f, textCenterY - (gLabelComp.dst.h / 2.0f)), 0.0f, 1.0f);
+    currencyLabelEntity.addComponent<Parent>(&overlay);
+    overlay.getComponent<Children>().children.push_back(&currencyLabelEntity);
+
+
+    // --- 5. GENERATE THE 5 COLUMNS ---
     for (int i = 0; i < 5; ++i) {
         float colX = startX + (i * spacingX);
-        float columnCenter = colX + (32.0f / 2.0f);
+        float columnCenter = colX + (btnWidth / 2.0f);
 
         // --- DIGIT LABEL ---
         auto& digitEntity = world.createEntity();
@@ -392,21 +446,23 @@ Entity& Scene::createPriceSelection(int windowWidth, int windowHeight, Entity& o
         TextureManager::updateLabel(dLabelComp);
 
         float centeredX = columnCenter - (dLabelComp.dst.w / 2.0f);
-        float centeredY = (startY + 16.0f) + ((72.0f - 16.0f) / 2.0f) - (dLabelComp.dst.h / 2.0f);
+        float centeredY = textCenterY - (dLabelComp.dst.h / 2.0f);
 
         digitEntity.addComponent<Transform>(Vector2D(centeredX, centeredY), 0.0f, 1.0f);
         digitEntity.addComponent<Parent>(&overlay);
         overlay.getComponent<Children>().children.push_back(&digitEntity);
 
         Entity* digitPtr = &digitEntity;
-        session.digitRefs[i] = digitPtr; // Cache reference
+        session.digitRefs[i] = digitPtr;
 
         // --- UP BUTTON (+) ---
         auto& btnUp = world.createEntity();
         auto& btnUpTransform = btnUp.addComponent<Transform>(Vector2D(colX, startY), 0.0f, 1.0f);
         SDL_Texture* texButtons = TextureManager::load("../asset/ui/Buttons.png");
+
         SDL_FRect srcUp{32, 0, 32, 16};
-        SDL_FRect destUp{colX, startY, 32, 16};
+        SDL_FRect destUp{colX, startY, btnWidth, btnHeight}; // Rendered larger!
+
         btnUp.addComponent<Sprite>(texButtons, srcUp, destUp, RenderLayer::UI, false);
         btnUp.addComponent<Collider>("ui", destUp);
 
@@ -439,9 +495,11 @@ Entity& Scene::createPriceSelection(int windowWidth, int windowHeight, Entity& o
 
         // --- DOWN BUTTON (-) ---
         auto& btnDown = world.createEntity();
-        auto& btnDownTransform = btnDown.addComponent<Transform>(Vector2D(colX, startY + 72), 0.0f, 1.0f);
+        auto& btnDownTransform = btnDown.addComponent<Transform>(Vector2D(colX, downBtnY), 0.0f, 1.0f);
+
         SDL_FRect srcDown{32, 16, 32, 16};
-        SDL_FRect destDown{colX, startY + 72, 32, 16};
+        SDL_FRect destDown{colX, downBtnY, btnWidth, btnHeight}; // Rendered larger!
+
         btnDown.addComponent<Sprite>(texButtons, srcDown, destDown, RenderLayer::UI, false);
         btnDown.addComponent<Collider>("ui", destDown);
 
@@ -476,6 +534,7 @@ Entity& Scene::createPriceSelection(int windowWidth, int windowHeight, Entity& o
 
     return overlay;
 }
+
 Entity& Scene::createHaggleButton(int windowWidth, int windowHeight, Entity& overlay) {
     auto& overlayTransform = overlay.getComponent<Transform>();
     auto& overlaySprite = overlay.getComponent<Sprite>();
@@ -487,7 +546,7 @@ Entity& Scene::createHaggleButton(int windowWidth, int windowHeight, Entity& ove
     auto& haggleButton = world.createEntity();
     float displaySize = 128.0f;
     float scaleX = centerLineX - (displaySize / 2.0f);
-    float scaleY = (baseY + overlaySprite.dst.h) - (displaySize + 40.0f);
+    float scaleY = (baseY + overlaySprite.dst.h) - (displaySize  );
 
     auto& haggleTransform = haggleButton.addComponent<Transform>(Vector2D(scaleX, scaleY), 0.0f, 1.0f);
     SDL_Texture* haggleTex = TextureManager::load("../asset/ui/haggleButton.png");
