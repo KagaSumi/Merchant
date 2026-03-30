@@ -37,9 +37,12 @@ void Scene::initMainMenu(int windowWidth, int windowHeight) {
     test.name ="Longsword";
     test.src = {0,0,32,32};
     test.requiredReputation = 1;
+    DaySummaryData SummaryData;
 
     auto &haggleOverlay = createHaggleUI(windowWidth, windowHeight, test);
-    createCogButton(windowWidth,windowHeight,haggleOverlay);
+    auto &summaryOverlay = createDaySummaryUI(windowWidth,windowHeight, SummaryData);
+
+    createCogButton(windowWidth,windowHeight,summaryOverlay);
 }
 
 void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight) {
@@ -234,6 +237,8 @@ Entity &Scene::createBaseMenuOverlay(int windowWidth, int windowHeight) {
     overlay.addComponent<Children>();
     return overlay;
 }
+
+//Haggle UI
 Entity& Scene::createItemHaggleDisplay(Entity& parent) {
     auto& session = parent.getComponent<HaggleSession>();
     auto& parentS = parent.getComponent<Sprite>();
@@ -606,6 +611,7 @@ Entity &Scene::createCogButton(int windowWidth, int windowHeight, Entity &overla
 
     return cog;
 }
+
 Entity& Scene::updateHaggleUI(ItemDef& item) {
     if (!UIMenu) {
         std::cerr << "Error: UIMenu not initialized!" << std::endl;
@@ -665,6 +671,184 @@ Entity& Scene::updateHaggleUI(ItemDef& item) {
     toggleSettingsOverlayVisibility(*UIMenu, &forceOpen);
 
     return *UIMenu;
+}
+
+//Summary UI
+Entity& Scene::createDaySummaryUI(int windowWidth, int windowHeight, const DaySummaryData& data) {
+    auto& mainOverlay = createBaseMenuOverlay(windowWidth, windowHeight);
+    mainOverlay.getComponent<Sprite>().visible = false; // Hide until end of day
+
+    if (!mainOverlay.hasComponent<Children>()) {
+        mainOverlay.addComponent<Children>();
+    }
+
+    createDaySummaryContent(mainOverlay, data);
+    createDaySummaryFooter(mainOverlay, data);
+
+    return mainOverlay;
+}
+
+void Scene::createDaySummaryContent(Entity& overlay, const DaySummaryData& data) {
+    auto& overlayTransform = overlay.getComponent<Transform>();
+    auto& overlaySprite = overlay.getComponent<Sprite>();
+
+    float baseX = overlayTransform.position.x;
+    float baseY = overlayTransform.position.y;
+    float centerLineX = baseX + (overlaySprite.dst.w / 2.0f);
+
+    // --- 1. TITLE ---
+    auto& titleLabel = world.createEntity();
+    Label tData = {"Today's Report", AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "reportTitle"};
+    tData.dirty = true;
+    tData.visible = false;
+    auto& tComp = titleLabel.addComponent<Label>(tData);
+    TextureManager::updateLabel(tComp);
+
+    titleLabel.addComponent<Transform>(Vector2D(centerLineX - (tComp.dst.w / 2.0f), baseY + 30.0f), 0.0f, 1.0f);
+    titleLabel.addComponent<Parent>(&overlay);
+    overlay.getComponent<Children>().children.push_back(&titleLabel);
+
+    // --- 2. LEDGER CONFIG ---
+    float leftColX = baseX + 60.0f;
+    float rightColX = baseX + overlaySprite.dst.w - 120.0f; // Anchor for right-aligned text
+    float startY = baseY + 120.0f;
+    float rowSpacing = 45.0f;
+
+    SDL_Color colorPositive = {76, 175, 80, 255};   // Green
+    SDL_Color colorNegative = {211, 47, 47, 255};   // Red
+    SDL_Color colorNeutral = {0, 0, 0, 255};        // Black
+
+    // --- HELPER LAMBDA FOR ROWS ---
+    auto createRow = [&](const std::string& labelText, int value, float yPos, SDL_Color valColor) {
+        // Left Label
+        auto& textEnt = world.createEntity();
+        Label lData = {labelText, AssetManager::getFont("arial"), colorNeutral, LabelType::Static, labelText};
+        lData.dirty = true;
+        lData.visible = false;
+        TextureManager::updateLabel(textEnt.addComponent<Label>(lData));
+        textEnt.addComponent<Transform>(Vector2D(leftColX, yPos), 0.0f, 1.0f);
+        textEnt.addComponent<Parent>(&overlay);
+        overlay.getComponent<Children>().children.push_back(&textEnt);
+
+        // Right Value
+        auto& valEnt = world.createEntity();
+        std::string valString = std::to_string(value) + "g";
+        // If it's negative, std::to_string handles the minus sign. For positive > 0, we can add a plus if desired.
+
+        Label vData = {valString, AssetManager::getFont("arial"), valColor, LabelType::Static, labelText + "_val"};
+        auto& vComp = valEnt.addComponent<Label>(vData);
+        vComp.dirty = true;
+        vComp.visible = false;
+        TextureManager::updateLabel(vComp);
+
+        // Right-align math: Anchor X minus the width of the generated text
+        valEnt.addComponent<Transform>(Vector2D(rightColX - vComp.dst.w, yPos), 0.0f, 1.0f);
+        valEnt.addComponent<Parent>(&overlay);
+        overlay.getComponent<Children>().children.push_back(&valEnt);
+    };
+
+    // --- 3. GENERATE ROWS ---
+    createRow("Gross Sales", data.grossSales, startY, data.grossSales > 0 ? colorPositive : colorNeutral);
+    createRow("Customer Purchase", data.customerPurchases, startY + rowSpacing, data.customerPurchases < 0 ? colorNegative : colorNeutral);
+
+    int profit = data.getGrossProfit();
+    SDL_Color profitColor = profit > 0 ? colorPositive : (profit < 0 ? colorNegative : colorNeutral);
+    createRow("Gross Profit", profit, startY + (rowSpacing * 2.5f), profitColor); // Extra gap for the total
+}
+
+void Scene::createDaySummaryFooter(Entity& overlay, const DaySummaryData& data) {
+    auto& overlayTransform = overlay.getComponent<Transform>();
+    auto& overlaySprite = overlay.getComponent<Sprite>();
+
+    float baseX = overlayTransform.position.x;
+    float baseY = overlayTransform.position.y;
+
+    float footerHeight = 140.0f;
+    float footerY = baseY + overlaySprite.dst.h - footerHeight;
+
+    // --- 1. DIVIDER LINE ---
+    // Hack: Stretch a tiny UI texture to act as a 2-pixel tall separator line
+    auto& lineEnt = world.createEntity();
+    SDL_Texture* texUI = TextureManager::load("../asset/ui/UI-Sub.png");
+    SDL_FRect lineSrc{0, 0, 8, 8};
+    SDL_FRect lineDst{baseX + 10.0f, footerY, overlaySprite.dst.w - 20.0f, 2.0f};
+
+    lineEnt.addComponent<Transform>(Vector2D(lineDst.x, lineDst.y), 0.0f, 1.0f);
+    lineEnt.addComponent<Sprite>(texUI, lineSrc, SDL_FRect{0,0, lineDst.w, lineDst.h}, RenderLayer::UI, false);
+    lineEnt.addComponent<Parent>(&overlay);
+    overlay.getComponent<Children>().children.push_back(&lineEnt);
+
+    // --- 2. WEEKLY PAYMENT TEXT ---
+    // Title
+    auto& debtTitleEnt = world.createEntity();
+    Label dtData = {"Weekly Payment", AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "debtTitleText"};
+    dtData.dirty = true;
+    dtData.visible = false;
+    TextureManager::updateLabel(debtTitleEnt.addComponent<Label>(dtData));
+
+    // Position the title near the top of the footer
+    debtTitleEnt.addComponent<Transform>(Vector2D(baseX + 30.0f, footerY + 15.0f), 0.0f, 1.0f);
+    debtTitleEnt.addComponent<Parent>(&overlay);
+    overlay.getComponent<Children>().children.push_back(&debtTitleEnt);
+
+    // Subtitle (The actual days and amount)
+    auto& debtSubEnt = world.createEntity();
+    std::string debtSubText = "In " + std::to_string(data.daysUntilPayment) + " days: " + std::to_string(data.weeklyPaymentAmount) + "g";
+    Label dsData = {debtSubText, AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "debtSubText"};
+    dsData.dirty = true;
+    dsData.visible = false;
+    TextureManager::updateLabel(debtSubEnt.addComponent<Label>(dsData));
+
+    // Position the subtitle directly below the title (Y offset + 35.0f)
+    debtSubEnt.addComponent<Transform>(Vector2D(baseX + 30.0f, footerY + 50.0f), 0.0f, 1.0f);
+    debtSubEnt.addComponent<Parent>(&overlay);
+    overlay.getComponent<Children>().children.push_back(&debtSubEnt);
+
+    // --- 3. CURRENT BALANCE TEXT ---
+    auto& balEnt = world.createEntity();
+    std::string balText = "Current Balance: " + std::to_string(data.currentBalance) + "g";
+    Label bData = {balText, AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "balText"};
+    bData.dirty = true;
+    bData.visible = false;
+    TextureManager::updateLabel(balEnt.addComponent<Label>(bData));
+
+    balEnt.addComponent<Transform>(Vector2D(baseX + (overlaySprite.dst.w * 0.45f), footerY + 20.0f), 0.0f, 1.0f);
+    balEnt.addComponent<Parent>(&overlay);
+    overlay.getComponent<Children>().children.push_back(&balEnt);
+
+    // --- 4. CONFIRM BUTTON ---
+    auto& btnEnt = world.createEntity();
+    float btnWidth = 160.0f;
+    float btnHeight = 40.0f;
+    float btnX = baseX + overlaySprite.dst.w - btnWidth - 30.0f;
+    float btnY = footerY + (footerHeight / 2.0f) - (btnHeight / 2.0f);
+
+    auto& btnTransform = btnEnt.addComponent<Transform>(Vector2D(btnX, btnY), 0.0f, 1.0f);
+
+    // Assuming you have a standard button sprite texture
+    SDL_Texture* texBtn = TextureManager::load("../asset/ui/Buttons.png");
+    SDL_FRect btnSrc{0, 33 ,64, 16}; // Adjust to your actual button source rect
+    SDL_FRect btnDst{btnX, btnY, btnWidth, btnHeight};
+
+    btnEnt.addComponent<Sprite>(texBtn, btnSrc, btnDst, RenderLayer::UI, false);
+    btnEnt.addComponent<Collider>("ui", btnDst);
+
+    // Click Logic
+    auto& clickable = btnEnt.addComponent<Clickable>();
+    clickable.onPressed = [&btnTransform] { btnTransform.scale = 0.9f; };
+    clickable.onCancel = [&btnTransform] { btnTransform.scale = 1.0f; };
+    clickable.onReleased = [&overlay, &btnTransform, this]() {
+        btnTransform.scale = 1.0f;
+        std::cout << "Starting next day cycle..." << std::endl;
+
+        // Hide UI
+        toggleSettingsOverlayVisibility(overlay, nullptr);
+
+        // TODO: Fire event to DayCycleSystem to swap to Morning phase
+    };
+
+    btnEnt.addComponent<Parent>(&overlay);
+    overlay.getComponent<Children>().children.push_back(&btnEnt);
 }
 
 void Scene::createSettingsUIComponents(Entity &overlay) {

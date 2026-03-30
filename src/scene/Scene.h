@@ -38,6 +38,19 @@ class Scene {
         }
     };
 
+    struct DaySummaryData {
+        int grossSales = 0;
+        int customerPurchases = 0;
+        int currentBalance = 0;
+        int weeklyPaymentAmount = 0;
+        int daysUntilPayment = 0;
+
+        int getGrossProfit() const {
+            return grossSales - customerPurchases; // Or + depending on how you store customer purchases
+        }
+    };
+
+
 public:
     Scene(SceneType sceneType, const char* sceneName, const char* mapPath, int windowWidth, int windowHeight);
 
@@ -89,6 +102,11 @@ private:
     Entity* UIInventory = nullptr;
     Entity& createItemInventoryOverlay(int windowWidth, int windowHeight, Entity& overlay);
     Entity& createInventoryOverlay(int windowWidth, int windowHeight, Entity& overlay);
+
+    //Summary UI
+    Entity& createDaySummaryUI(int windowWidth, int windowHeight, const DaySummaryData& data);
+    void createDaySummaryContent(Entity& parent, const DaySummaryData& data);
+    void createDaySummaryFooter(Entity& parent, const DaySummaryData& data);
 
 
     //Order Screen
