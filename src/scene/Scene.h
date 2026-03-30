@@ -99,7 +99,6 @@ private:
     Entity& createDialogueOverlay(int windowWidth, int windowHeight);
 
     void createSettingsUIComponents(Entity& overlay);
-    void createHaggleUIComponents(Entity& overlay, int basePrice);
 
     void toggleSettingsOverlayVisibility(Entity& overlay, bool* forceState);
 

@@ -39,7 +39,6 @@ void Scene::initMainMenu(int windowWidth, int windowHeight) {
     test.requiredReputation = 1;
 
     auto &haggleOverlay = createHaggleUI(windowWidth, windowHeight, test);
-    //createHaggleUIComponents(haggleOverlay,test.basePrice);
     createCogButton(windowWidth,windowHeight,haggleOverlay);
 }
 
@@ -359,19 +358,18 @@ Entity& Scene::createPriceSelection(int windowWidth, int windowHeight, Entity& o
     // Increase button size (1.5x scale of the original 32x16)
     float btnWidth = 48.0f;
     float btnHeight = 24.0f;
+    float spacingX = 56.0f;
 
     // Increase gap between columns to fit the larger buttons
-    float spacingX = 56.0f;
 
     // Calculate the X start point so all 5 columns perfectly center
     // 5 columns means we go -2, -1, 0, 1, 2 widths from the center line.
-    float startX = centerLineX - (2.0f * spacingX);
+    float startX = centerLineX - (2.0f * spacingX) - (btnWidth / 2.0f);
 
     // Y Offsets
-    float startY = baseY + 240.0f; // Top of the UP buttons
-    float downBtnY = startY + 80.0f; // Top of the DOWN buttons (increases vertical gap for digits)
-    float textCenterY = startY + btnHeight + ((downBtnY - (startY + btnHeight)) / 2.0f); // Perfect middle for text
-
+    float startY = baseY + 240.0f;
+    float downBtnY = startY + 80.0f;
+    float textCenterY = startY + btnHeight + ((downBtnY - (startY + btnHeight)) / 2.0f);
 
     // --- 1. TITLE LABEL ("How much should I sell it for?") ---
     auto& titleLabelEntity = world.createEntity();
@@ -608,203 +606,65 @@ Entity &Scene::createCogButton(int windowWidth, int windowHeight, Entity &overla
 
     return cog;
 }
-
-void Scene::createHaggleUIComponents(Entity &overlay, int basePrice) {
-    if (!overlay.hasComponent<Children>()) {
-        overlay.addComponent<Children>();
+Entity& Scene::updateHaggleUI(ItemDef& item) {
+    if (!UIMenu) {
+        std::cerr << "Error: UIMenu not initialized!" << std::endl;
+        return *UIMenu; // Return early to prevent crash
     }
 
-    auto &overlayTransform = overlay.getComponent<Transform>();
-    auto &overlaySprite = overlay.getComponent<Sprite>();
-    float baseX = overlayTransform.position.x;
-    float baseY = overlayTransform.position.y;
-    float centerLineX = baseX + (overlaySprite.dst.w / 2.0f);
+    auto& session = UIMenu->getComponent<HaggleSession>();
+    session.currentItem = item;
 
-    // 1. THE SHARED STATE
-    auto digits = std::make_shared<std::vector<int>>(5, 0);
-    int tempPrice = basePrice;
+    // 1. Reset digits based on new item's base price
+    int tempPrice = item.basePrice;
     for (int i = 4; i >= 0; --i) {
-        (*digits)[i] = tempPrice % 10;
+        session.digits[i] = tempPrice % 10;
         tempPrice /= 10;
     }
 
-    // 2. THE PERCENTAGE LABEL
-    auto &percentLabelEntity = world.createEntity();
-    Label pLabel = {"100%", AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "hagglePercent"};
-    auto& pLabelComp = percentLabelEntity.addComponent<Label>(pLabel);
-    pLabelComp.dirty = true;
-    pLabelComp.visible = false;
-    TextureManager::updateLabel(pLabelComp);
-
-
-    // Positioned at the bottom-right of the lock area
-    percentLabelEntity.addComponent<Transform>(Vector2D(centerLineX + 80, baseY + 360), 0.0f, 1.0f);
-    percentLabelEntity.addComponent<Parent>(&overlay);
-    overlay.getComponent<Children>().children.push_back(&percentLabelEntity);
-
-    Entity* percentPtr = &percentLabelEntity;
-
-    // 3. THE RECALCULATION LAMBDA
-    auto updateHagglePercentage = [digits, percentPtr, basePrice]() {
-        int totalProposedPrice = 0;
-        int multiplier = 10000;
-        for (int i = 0; i < 5; ++i) {
-            totalProposedPrice += (*digits)[i] * multiplier;
-            multiplier /= 10;
-        }
-
-        if (basePrice > 0) {
-            int percentage = (int)(((float)totalProposedPrice / (float)basePrice) * 100.0f);
-
-            // Grab the reference to the label component
-            auto& pLabelComp = percentPtr->getComponent<Label>();
-
-            // Update data
-
-            pLabelComp.text = std::to_string(percentage) + "%";
-            pLabelComp.dirty = true;
-
-            // Force the rebuild immediately! (Bypasses loadLabel)
-            TextureManager::updateLabel(pLabelComp);
-        }
-    };
-
-    // 4. GENERATE THE 5 COLUMNS (Mathematically Centered!)
-    float spacingX = 48.0f; // Gap between columns
-    // Total width of 5 columns is roughly (4 * 48) + 32 = 224 pixels.
-    // To center it, we subtract half of that (112) from the center line.
-    float startX = centerLineX - 112.0f;
-    float startY = baseY + 240.0f; // Pushed down to the bottom half of the panel
-
-    for (int i = 0; i < 5; ++i) {
-        float colX = startX + (i * spacingX);
-        float columnCenter = colX + (32.0f / 2.0f); // 32 is the width of your +/- buttons
-
-        // --- DIGIT LABEL (Middle) ---
-        auto &digitEntity = world.createEntity();
-        Label dLabel = {std::to_string((*digits)[i]), AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "digit_" + std::to_string(i)};
-
-        // 1. Add and Update first to get the width/height
-        auto& dLabelComp = digitEntity.addComponent<Label>(dLabel);
-        dLabelComp.visible = false;
-        dLabelComp.dirty = true;
-        TextureManager::updateLabel(dLabelComp);
-
-        // 2. MATH: (Center of Column) - (Half of the Text Width)
-        float centeredX = columnCenter - (dLabelComp.dst.w / 2.0f);
-        // Do the same for Y if you want it perfectly between the buttons
-        float centeredY = (startY + 16.0f) + ( (72.0f - 16.0f) / 2.0f ) - (dLabelComp.dst.h / 2.0f);
-
-        digitEntity.addComponent<Transform>(Vector2D(centeredX, centeredY), 0.0f, 1.0f);
-        digitEntity.addComponent<Parent>(&overlay);
-        overlay.getComponent<Children>().children.push_back(&digitEntity);
-
-        Entity* digitPtr = &digitEntity;
-
-        // --- UP BUTTON (+) ---
-        auto &btnUp = world.createEntity();
-        auto &btnUpTransform = btnUp.addComponent<Transform>(Vector2D(colX, startY), 0.0f, 1.0f);
-        SDL_Texture *texButtons = TextureManager::load("../asset/ui/Buttons.png");
-        SDL_FRect srcUp{32, 0, 32, 16};
-        SDL_FRect destUp{colX, startY, 32, 16};
-        btnUp.addComponent<Sprite>(texButtons, srcUp, destUp, RenderLayer::UI, false);
-        btnUp.addComponent<Collider>("ui", destUp);
-
-        auto &clickUp = btnUp.addComponent<Clickable>();
-        clickUp.onPressed = [&btnUpTransform] { btnUpTransform.scale = 0.8f; };
-        clickUp.onCancel = [&btnUpTransform] { btnUpTransform.scale = 1.0f; };
-        clickUp.onReleased = [digits, i, digitPtr, updateHagglePercentage,columnCenter ,&btnUpTransform]() {
-            btnUpTransform.scale = 1.0f;
-            (*digits)[i] = ((*digits)[i] + 1) % 10;
-            auto& dLabelComp = digitPtr->getComponent<Label>();
-            dLabelComp.text = std::to_string((*digits)[i]);
-            dLabelComp.dirty = true;
-            TextureManager::updateLabel(dLabelComp);
-
-            // RE-CENTER AFTER TEXT CHANGE
-            auto& dTransform = digitPtr->getComponent<Transform>();
-            dTransform.position.x = columnCenter - (dLabelComp.dst.w / 2.0f);
-
-            updateHagglePercentage();
-        };
-        btnUp.addComponent<Parent>(&overlay);
-        overlay.getComponent<Children>().children.push_back(&btnUp);
-
-        // --- DOWN BUTTON (-) ---
-        auto &btnDown = world.createEntity();
-        auto &btnDownTransform = btnDown.addComponent<Transform>(Vector2D(colX, startY + 72), 0.0f, 1.0f);
-        SDL_FRect srcDown{32, 16, 32, 16};
-        SDL_FRect destDown{colX, startY + 72, 32, 16};
-        btnDown.addComponent<Sprite>(texButtons, srcDown, destDown, RenderLayer::UI, false);
-        btnDown.addComponent<Collider>("ui", destDown);
-
-        auto &clickDown = btnDown.addComponent<Clickable>();
-        clickDown.onPressed = [&btnDownTransform] { btnDownTransform.scale = 0.8f; };
-        clickDown.onCancel = [&btnDownTransform] { btnDownTransform.scale = 1.0f; };
-        clickDown.onReleased = [digits, i, digitPtr, updateHagglePercentage,columnCenter ,&btnDownTransform]() {
-            btnDownTransform.scale = 1.0f;
-            (*digits)[i] = ((*digits)[i] + 1) % 10;
-
-            auto &dLabelComp = digitPtr->getComponent<Label>();
-            dLabelComp.text = std::to_string((*digits)[i]);
-            dLabelComp.dirty = true;
-            TextureManager::updateLabel(dLabelComp);
-
-            // RE-CENTER AFTER TEXT CHANGE
-            auto &dTransform = digitPtr->getComponent<Transform>();
-            dTransform.position.x = columnCenter - (dLabelComp.dst.w / 2.0f);
-
-            updateHagglePercentage();
-
-        };
-        btnDown.addComponent<Parent>(&overlay);
-        overlay.getComponent<Children>().children.push_back(&btnDown);
+    // 2. Update Item Display Details using cached refs
+    if (session.itemNameRef) {
+        auto& nameLabel = session.itemNameRef->getComponent<Label>();
+        nameLabel.text = item.name;
+        nameLabel.dirty = true;
+        TextureManager::updateLabel(nameLabel);
     }
 
-    // 5. THE SELL / CONFIRM BUTTON (The Scales)
-    auto &haggleButton = world.createEntity();
+    if (session.itemIconRef) {
+        auto& iconSprite = session.itemIconRef->getComponent<Sprite>();
+        iconSprite.src = item.src; // Update the source rect for the new item icon
+    }
 
-    // Our new desired UI size
-    float displaySize = 128.0f;
+    if (session.itemBaseValRef) {
+        auto& baseValLabel = session.itemBaseValRef->getComponent<Label>();
+        baseValLabel.text = "Base Value: " + std::to_string(item.basePrice) + "G";
+        baseValLabel.dirty = true;
+        TextureManager::updateLabel(baseValLabel);
+    }
 
-    // Calculate centering: (Panel Center) - (Half of Display Size)
-    // Position it 40px up from the very bottom of the parchment
-    float scaleX = centerLineX - (displaySize / 2.0f);
-    float scaleY = (baseY + overlaySprite.dst.h) - (displaySize + 40.0f);
-
-    auto &haggleTransform = haggleButton.addComponent<Transform>(Vector2D(scaleX, scaleY), 0.0f, 1.0f);
-
-    SDL_Texture *haggleTex = TextureManager::load("../asset/ui/haggleButton.png");
-
-    // Source is the FULL file size
-    SDL_FRect haggleSrc{0, 0, 256, 256};
-    // Destination is our SHRUNK display size
-    SDL_FRect haggleDest{scaleX, scaleY, displaySize, displaySize};
-
-    // Important: Set visible to false so it follows your toggle logic!
-    haggleButton.addComponent<Sprite>(haggleTex, haggleSrc, haggleDest, RenderLayer::UI, false);
-
-    // --- The Collider ---
-    // Make the clickable area match the 128x128 visual size
-    haggleButton.addComponent<Collider>("ui", haggleDest);
-
-    auto& clickable = haggleButton.addComponent<Clickable>();
-    clickable.onPressed = [&haggleTransform] { haggleTransform.scale = 0.9f; };
-    clickable.onCancel = [&haggleTransform] { haggleTransform.scale = 1.0f; };
-    clickable.onReleased = [this, &overlay, &haggleTransform, digits]() {
-        haggleTransform.scale = 1.0f;
-        int finalPrice = 0;
-        int multiplier = 10000;
-        for (int i = 0; i < 5; ++i) {
-            finalPrice += (*digits)[i] * multiplier;
-            multiplier /= 10;
+    // 3. Update Digit Spinners
+    for (int i = 0; i < 5; ++i) {
+        if (session.digitRefs[i]) {
+            auto& dLabel = session.digitRefs[i]->getComponent<Label>();
+            dLabel.text = std::to_string(session.digits[i]);
+            dLabel.dirty = true;
+            TextureManager::updateLabel(dLabel);
         }
-        std::cout << "Transaction Confirmed! Sold for: " << finalPrice << "G" << std::endl;
-        toggleSettingsOverlayVisibility(overlay,nullptr);
-    };
+    }
 
-    haggleButton.addComponent<Parent>(&overlay);
-    overlay.getComponent<Children>().children.push_back(&haggleButton);
+    // 4. Update Percentage (will default to 100% since digits == basePrice)
+    if (session.percentLabelRef) {
+        auto& pLabel = session.percentLabelRef->getComponent<Label>();
+        pLabel.text = std::to_string(session.getPercentage()) + "%";
+        pLabel.dirty = true;
+        TextureManager::updateLabel(pLabel);
+    }
+
+    // 5. Open the menu
+    bool forceOpen = true;
+    toggleSettingsOverlayVisibility(*UIMenu, &forceOpen);
+
+    return *UIMenu;
 }
 
 void Scene::createSettingsUIComponents(Entity &overlay) {
