@@ -39,7 +39,7 @@ void Scene::initMainMenu(int windowWidth, int windowHeight) {
     test.requiredReputation = 1;
 
     auto &haggleOverlay = createHaggleUI(windowWidth, windowHeight, test);
-    createHaggleUIComponents(haggleOverlay,test.basePrice);
+    //createHaggleUIComponents(haggleOverlay,test.basePrice);
     createCogButton(windowWidth,windowHeight,haggleOverlay);
 }
 
@@ -103,7 +103,7 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
 
     SDL_Texture *tex = TextureManager::load("../asset/animations/fox_anim.png");
     SDL_FRect playerSrc = anim.clips[anim.currentClip].frameIndicies[0];
-    SDL_FRect playerDst{playerTransform.position.x, playerTransform.position.y, 32, 32};
+    SDL_FRect playerDst{0,0, 32, 32};
     player.addComponent<Sprite>(tex, playerSrc, playerDst);
 
     auto &playerCollider = player.addComponent<Collider>("player");
@@ -124,7 +124,6 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
     int customerIndexCount = 0; // Index on which Texture ^
 
     auto &spawner(world.createEntity());
-    std::cout << "Door Position: " << door.x << ", "<<door.y << std::endl;
     Transform t = spawner.addComponent<Transform>(Vector2D(door.x * 32, door.y * 32), 1.0f);
     spawner.addComponent<Spawner>([this,t,customerTextures,customerIndexCount]() mutable {
         auto &e = world.createDeferredEntity();
@@ -140,7 +139,7 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
         // Because the lambda is 'mutable', customerIndexCount will correctly increment across spawns.
         SDL_Texture *tex = customerTextures[customerIndexCount++ % customerTextures.size()];
         SDL_FRect src = anim.clips[anim.currentClip].frameIndicies[0];
-        SDL_FRect dst{t.position.x - 16.0f, t.position.y - 16.0f, 64, 64};
+        SDL_FRect dst{- 16.0f, - 16.0f, 64, 64};
         e.addComponent<Sprite>(tex, src, dst);
     });
     //Display Case: (Test)
@@ -150,18 +149,31 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
     // createDisplaycase(Vector2D(22 * 32, 15 * 32), tilemapTex, {64, 32, 32, 32}, {0, 0, 32, 32});
 
     //Cash Register
-    auto &cashRegister = world.createEntity();
-    std::cout << "Register Position: " << regi.x << ", "<<regi.y << std::endl;
-    cashRegister.addComponent<Transform>(Vector2D(regi.x * 32, (regi.y + 2) * 32));
-    auto &c = cashRegister.addComponent<Collider>("wall");
-    c.rect = {1 * 32, 14 * 32, 4 * 32, 32};
-    c.offsetX = -32.0f;
+     auto &cashRegister = world.createEntity();
+     auto& cashTransform = cashRegister.addComponent<Transform>(Vector2D(regi.x * 32, (regi.y + 2) * 32));
+     auto &c = cashRegister.addComponent<Collider>("wall");
+     c.rect = { regi.x*32.0f - 64.0f, (regi.y+2)*32 + 32.0f, 160.0f, 32.0f };
+     c.offsetX = -64.0f;
+     c.offsetY = 16.0f;
+     cashRegister.addComponent<Interaction>([&dayCycle]() {
+         if (dayCycle.currentPhase == DayPhase::Morning) {
+             std::cout << "Start the day ..." << std::endl;
+             dayCycle.phaseSwapReady = true;
+         }
+     });
+    SDL_FRect regSrc = { 160.0f, 256.0f, 160.0f, 96.0f };
+    SDL_FRect regDst = {2*-32.0f , -32.0f, 160.0f, 96.0f };
+    cashRegister.addComponent<Sprite>(tilemapTex, regSrc, regDst);
+
+    // 5. Interaction
     cashRegister.addComponent<Interaction>([&dayCycle]() {
         if (dayCycle.currentPhase == DayPhase::Morning) {
             std::cout << "Start the day ..." << std::endl;
             dayCycle.phaseSwapReady = true;
         }
-    }); // -> Interact to start morning
+    });
+
+
     //Message Board
     auto &bulletinBoard = world.createEntity();
     bulletinBoard.addComponent<Transform>(Vector2D(17 * 32, 5 * 32), 1.0f);
@@ -230,29 +242,32 @@ Entity &Scene::createBaseMenuOverlay(int windowWidth, int windowHeight) {
 }
 Entity& Scene::createItemHaggleDisplay(Entity& parent, ItemDef& item) {
     auto& subOverlay = world.createEntity();
-
-    // 1. Setup Sub-Overlay Container
     auto& parentS = parent.getComponent<Sprite>();
     auto& parentT = parent.getComponent<Transform>();
 
-    // Position it at the top-left of the parent (or offset it)
-    float baseX = parentT.position.x;
-    float baseY = parentT.position.y;
-    float centerLineX = baseX + (parentS.dst.w / 2.0f);
+    // Calculate the center of the parchment relative to the parent's top-left
+    float parentCenterX = parentS.dst.w / 2.0f;
 
-    subOverlay.addComponent<Transform>(Vector2D(baseX, baseY), 0.0f, 1.0f);
+    // The subOverlay entity lives at the parent's origin (0,0) logic-wise
+    subOverlay.addComponent<Transform>(Vector2D(parentT.position.x, parentT.position.y), 0.0f, 1.0f);
     subOverlay.addComponent<Parent>(&parent);
 
-    // OPTIONAL: Add a sub-background texture if you have one
+    // --- THE WRAPPER BOX (UI-Sub.png) ---
+    float subWidth = 240.0f;
+    float subHeight = 195.0f;
+    // OFFSET: Center it on the parchment and push it down 10px
+    float offsetX = parentCenterX - (subWidth / 2.0f);
+    float offsetY = 10.0f;
+
     SDL_Texture* subTex = TextureManager::load("../asset/ui/UI-Sub.png");
-    SDL_FRect subSrc{0, 0, 21,21};
-    subOverlay.addComponent<Sprite>(subTex,subSrc , parentS.dst, RenderLayer::UI, false);
+    SDL_FRect subSrc{0, 0, 21.0f, 21.0f};
+    // DST now stores LOCAL OFFSET {x, y, w, h}
+    SDL_FRect subDst{offsetX, offsetY, subWidth, subHeight};
+    subOverlay.addComponent<Sprite>(subTex, subSrc, subDst, RenderLayer::UI, false);
 
-    if (!subOverlay.hasComponent<Children>()) {
-        subOverlay.addComponent<Children>();
-    }
+    subOverlay.addComponent<Children>();
 
-    // 2. ITEM NAME
+    // 2. ITEM NAME (Relative to parentT)
     auto &nameLabel = world.createEntity();
     Label nameData = {item.name, AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "itemName"};
     auto& nameLabelComp = nameLabel.addComponent<Label>(nameData);
@@ -260,22 +275,23 @@ Entity& Scene::createItemHaggleDisplay(Entity& parent, ItemDef& item) {
     nameLabelComp.dirty = true;
     TextureManager::updateLabel(nameLabelComp);
 
-    nameLabel.addComponent<Transform>(Vector2D(centerLineX - (nameLabelComp.dst.w / 2.0f), baseY + 40), 0.0f, 1.0f);
+    // Position: Centered X, 40px down from Top
+    nameLabel.addComponent<Transform>(Vector2D(parentT.position.x + parentCenterX - (nameLabelComp.dst.w / 2.0f), parentT.position.y + 40), 0.0f, 1.0f);
     nameLabel.addComponent<Parent>(&subOverlay);
     subOverlay.getComponent<Children>().children.push_back(&nameLabel);
 
     // 3. ITEM ICON
     auto &itemIcon = world.createEntity();
     float iconSize = 64.0f;
-    float iconX = centerLineX - (iconSize / 2.0f);
-    float iconY = baseY + 80.0f;
+    // Position: Centered X, 80px down from Top
+    itemIcon.addComponent<Transform>(Vector2D(parentT.position.x + parentCenterX - (iconSize / 2.0f), parentT.position.y + 80), 0.0f, 1.0f);
 
-    itemIcon.addComponent<Transform>(Vector2D(iconX, iconY), 0.0f, 1.0f);
     SDL_Texture *itemsTex = TextureManager::get("items");
     if (!itemsTex) itemsTex = TextureManager::load("../asset/items.png");
 
-    SDL_FRect itemDst{iconX,iconY,iconSize,iconSize};
-    itemIcon.addComponent<Sprite>(itemsTex, item.src,itemDst,RenderLayer::UI, false);
+    // Icon has no local offset, so dst.x/y = 0
+    SDL_FRect itemDst{0, 0, iconSize, iconSize};
+    itemIcon.addComponent<Sprite>(itemsTex, item.src, itemDst, RenderLayer::UI, false);
     itemIcon.addComponent<Parent>(&subOverlay);
     subOverlay.getComponent<Children>().children.push_back(&itemIcon);
 
@@ -288,13 +304,13 @@ Entity& Scene::createItemHaggleDisplay(Entity& parent, ItemDef& item) {
     valLabelComp.dirty = true;
     TextureManager::updateLabel(valLabelComp);
 
-    baseValLabel.addComponent<Transform>(Vector2D(centerLineX - (valLabelComp.dst.w / 2.0f), baseY + 155), 0.0f, 1.0f);
+    // Position: Centered X, 155px down from Top
+    baseValLabel.addComponent<Transform>(Vector2D(parentT.position.x + parentCenterX - (valLabelComp.dst.w / 2.0f), parentT.position.y + 155), 0.0f, 1.0f);
     baseValLabel.addComponent<Parent>(&subOverlay);
     subOverlay.getComponent<Children>().children.push_back(&baseValLabel);
 
-    // 5. COMBO LOCK COMPONENTS
-    // We pass subOverlay as the parent so the buttons are children of the sub-menu
-    createHaggleUIComponents(subOverlay, item.basePrice);
+    // Pass 'parent' so the lock system uses the big parchment for its math
+    createHaggleUIComponents(parent, item.basePrice);
 
     return subOverlay;
 }
