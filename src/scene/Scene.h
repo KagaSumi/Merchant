@@ -72,11 +72,52 @@ class Scene {
         Entity* label = nullptr;
     };
 
+    struct QuantityScreenSession {
+        InventoryEntry selectedItem;
+
+        // Callbacks to tell the Scene what to do when the screen closes
+        std::function<void(InventoryEntry, int)> onConfirm;
+        std::function<void()> onCancel;
+
+        Entity* itemIconRef = nullptr;
+        Entity* itemNameRef = nullptr;
+        std::vector<Entity*> quantityButtonRefs;
+    };
+
+    struct QuantitySession {
+        InventoryEntry selectedItem;
+        int maxQuantity = 0;
+
+        Entity* itemIconRef = nullptr;
+        Entity* itemNameRef = nullptr;
+        Entity* quantityButtonContainer = nullptr; // parent of the number buttons
+        std::vector<Entity*> quantityButtonRefs;   // the clickable number buttons
+
+        std::function<void(InventoryEntry, int)> onConfirm; // fires when player picks qty
+    };
+
+    enum class InventoryUIState {
+        Grid,
+        QuantitySelect
+    };
+
+    enum class InventoryMode {
+        Browse,      // opened via I key - view only
+        PlaceItem    // opened via display case - clickable
+    };
     struct InventorySession {
         std::vector<InventoryEntry> cachedInventory;
         std::vector<InventorySlotRefs> slots;
-    };
+        InventoryMode mode = InventoryMode::Browse;
 
+        InventoryUIState state = InventoryUIState::Grid;
+        QuantitySession quantitySession;
+
+        // grid root container ref so you can hide/show the whole grid at once
+        Entity* gridContainerRef = nullptr;
+        // quantity panel root ref
+        Entity* quantityPanelRef = nullptr;
+    };
 
 
 public:
@@ -96,8 +137,8 @@ public:
     const std::string& getName() const {return name;}
 
     Entity* UIInventory = nullptr;
-    void openInventory(const std::vector<InventoryEntry>& items) {
-        updateInventoryUI(items);
+    void openInventory(const std::vector<InventoryEntry>& items, InventoryMode mode) {
+        updateInventoryUI(items,mode);
     }
 
 private:
@@ -109,7 +150,7 @@ private:
     void initGameplay(const char* mapPath, int windowWidth, int windowHeight);
 
     //Helper Function
-    Entity& createDisplaycase(Vector2D location, SDL_Texture* texture,SDL_FRect src, SDL_FRect dst, DayCycle& dayCycle);
+    Entity& createDisplaycase(Vector2D location, SDL_Texture* texture,SDL_FRect src, SDL_FRect dst, DayCycle& dayCycle,Entity* playerRef);
 
     //HUD
     Entity& createhudOverlay(int windowWidth, int windowHeight);
@@ -133,7 +174,7 @@ private:
 
     //Inventory UI
     Entity& createInventoryUI(int windowWidth, int windowHeight);
-    Entity& updateInventoryUI(const std::vector<InventoryEntry>& inventoryData);
+    Entity& updateInventoryUI(const std::vector<InventoryEntry>& inventoryData, InventoryMode mode);
 
     //Summary UI
     Entity* UIDaySummary = nullptr;
@@ -142,6 +183,12 @@ private:
     void createDaySummaryContent(Entity& parent, const DaySummaryData& data);
     void createDaySummaryFooter(Entity& parent, const DaySummaryData& data);
 
+    //Select UI (Display Case)
+    Entity* UIQuantityScreen = nullptr;
+    Entity& createQuantityScreen(int windowWidth, int windowHeight);
+    void openQuantityScreen(const InventoryEntry& item, int maxQty,
+                            std::function<void(InventoryEntry, int)> onConfirm,
+                            std::function<void()> onCancel);
 
     //Order Screen
     Entity& createOrderStockButton(int windowWidth, int windowHeight, Entity& overlay);
