@@ -39,8 +39,8 @@ void Scene::initMainMenu(int windowWidth, int windowHeight) {
     test.requiredReputation = 1;
     DaySummaryData SummaryData;
 
-    auto &haggleOverlay = createHaggleUI(windowWidth, windowHeight, test);
-    auto &summaryOverlay = createDaySummaryUI(windowWidth,windowHeight, SummaryData);
+    auto &haggleOverlay = createHaggleUI(windowWidth, windowHeight);
+    auto &summaryOverlay = createDaySummaryUI(windowWidth,windowHeight);
 
     createCogButton(windowWidth,windowHeight,summaryOverlay);
 }
@@ -320,7 +320,7 @@ Entity& Scene::createItemHaggleDisplay(Entity& parent) {
     return subOverlay;
 }
 
-Entity& Scene::createHaggleUI(int windowWidth, int windowHeight, ItemDef& item) {
+Entity& Scene::createHaggleUI(int windowWidth, int windowHeight) {
     auto& mainOverlay = createBaseMenuOverlay(windowWidth, windowHeight);
     mainOverlay.getComponent<Sprite>().visible = false;
 
@@ -328,25 +328,19 @@ Entity& Scene::createHaggleUI(int windowWidth, int windowHeight, ItemDef& item) 
         mainOverlay.addComponent<Children>();
     }
 
-    // 1. Initialize the Shared State
     auto& session = mainOverlay.addComponent<HaggleSession>();
-    session.currentItem = item;
+    // Set a safe default state so the initial labels don't crash
+    session.currentItem.name = "Loading...";
+    session.currentItem.basePrice = 0;
+    session.currentItem.src = {0, 0, 32, 32};
+    session.digits = {0, 0, 0, 0, 0};
 
-    // Set initial digits based on base price
-    int tempPrice = item.basePrice;
-    for (int i = 4; i >= 0; --i) {
-        session.digits[i] = tempPrice % 10;
-        tempPrice /= 10;
-    }
-
-    // 2. Build the Modular Parts (passing the mainOverlay)
+    // Build the modular parts
     createItemHaggleDisplay(mainOverlay);
     createPriceSelection(windowWidth, windowHeight, mainOverlay);
     createHaggleButton(windowWidth, windowHeight, mainOverlay);
 
-    // Set your global pointer so updateHaggleUI can find it later
     UIMenu = &mainOverlay;
-
     return mainOverlay;
 }
 
@@ -674,17 +668,26 @@ Entity& Scene::updateHaggleUI(ItemDef& item) {
 }
 
 //Summary UI
-Entity& Scene::createDaySummaryUI(int windowWidth, int windowHeight, const DaySummaryData& data) {
+Entity& Scene::createDaySummaryUI(int windowWidth, int windowHeight) {
     auto& mainOverlay = createBaseMenuOverlay(windowWidth, windowHeight);
-    mainOverlay.getComponent<Sprite>().visible = false; // Hide until end of day
+    mainOverlay.getComponent<Sprite>().visible = false;
 
     if (!mainOverlay.hasComponent<Children>()) {
         mainOverlay.addComponent<Children>();
     }
 
-    createDaySummaryContent(mainOverlay, data);
-    createDaySummaryFooter(mainOverlay, data);
+    // Create a local, zeroed-out data struct just for the initial layout calculations
+    DaySummaryData defaultData;
 
+    // Attach the session
+    auto& session = mainOverlay.addComponent<DaySummarySession>();
+    session.currentData = defaultData;
+
+    // Pass the zeroed-out data to build the hidden layout
+    createDaySummaryContent(mainOverlay, defaultData);
+    createDaySummaryFooter(mainOverlay, defaultData);
+
+    UIDaySummary = &mainOverlay;
     return mainOverlay;
 }
 
@@ -719,7 +722,7 @@ void Scene::createDaySummaryContent(Entity& overlay, const DaySummaryData& data)
     SDL_Color colorNeutral = {0, 0, 0, 255};        // Black
 
     // --- HELPER LAMBDA FOR ROWS ---
-    auto createRow = [&](const std::string& labelText, int value, float yPos, SDL_Color valColor) {
+    auto createRow = [&](const std::string& labelText, int value, float yPos, SDL_Color valColor) -> std::pair<Entity*,Entity*> {
         // Left Label
         auto& textEnt = world.createEntity();
         Label lData = {labelText, AssetManager::getFont("arial"), colorNeutral, LabelType::Static, labelText};
@@ -745,18 +748,27 @@ void Scene::createDaySummaryContent(Entity& overlay, const DaySummaryData& data)
         valEnt.addComponent<Transform>(Vector2D(rightColX - vComp.dst.w, yPos), 0.0f, 1.0f);
         valEnt.addComponent<Parent>(&overlay);
         overlay.getComponent<Children>().children.push_back(&valEnt);
+
+        return {&textEnt,&valEnt};
     };
+    auto& session = overlay.getComponent<DaySummarySession>();
 
     // --- 3. GENERATE ROWS ---
-    createRow("Gross Sales", data.grossSales, startY, data.grossSales > 0 ? colorPositive : colorNeutral);
-    createRow("Customer Purchase", data.customerPurchases, startY + rowSpacing, data.customerPurchases < 0 ? colorNegative : colorNeutral);
+    session.grossProfitValRef = createRow("Gross Sales", data.grossSales, startY, data.grossSales > 0 ? colorPositive : colorNeutral).second;
+    session.customerPurchasesValRef = createRow("Customer Purchase", data.customerPurchases, startY + rowSpacing, data.customerPurchases < 0 ? colorNegative : colorNeutral).second; auto wpRow = createRow("Weekly Payment",data.weeklyPaymentAmount, startY + rowSpacing*2, colorNegative);
+    session.weeklyPaymentLabelRef = wpRow.first;
+    session.weeklyPaymentValRef = wpRow.second;
+    bool isPaymentDay = (data.daysUntilPayment == 0);
+    session.weeklyPaymentLabelRef->getComponent<Label>().visible = isPaymentDay;
+    session.weeklyPaymentValRef->getComponent<Label>().visible = isPaymentDay;
 
     int profit = data.getGrossProfit();
     SDL_Color profitColor = profit > 0 ? colorPositive : (profit < 0 ? colorNegative : colorNeutral);
-    createRow("Gross Profit", profit, startY + (rowSpacing * 2.5f), profitColor); // Extra gap for the total
+    session.grossProfitValRef = createRow("Gross Profit", profit, startY + (rowSpacing * 2.5f), profitColor).second; // Extra gap for the total
 }
 
 void Scene::createDaySummaryFooter(Entity& overlay, const DaySummaryData& data) {
+    auto& session = overlay.getComponent<DaySummarySession>();
     auto& overlayTransform = overlay.getComponent<Transform>();
     auto& overlaySprite = overlay.getComponent<Sprite>();
 
@@ -793,6 +805,7 @@ void Scene::createDaySummaryFooter(Entity& overlay, const DaySummaryData& data) 
 
     // Subtitle (The actual days and amount)
     auto& debtSubEnt = world.createEntity();
+    session.debtSubTextRef = &debtSubEnt;
     std::string debtSubText = "In " + std::to_string(data.daysUntilPayment) + " days: " + std::to_string(data.weeklyPaymentAmount) + "g";
     Label dsData = {debtSubText, AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "debtSubText"};
     dsData.dirty = true;
@@ -806,6 +819,7 @@ void Scene::createDaySummaryFooter(Entity& overlay, const DaySummaryData& data) 
 
     // --- 3. CURRENT BALANCE TEXT ---
     auto& balEnt = world.createEntity();
+    session.balanceTextRef = &balEnt;
     std::string balText = "Current Balance: " + std::to_string(data.currentBalance) + "g";
     Label bData = {balText, AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "balText"};
     bData.dirty = true;
@@ -888,7 +902,83 @@ void Scene::createSettingsUIComponents(Entity &overlay) {
     auto &parentChildren = overlay.getComponent<Children>();
     parentChildren.children.push_back(&closeButton);
 }
+Entity& Scene::updateDaySummaryUI(const DaySummaryData& data) {
+    if (!UIDaySummary) {
+        std::cerr << "Error: UIDaySummary not initialized!" << std::endl;
+        return *UIDaySummary;
+    }
 
+    auto& session = UIDaySummary->getComponent<DaySummarySession>();
+    session.currentData = data;
+
+    auto& overlayTransform = UIDaySummary->getComponent<Transform>();
+    auto& overlaySprite = UIDaySummary->getComponent<Sprite>();
+
+    // We need to recalculate the right anchor for our right-aligned text
+    float rightColX = overlayTransform.position.x + overlaySprite.dst.w - 120.0f;
+
+    SDL_Color colorPositive = {76, 175, 80, 255};
+    SDL_Color colorNegative = {211, 47, 47, 255};
+    SDL_Color colorNeutral = {0, 0, 0, 255};
+
+    // --- HELPER LAMBDA FOR UPDATING RIGHT-ALIGNED LEDGER VALUES ---
+    auto updateLedgerValue = [&](Entity* ent, int value, SDL_Color color) {
+        if (!ent) return;
+        auto& label = ent->getComponent<Label>();
+        label.text = std::to_string(value) + "g";
+        label.color = color;
+        label.dirty = true;
+        TextureManager::updateLabel(label); // This updates label.dst.w
+
+        // Shift the X position based on the new text width to keep it right-aligned!
+        auto& transform = ent->getComponent<Transform>();
+        transform.position.x = rightColX - label.dst.w;
+    };
+
+    // 1. Update Ledger Rows
+    updateLedgerValue(session.grossSalesValRef, data.grossSales, data.grossSales > 0 ? colorPositive : colorNeutral);
+    updateLedgerValue(session.customerPurchasesValRef, data.customerPurchases, data.customerPurchases < 0 ? colorNegative : colorNeutral);
+
+    int profit = data.getGrossProfit();
+    updateLedgerValue(session.grossProfitValRef, profit, profit > 0 ? colorPositive : (profit < 0 ? colorNegative : colorNeutral));
+
+    bool isPaymentDay = (data.daysUntilPayment == 0);
+
+    if (session.weeklyPaymentLabelRef && session.weeklyPaymentValRef) {
+        // Toggle visibility for both the left and right side of the row
+        session.weeklyPaymentLabelRef->getComponent<Label>().visible = isPaymentDay;
+        session.weeklyPaymentValRef->getComponent<Label>().visible = isPaymentDay;
+
+        // If it is visible, update the number and right-align it
+        if (isPaymentDay) {
+            updateLedgerValue(session.weeklyPaymentValRef, data.weeklyPaymentAmount, colorNegative);
+        }
+    }
+
+    // 2. Update Footer Subtext (Days Remaining & Amount)
+    if (session.debtSubTextRef) {
+        auto& subLabel = session.debtSubTextRef->getComponent<Label>();
+        subLabel.text = "In " + std::to_string(data.daysUntilPayment) + " days: " + std::to_string(data.weeklyPaymentAmount) + "g";
+        subLabel.dirty = true;
+        TextureManager::updateLabel(subLabel);
+    }
+
+    // 3. Update Balance Text
+    if (session.balanceTextRef) {
+        auto& balLabel = session.balanceTextRef->getComponent<Label>();
+        balLabel.text = "Current Balance: " + std::to_string(data.currentBalance) + "g";
+        balLabel.dirty = true;
+        TextureManager::updateLabel(balLabel);
+    }
+
+    // 4. Open the menu
+    bool forceOpen = true;
+    toggleSettingsOverlayVisibility(*UIDaySummary, &forceOpen);
+
+    return *UIDaySummary;
+}
+
+//UI Utils
 void Scene::toggleSettingsOverlayVisibility(Entity &overlay, bool* forceState) {
     // 1. Determine the new state
     // If forceState is null, we just flip the current visibility.

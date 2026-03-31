@@ -3,6 +3,7 @@
 //
 
 #include "DayCycleSystem.h"
+#include "scene/Scene.h"
 void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities) {
 
     // 1. Safely find the Spawner component
@@ -60,6 +61,12 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
 
         case DayPhase::Evening:
             applyTint(entities, evening_target);
+            // DaySummaryData todayData;
+            // todayData.grossSales = Game::gameState.Wallet.dailyIncome;
+            // todayData.customerPurchases = Game::gameState.Wallet.dailyExpenses;
+            // todayData.currentBalance = Game::gameState.Wallet.totalGold;
+            // todayData.weeklyPaymentAmount = Game::gameState.Debt.nextPayment;
+            // todayData.daysUntilPayment = Game::gameState.Debt.daysRemaining;
             if (cycle->phaseSwapReady == true) {
                 cycle->phaseSwapReady = false;
                 finishEvening();

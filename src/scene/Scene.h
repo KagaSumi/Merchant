@@ -38,6 +38,7 @@ class Scene {
         }
     };
 
+    //Data Package
     struct DaySummaryData {
         int grossSales = 0;
         int customerPurchases = 0;
@@ -48,6 +49,20 @@ class Scene {
         int getGrossProfit() const {
             return grossSales - customerPurchases; // Or + depending on how you store customer purchases
         }
+    };
+    struct DaySummarySession {
+        DaySummaryData currentData;
+
+        // Cached references to the dynamic text entities
+        Entity* grossSalesValRef = nullptr;
+        Entity* customerPurchasesValRef = nullptr;
+        Entity* grossProfitValRef = nullptr;
+
+        Entity* weeklyPaymentLabelRef = nullptr;
+        Entity* weeklyPaymentValRef = nullptr;
+
+        Entity* debtSubTextRef = nullptr;
+        Entity* balanceTextRef = nullptr;
     };
 
 
@@ -93,7 +108,7 @@ private:
     //Haggling UI
     Entity* UIMenu = nullptr;
     Entity& updateHaggleUI(ItemDef &item);
-    Entity& createHaggleUI(int windowWidth, int windowHeight, ItemDef& item);
+    Entity& createHaggleUI(int windowWidth, int windowHeight);
     Entity& createItemHaggleDisplay(Entity& parent); // Item Overlay
     Entity& createPriceSelection(int windowWidth, int windowHeight, Entity& overlay); //Price Selection
     Entity& createHaggleButton(int windowWidth, int windowHeight, Entity& overlay); // Confirm Button
@@ -104,7 +119,9 @@ private:
     Entity& createInventoryOverlay(int windowWidth, int windowHeight, Entity& overlay);
 
     //Summary UI
-    Entity& createDaySummaryUI(int windowWidth, int windowHeight, const DaySummaryData& data);
+    Entity* UIDaySummary = nullptr;
+    Entity& createDaySummaryUI(int windowWidth, int windowHeight);
+    Entity& updateDaySummaryUI(const DaySummaryData& data);
     void createDaySummaryContent(Entity& parent, const DaySummaryData& data);
     void createDaySummaryFooter(Entity& parent, const DaySummaryData& data);
 
