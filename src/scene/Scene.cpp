@@ -123,7 +123,7 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
         }
     };
     auto &itemDB = world.getItems();
-    for (auto &[id, item]: itemDB.items) {
+    for (auto &[id,item]: itemDB.items) {
         inv.addItem(item, 0);
     }
     inv.addItem(itemDB.items[1], 5); // Minor Health Potion
@@ -135,7 +135,6 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
 
     //Customers:
     std::vector<SDL_Texture *> customerTextures = {
-        //TextureManager::load("../asset/animations/CustomerA.png"),
         TextureManager::load("../asset/animations/CustomerF.png"),
         TextureManager::load("../asset/animations/CustomerM.png")
     };
@@ -1445,27 +1444,28 @@ Entity &Scene::createQuantityScreen(int windowWidth, int windowHeight) {
     promptEnt.addComponent<Transform>(Vector2D(centerX - (promptComp.dst.w / 2.0f), baseY + 180.0f), 0.0f, 1.0f);
     promptEnt.addComponent<Parent>(&mainOverlay);
     mainOverlay.getComponent<Children>().children.push_back(&promptEnt);
-
-    // --- THE 9 BUTTON POOL ---
+    // --- THE 4 BUTTON POOL ---
     SDL_Texture *btnTex = TextureManager::load("../asset/ui/Buttons.png");
-    float btnSize = 48.0f; // Made them slightly bigger since it's a full screen
 
-    for (int q = 1; q <= 9; ++q) {
+    // Scale up the 32x16 source image so it's easy to click
+    float btnSizeW = 96.0f;
+    float btnSizeH = 48.0f;
+
+    for (int q = 1; q <= 4; ++q) {
         auto &btn = world.createEntity();
         btn.addComponent<Transform>(Vector2D(0, 0), 0.0f, 1.0f);
-        btn.addComponent<Sprite>(btnTex, SDL_FRect{0, 0, 32, 32}, SDL_FRect{0, 0, btnSize, btnSize}, RenderLayer::UI,
-                                 false).visible = false;
-        btn.addComponent<Collider>("ui", SDL_FRect{0, 0, btnSize, btnSize}).enabled = false;
 
-        auto &numEnt = world.createEntity();
-        Label numData = {
-            std::to_string(q), AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static,
-            "qtyScreenBtn_" + std::to_string(q)
-        };
-        TextureManager::updateLabel(numEnt.addComponent<Label>(numData));
-        numEnt.addComponent<Transform>(Vector2D(0, 0), 0.0f, 1.0f);
-        numEnt.addComponent<Parent>(&btn);
-        btn.addComponent<Children>().children.push_back(&numEnt);
+        // Determine exact X and Y on the sprite sheet based on the button number
+        float srcX = (q == 1 || q == 3) ? 0.0f : 33.0f;
+        float srcY = (q == 1 || q == 2) ? 64.0f : 80.0f;
+
+        SDL_FRect srcRect{srcX, srcY, 32.0f, 16.0f};
+        SDL_FRect dstRect{0, 0, btnSizeW, btnSizeH};
+
+        btn.addComponent<Sprite>(btnTex, srcRect, dstRect, RenderLayer::UI, false).visible = false;
+        btn.addComponent<Collider>("ui", dstRect).enabled = false;
+
+        // (We completely removed the numEnt Label creation here!)
 
         // Click Logic
         auto &bClick = btn.addComponent<Clickable>();
@@ -1474,14 +1474,11 @@ Entity &Scene::createQuantityScreen(int windowWidth, int windowHeight) {
         bClick.onCancel = [btnPtr] { btnPtr->getComponent<Transform>().scale = 1.0f; };
         bClick.onReleased = [this, q, btnPtr]() {
             btnPtr->getComponent<Transform>().scale = 1.0f;
-
             auto &s = UIQuantityScreen->getComponent<QuantityScreenSession>();
 
-            // Hide this screen
             bool close = false;
             toggleSettingsOverlayVisibility(*UIQuantityScreen, &close);
 
-            // Trigger the confirm callback
             if (s.onConfirm) {
                 s.onConfirm(s.selectedItem, q);
             }
@@ -1499,7 +1496,7 @@ Entity &Scene::createQuantityScreen(int windowWidth, int windowHeight) {
     float rBtnY = baseY + overlaySprite.dst.h - 80.0f;
 
     returnBtn.addComponent<Transform>(Vector2D(rBtnX, rBtnY), 0.0f, 1.0f);
-    returnBtn.addComponent<Sprite>(btnTex, SDL_FRect{0, 33, 64, 16}, SDL_FRect{rBtnX, rBtnY, rBtnW, rBtnH},
+    returnBtn.addComponent<Sprite>(btnTex, SDL_FRect{0, 49, 64, 16}, SDL_FRect{rBtnX, rBtnY, rBtnW, rBtnH},
                                    RenderLayer::UI, false);
     returnBtn.addComponent<Collider>("ui", SDL_FRect{rBtnX, rBtnY, rBtnW, rBtnH}).enabled = false;
 
@@ -1532,12 +1529,10 @@ void Scene::openQuantityScreen(const InventoryEntry &item, int maxQty,
     if (!UIQuantityScreen) return;
     auto &session = UIQuantityScreen->getComponent<QuantityScreenSession>();
 
-    // 1. Store the state and callbacks
     session.selectedItem = item;
     session.onConfirm = onConfirm;
     session.onCancel = onCancel;
 
-    // 2. Update Header Graphics
     if (session.itemIconRef) {
         session.itemIconRef->getComponent<Sprite>().src = item.item.src;
     }
@@ -1548,49 +1543,47 @@ void Scene::openQuantityScreen(const InventoryEntry &item, int maxQty,
         TextureManager::updateLabel(lbl);
     }
 
+    // 1. Force the menu on
     bool forceOpen = true;
     toggleSettingsOverlayVisibility(*UIQuantityScreen, &forceOpen);
 
-    // 3. Layout the buttons
+    // 2. Layout the buttons
     auto &overlaySprite = UIQuantityScreen->getComponent<Sprite>();
     auto &overlayTransform = UIQuantityScreen->getComponent<Transform>();
     float centerX = overlayTransform.position.x + overlaySprite.dst.w / 2.0f;
     float containerY = overlayTransform.position.y + 240.0f;
 
-    int count = std::min(maxQty, 9);
-    float btnSize = 48.0f;
-    float btnSpacing = 60.0f;
-    float totalWidth = count * btnSpacing - (btnSpacing - btnSize);
+    int count = std::min(maxQty, 4); // Capped at 4!
+
+    // Adjust spacing to account for the wider 96x48 buttons
+    float btnSizeW = 96.0f;
+    float btnSpacing = 110.0f;
+    float totalWidth = count * btnSpacing - (btnSpacing - btnSizeW);
     float startX = centerX - totalWidth / 2.0f;
 
-    for (int i = 0; i < 9; ++i) {
+    for (int i = 0; i < 4; ++i) {
         Entity *btn = session.quantityButtonRefs[i];
         if (!btn) continue;
 
         auto &sprite = btn->getComponent<Sprite>();
         auto &col = btn->getComponent<Collider>();
-        Entity *numLabelEnt = btn->getComponent<Children>().children[0];
-        auto &numLabel = numLabelEnt->getComponent<Label>();
 
         if (i < count) {
             float bx = startX + (i * btnSpacing);
 
             btn->getComponent<Transform>().position.x = bx;
             btn->getComponent<Transform>().position.y = containerY;
+
             sprite.dst.x = bx;
             sprite.dst.y = containerY;
             col.rect.x = bx;
             col.rect.y = containerY;
 
-            numLabelEnt->getComponent<Transform>().position.x = bx + (btnSize / 2) - (numLabel.dst.w / 2);
-            numLabelEnt->getComponent<Transform>().position.y = containerY + (btnSize / 2) - (numLabel.dst.h / 2);
-
             sprite.visible = true;
-            numLabel.visible = true;
+            col.enabled = true;
         } else {
             sprite.visible = false;
             col.enabled = false;
-            numLabel.visible = false;
         }
     }
 }
