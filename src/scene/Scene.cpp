@@ -231,7 +231,11 @@ Entity &Scene::createDisplaycase(Vector2D location, SDL_Texture *texture, SDL_FR
     Entity *casePtr = &displayCase;
     DayCycle *cyclePtr = &dayCycle;
 
-    displayCase.addComponent<Interaction>([casePtr, cyclePtr, playerRef, this]() {
+    // 1. CAPTURE THE EMPTY SPRITE SOURCE
+    SDL_FRect emptySrc = src;
+
+    // 2. PASS `emptySrc` INTO THIS LAMBDA
+    displayCase.addComponent<Interaction>([casePtr, cyclePtr, playerRef, emptySrc, this]() {
         auto &dc = casePtr->getComponent<DisplayStand>();
 
         if (cyclePtr->currentPhase != DayPhase::Morning) return;
@@ -240,12 +244,13 @@ Entity &Scene::createDisplaycase(Vector2D location, SDL_Texture *texture, SDL_FR
         auto &inv = playerRef->getComponent<Inventory>();
         auto &session = UIInventory->getComponent<InventorySession>();
 
-        // --- THE SEAMLESS SWAP CALLBACK ---
-        session.quantitySession.onConfirm = [casePtr, playerRef](InventoryEntry entry, int qty) {
+        // 3. PASS `emptySrc` INTO THE CONFIRM LAMBDA
+        session.quantitySession.onConfirm = [casePtr, playerRef, emptySrc](InventoryEntry entry, int qty) {
             auto &stand = casePtr->getComponent<DisplayStand>();
+            auto &sprite = casePtr->getComponent<Sprite>(); // Grab the physical sprite component!
             auto &playerInv = playerRef->getComponent<Inventory>().items;
 
-            // 1. REFUND OLD ITEMS (If the stand isn't empty)
+            // REFUND OLD ITEMS (If the stand isn't empty)
             if (stand.quantity > 0) {
                 for (auto &e: playerInv) {
                     if (e.item.name == stand.item.name) {
@@ -256,16 +261,27 @@ Entity &Scene::createDisplaycase(Vector2D location, SDL_Texture *texture, SDL_FR
                 }
             }
 
-            // 2. SET NEW ITEMS IN STAND
+            // SET NEW ITEMS IN STAND
             stand.item = entry.item;
             stand.quantity = qty;
 
-            // 3. DEDUCT NEW ITEMS FROM PLAYER
+            // DEDUCT NEW ITEMS FROM PLAYER
             for (auto &e: playerInv) {
                 if (e.item.name == entry.item.name) {
                     e.quantity -= qty;
                     break;
                 }
+            }
+
+            // --- 4. UPDATE THE DISPLAY CASE SPRITE GRAPHICS ---
+            if (qty > 0) {
+                int variant = (rand() % 2) + 1; // Randomly rolls a 1 or a 2
+                sprite.src = emptySrc;
+                // Shift the source rect to the right by 1 or 2 full display-case widths
+                sprite.src.x += (variant * emptySrc.w);
+            } else {
+                // If quantity is 0, revert back to the completely empty shelf
+                sprite.src = emptySrc;
             }
 
             std::cout << "Placed " << qty << "x " << entry.item.name << " in display case\n";
