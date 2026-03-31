@@ -91,7 +91,7 @@ private:
     void initGameplay(const char* mapPath, int windowWidth, int windowHeight);
 
     //Helper Function
-    Entity& createDisplaycase(Vector2D location, SDL_Texture* texture,SDL_FRect src, SDL_FRect dst);
+    Entity& createDisplaycase(Vector2D location, SDL_Texture* texture,SDL_FRect src, SDL_FRect dst, DayCycle& dayCycle);
 
     //HUD
     Entity& createhudOverlay(int windowWidth, int windowHeight);

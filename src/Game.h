@@ -17,9 +17,29 @@ struct GameState {
     int Wallet;
     int Debt;
     int DayCycle;
-    float shopReputation;
+    int  shopReputation = 1;
+    int currentRepXP = 0;      // This increases after every sale
+    int xpToNextLevel = 100;   // Threshold to level up
+
+    int displayCasesUnlocked = 3; // Start with 3 Shelves
 };
 
+/* To be added in haggle system
+void onSuccessfulSale(int profitMargin) {
+    // Better haggling = more XP
+    int xpGained = 10 + (profitMargin / 10);
+    Game::gameState.currentRepXP += xpGained;
+
+    // Check for level up
+    if (Game::gameState.currentRepXP >= Game::gameState.xpToNextLevel) {
+        Game::gameState.shopReputation++;
+        Game::gameState.currentRepXP -= Game::gameState.xpToNextLevel;
+        Game::gameState.xpToNextLevel = static_cast<int>(Game::gameState.xpToNextLevel * 1.5f); // Next level is harder
+
+        std::cout << "Shop Leveled Up to " << Game::gameState.shopLevel << "!\n";
+    }
+}
+ */
 class Game {
 public:
     Game();

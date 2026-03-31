@@ -31,13 +31,6 @@ void Scene::initMainMenu(int windowWidth, int windowHeight) {
 
     auto &settingsOverlay = createSettingsOverlay(windowWidth, windowHeight);
     // createCogButton(windowWidth, windowHeight, settingsOverlay);
-    ItemDef test;
-    test.basePrice = 100;
-    test.id = 1;
-    test.name ="Longsword";
-    test.src = {0,0,32,32};
-    test.requiredReputation = 1;
-    DaySummaryData SummaryData;
 
     auto &haggleOverlay = createHaggleUI(windowWidth, windowHeight);
     auto &summaryOverlay = createDaySummaryUI(windowWidth,windowHeight);
@@ -92,7 +85,7 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
 
     //Create Player
     auto &player(world.createEntity());
-    auto &playerTransform = player.addComponent<Transform>(Vector2D(12 * 32, 14 * 32), 1.0f);
+    auto &playerTransform = player.addComponent<Transform>(Vector2D(door.x * 32, door.y * 32), 1.0f);
     player.addComponent<Velocity>(Vector2D(0, 0), 120.0f);
 
     Animation anim = AssetManager::getAnimation("customer");
@@ -139,15 +132,21 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
         SDL_FRect dst{- 16.0f, - 16.0f, 64, 64};
         e.addComponent<Sprite>(tex, src, dst);
     });
-    //Display Case: (Test)
-    SDL_FRect src = {64, 32, 32, 32};
-    SDL_FRect dst = {0, 0, 32, 32};
-    // createDisplaycase(Vector2D(21 * 32, 15 * 32), tilemapTex, {64, 32, 32, 32}, {0, 0, 32, 32});
-    // createDisplaycase(Vector2D(22 * 32, 15 * 32), tilemapTex, {64, 32, 32, 32}, {0, 0, 32, 32});
+
+    //Display Case:
+    std::map<int, Vector2D> displayCaseLocations = world.getMap().displayCaseSpawns;
+    for (const auto &[order, location]: displayCaseLocations) {
+        if (order <= Game::gameState.displayCasesUnlocked) {
+        // Spawn owned display case
+        SDL_FRect src = {16 * 32.0f, 8 * 32.0f, 96, 128};
+        SDL_FRect dst = {-32.0, 2 * -32.0, 96, 128};
+        createDisplaycase(location, tilemapTex, src, dst, dayCycle);
+    }
+}
 
     //Cash Register
      auto &cashRegister = world.createEntity();
-     auto& cashTransform = cashRegister.addComponent<Transform>(Vector2D(regi.x * 32, (regi.y + 2) * 32));
+     cashRegister.addComponent<Transform>(Vector2D(regi.x * 32, (regi.y + 2) * 32));
      auto &c = cashRegister.addComponent<Collider>("wall");
      c.rect = { regi.x*32.0f - 64.0f, (regi.y+2)*32 + 32.0f, 160.0f, 62.0f };
      c.offsetX = -64.0f;
@@ -187,23 +186,26 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
     createPlayerPosLabel();
 }
 
-Entity &Scene::createDisplaycase(Vector2D location, SDL_Texture *texture, SDL_FRect src, SDL_FRect dst) {
+Entity &Scene::createDisplaycase(Vector2D location, SDL_Texture *texture, SDL_FRect src, SDL_FRect dst,DayCycle& dayCycle) {
     auto &displayCase(world.createEntity());
     displayCase.addComponent<Transform>(location, 0.0f, 1.0f);
     displayCase.addComponent<DisplayStand>();
     auto &c = displayCase.addComponent<Collider>("wall");
-    c.rect.w = 32;
-    c.rect.h = 32;
+    c.rect.w = 96;
+    c.rect.h = 48;
     c.rect.x = location.x;
     c.rect.y = location.y;
+    c.offsetX = -32.0f;
+    c.offsetY = 16.0f;
     displayCase.addComponent<Sprite>(texture, src, dst);
-    displayCase.addComponent<Interaction>([&displayCase]() {
+    displayCase.addComponent<Interaction>([&displayCase,&dayCycle]() {
         auto &dc = displayCase.getComponent<DisplayStand>();
-
-        if (dc.quantity > 0 && dc.item.id != -1) {
-            std::cout << "Display case has an " << dc.item.name << "! Opening modification UI...\n";
-        } else {
-            std::cout << "Display case is empty. Opening inventory UI to place item...\n";
+        if (dayCycle.currentPhase == DayPhase::Morning) {
+            if (dc.quantity > 0 && dc.item.id != -1) {
+                std::cout << "Display case has an " << dc.item.name << "! Opening modification UI...\n";
+            } else {
+                std::cout << "Display case is empty. Opening inventory UI to place item...\n";
+            }
         }
     });
     return displayCase;
@@ -754,13 +756,11 @@ void Scene::createDaySummaryContent(Entity& overlay, const DaySummaryData& data)
     auto& session = overlay.getComponent<DaySummarySession>();
 
     // --- 3. GENERATE ROWS ---
-    session.grossProfitValRef = createRow("Gross Sales", data.grossSales, startY, data.grossSales > 0 ? colorPositive : colorNeutral).second;
-    session.customerPurchasesValRef = createRow("Customer Purchase", data.customerPurchases, startY + rowSpacing, data.customerPurchases < 0 ? colorNegative : colorNeutral).second; auto wpRow = createRow("Weekly Payment",data.weeklyPaymentAmount, startY + rowSpacing*2, colorNegative);
+    session.grossSalesValRef = createRow("Gross Sales", data.grossSales, startY, data.grossSales > 0 ? colorPositive : colorNeutral).second;
+    session.customerPurchasesValRef = createRow("Customer Purchase", data.customerPurchases, startY + rowSpacing, data.customerPurchases < 0 ? colorNegative : colorNeutral).second;
+    auto wpRow = createRow("Weekly Payment",data.weeklyPaymentAmount, startY + rowSpacing*2, colorNegative);
     session.weeklyPaymentLabelRef = wpRow.first;
     session.weeklyPaymentValRef = wpRow.second;
-    bool isPaymentDay = (data.daysUntilPayment == 0);
-    session.weeklyPaymentLabelRef->getComponent<Label>().visible = isPaymentDay;
-    session.weeklyPaymentValRef->getComponent<Label>().visible = isPaymentDay;
 
     int profit = data.getGrossProfit();
     SDL_Color profitColor = profit > 0 ? colorPositive : (profit < 0 ? colorNegative : colorNeutral);
