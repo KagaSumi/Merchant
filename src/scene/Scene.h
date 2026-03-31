@@ -123,6 +123,24 @@ class Scene {
         Entity* quantityPanelRef = nullptr;
     };
 
+    // Order UI
+    struct OrderSlotRefs {
+        Entity* icon = nullptr;
+        Entity* nameLabel = nullptr;
+        Entity* priceLabel = nullptr;
+        Entity* buyBtn = nullptr;
+        Entity* buyBtnCollider = nullptr; // for enable/disable
+    };
+
+    struct OrderSession {
+        std::vector<OrderSlotRefs> slots;
+        std::vector<ItemDef> currentItems;
+        Entity* walletLabelRef = nullptr;
+        int* walletRef = nullptr; // live pointer to game wallet
+        Inventory* inventoryRef = nullptr;
+        std::function<void()> onContinue;
+    };
+
 
 public:
     Scene(SceneType sceneType, const char* sceneName, const char* mapPath, int windowWidth, int windowHeight);
@@ -195,7 +213,11 @@ private:
                             std::function<void()> onCancel);
 
     //Order Screen
-    Entity& createOrderStockButton(int windowWidth, int windowHeight, Entity& overlay);
+    Entity* UIOrderScreen = nullptr;
+    Entity& createOrderUI(int windowWidth, int windowHeight);
+    Entity& updateOrderUI(std::vector<ItemDef> availableItems, Wallet& wallet, Inventory& inv,
+                          std::function<void()> onContinue);
+    void refreshOrderSlot(int slotIdx, const ItemDef& item, int walletAmount);
 
     //Dialogue Screen
     Entity* UIDialogue = nullptr;

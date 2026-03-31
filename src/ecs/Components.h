@@ -150,6 +150,7 @@ struct MarketTrend {
 
 struct Wallet {
     int balance;
+    int dailyIncome;
 };
 
 struct Debt {

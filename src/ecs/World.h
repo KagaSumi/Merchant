@@ -45,7 +45,6 @@ class World {
     CameraSystem cameraSystem;
     EventManager eventManager;
     SpawnTimerSystem spawnTimerSystem;
-    //DestructionSystem destructionSystem;
     EventResponseSystem eventResponseSystem{*this};
     MainMenuSystem mainMenuSystem;
     UIRenderSystem uiRenderSystem;
@@ -72,7 +71,6 @@ class World {
             dayCycleSystem.update(entities);
             cameraSystem.update(entities);
             customerSpawnerSystem.update(entities, dt);
-            //destructionSystem.update(entities);
             hudSystem.update(entities);
         }
 
@@ -140,6 +138,7 @@ class World {
     Map& getMap(){return map;}
     Items& getItems(){return items;}
     CustomerAISystem& getCustomerAISystem() {return customerAISystem;}
+    DayCycleSystem& getDayCycleSystem() {return dayCycleSystem;}
 };
 
 #endif //PROJECT_WORLD_H

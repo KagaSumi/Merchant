@@ -17,7 +17,7 @@ struct GameState {
     int Wallet;
     int Debt;
     int DayCycle;
-    int  shopReputation = 1;
+    int shopReputation = 1;
     int currentRepXP = 0;      // This increases after every sale
     int xpToNextLevel = 100;   // Threshold to level up
 

@@ -12,6 +12,7 @@ public:
     DebtSystem(int basePayment, int increment): basePayment(basePayment), weeklyIncrement(increment), weeksPassed(0) {}
 
     void payDebt(Wallet& wallet, Debt& debt);
+    int calculatePayment(const Debt& debt) const;
 
 private:
     int basePayment;       // starting weekly payment

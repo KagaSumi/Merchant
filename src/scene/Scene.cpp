@@ -3,6 +3,7 @@
 //
 
 #include "../scene/Scene.h"
+#include "DebtSystem.h"
 #include "../manager/AssetManager.h"
 #include "Game.h"
 
@@ -40,6 +41,7 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
     SDL_Texture *itemsTex = TextureManager::load("../asset/items.png");
     world.getItems().load("../asset/items.xml");
 
+    //Create UI
     createHaggleUI(windowWidth, windowHeight);
     createDaySummaryUI(windowWidth, windowHeight);
     auto &inventoryUIRef = createInventoryUI(windowWidth, windowHeight);
@@ -49,7 +51,7 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
         bool hide = false;
         toggleSettingsOverlayVisibility(*invSession.quantityPanelRef, &hide);
     }
-
+    createOrderUI(windowWidth, windowHeight);
 
     for (auto &collider: world.getMap().colliders) {
         auto &e = world.createEntity();
@@ -131,6 +133,67 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
     inv.addItem(itemDB.items[2], 1); // Phoenix Feather
     inv.addItem(itemDB.items[14], 3);
     player.addComponent<PlayerTag>();
+
+    //Setup DayCycle System callback:
+    auto& dayCycleSystem = world.getDayCycleSystem(); // however you access it
+
+    // Wire up the phase callbacks
+    dayCycleSystem.onMorningStart = [this,&store]() {
+        auto& wallet = store.getComponent<Wallet>();
+        wallet.dailyIncome = 0; // Reset Daily Income
+        // Nothing for now - player is free to roam
+        std::cout << "Morning started\n";
+    };
+
+    dayCycleSystem.onShopOpenStart = [this]() {
+        // Spawn customers, lock display cases, etc.
+        std::cout << "Shop is open!\n";
+        //TODO Lock Player??
+    };
+
+    dayCycleSystem.onEveningStart = [this, &player, &store, dayCycle]() {
+        // 1. Filter available items by rep
+        std::vector<ItemDef> available;
+        for (auto& [id, item] : world.getItems().items) {
+            if (item.requiredReputation <= Game::gameState.shopReputation) {
+                available.push_back(item);
+            }
+        }
+
+        auto& wallet = store.getComponent<Wallet>();
+        auto& inv = player.getComponent<Inventory>();
+
+        // 2. Open order screen, wire continue to open summary
+        updateOrderUI(available, wallet, inv, [this, &store, &dayCycle]() {
+            // 3. Build summary data from today's results
+            auto& wallet = store.getComponent<Wallet>();
+
+            DaySummaryData summary;
+            summary.grossSales = wallet.dailyIncome;
+            summary.currentBalance = wallet.balance;
+            summary.weeklyPaymentAmount = store.getComponent<Debt>().amount;
+            summary.daysUntilPayment = 7 - dayCycle.date %7;
+
+            // 4. Open summary, wire confirm to advance to morning
+            updateDaySummaryUI(summary);
+
+            // The summary's confirm button calls finishEvening() which
+            // triggers onMorningStart and resets the cycle
+        });
+    };
+
+    dayCycleSystem.onWeekPassed = [this, &store]() {
+        // Deduct debt payment, check game over, etc.
+        //TODO Make it call make payment
+        auto& debt = store.getComponent<Debt>();
+        auto& wallet = store.getComponent<Wallet>();
+        wallet.balance -= debt.amount;
+
+        if (wallet.balance < 0) {
+            // Game over
+            std::cout << "Game Over - can't pay debt!\n";
+        }
+    };
 
 
     //Customers:
@@ -1588,6 +1651,273 @@ void Scene::openQuantityScreen(const InventoryEntry &item, int maxQty,
     }
 }
 
+//Order UI
+Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
+    auto& mainOverlay = createBaseMenuOverlay(windowWidth, windowHeight);
+    mainOverlay.getComponent<Sprite>().visible = false;
+
+    auto& session = mainOverlay.addComponent<OrderSession>();
+    auto& overlayTransform = mainOverlay.getComponent<Transform>();
+    auto& overlaySprite = mainOverlay.getComponent<Sprite>();
+
+    float baseX = overlayTransform.position.x;
+    float baseY = overlayTransform.position.y;
+    float menuWidth = overlaySprite.dst.w;
+    float menuHeight = overlaySprite.dst.h;
+    float centerX = baseX + menuWidth / 2.0f;
+
+    // --- TITLE ---
+    auto& titleEnt = world.createEntity();
+    Label tData = {"Market", AssetManager::getFont("arial"), {0,0,0,255}, LabelType::Static, "orderTitle"};
+    auto& tComp = titleEnt.addComponent<Label>(tData);
+    tComp.dirty = true; tComp.visible = false;
+    TextureManager::updateLabel(tComp);
+    titleEnt.addComponent<Transform>(Vector2D(centerX - tComp.dst.w / 2.0f, baseY + 16.0f), 0.0f, 1.0f);
+    titleEnt.addComponent<Parent>(&mainOverlay);
+    mainOverlay.getComponent<Children>().children.push_back(&titleEnt);
+
+    // --- WALLET LABEL (top left) ---
+    auto& walletEnt = world.createEntity();
+    Label wData = {"Wallet: 0G", AssetManager::getFont("arial"), {0,0,0,255}, LabelType::Static, "orderWallet"};
+    auto& wComp = walletEnt.addComponent<Label>(wData);
+    wComp.dirty = true; wComp.visible = false;
+    TextureManager::updateLabel(wComp);
+    walletEnt.addComponent<Transform>(Vector2D(baseX + 20.0f, baseY + 16.0f), 0.0f, 1.0f);
+    walletEnt.addComponent<Parent>(&mainOverlay);
+    mainOverlay.getComponent<Children>().children.push_back(&walletEnt);
+    session.walletLabelRef = &walletEnt;
+
+    // --- GRID: 4 cols x 4 rows = 16 slots ---
+    // Reserve bottom strip for Continue button
+    float footerH = 70.0f;
+    float gridTop = baseY + 55.0f;
+    float gridBottom = baseY + menuHeight - footerH;
+    float gridH = gridBottom - gridTop;
+
+    int cols = 4;
+    int rows = 4;
+    float colW = menuWidth / cols;
+    float rowH = gridH / rows;
+
+    SDL_Texture* itemsTex = TextureManager::load("../asset/items.png");
+    SDL_Texture* btnTex = TextureManager::load("../asset/ui/Buttons.png");
+
+    for (int row = 0; row < rows; ++row) {
+        for (int col = 0; col < cols; ++col) {
+            OrderSlotRefs slot;
+            float slotX = baseX + col * colW;
+            float slotY = gridTop + row * rowH;
+
+            float iconSize = 36.0f;
+            float padding = 6.0f;
+
+            // Icon
+            auto& iconEnt = world.createEntity();
+            iconEnt.addComponent<Transform>(Vector2D(slotX + padding, slotY + padding), 0.0f, 1.0f);
+            SDL_FRect iconDst = {slotX + padding, slotY + padding, iconSize, iconSize};
+            iconEnt.addComponent<Sprite>(itemsTex, SDL_FRect{0,0,32,32}, iconDst, RenderLayer::UI, false);
+            iconEnt.addComponent<Parent>(&mainOverlay);
+            mainOverlay.getComponent<Children>().children.push_back(&iconEnt);
+            slot.icon = &iconEnt;
+
+            // Name label
+            auto& nameEnt = world.createEntity();
+            Label nData = {"Item", AssetManager::getFont("arial-small"), {0,0,0,255}, LabelType::Static,
+                           "ord_name_" + std::to_string(row) + "_" + std::to_string(col)};
+            auto& nComp = nameEnt.addComponent<Label>(nData);
+            nComp.dirty = true; nComp.visible = false;
+            TextureManager::updateLabel(nComp);
+            nameEnt.addComponent<Transform>(
+                Vector2D(slotX + padding + iconSize + 4.0f, slotY + padding), 0.0f, 1.0f);
+            nameEnt.addComponent<Parent>(&mainOverlay);
+            mainOverlay.getComponent<Children>().children.push_back(&nameEnt);
+            slot.nameLabel = &nameEnt;
+
+            // Price label
+            auto& priceEnt = world.createEntity();
+            Label pData = {"0G", AssetManager::getFont("arial-small"), {0,0,0,255}, LabelType::Static,
+                           "ord_price_" + std::to_string(row) + "_" + std::to_string(col)};
+            auto& pComp = priceEnt.addComponent<Label>(pData);
+            pComp.dirty = true; pComp.visible = false;
+            TextureManager::updateLabel(pComp);
+            priceEnt.addComponent<Transform>(
+                Vector2D(slotX + colW - 40.0f, slotY + padding), 0.0f, 1.0f);
+            priceEnt.addComponent<Parent>(&mainOverlay);
+            mainOverlay.getComponent<Children>().children.push_back(&priceEnt);
+            slot.priceLabel = &priceEnt;
+
+            // Buy button
+            auto& btnEnt = world.createEntity();
+            float btnW = 48.0f, btnH = 22.0f;
+            float btnX = slotX + padding + iconSize + 4.0f;
+            float btnY = slotY + padding + nComp.dst.h + 4.0f;
+
+            auto& btnTransform = btnEnt.addComponent<Transform>(Vector2D(btnX, btnY), 0.0f, 1.0f);
+            SDL_FRect btnDst = {btnX, btnY, btnW, btnH};
+            btnEnt.addComponent<Sprite>(btnTex, SDL_FRect{0,0,32,16}, btnDst, RenderLayer::UI, false);
+            auto& btnCol = btnEnt.addComponent<Collider>("ui", btnDst);
+            btnCol.enabled = false;
+            slot.buyBtn = &btnEnt;
+
+            // Buy label "Buy"
+            auto& buyLblEnt = world.createEntity();
+            Label buyLblData = {"Buy", AssetManager::getFont("arial-small"), {0,0,0,255},
+                                LabelType::Static, "ord_buy_lbl_" + std::to_string(row*cols+col)};
+            auto& buyLblComp = buyLblEnt.addComponent<Label>(buyLblData);
+            buyLblComp.dirty = true; buyLblComp.visible = false;
+            TextureManager::updateLabel(buyLblComp);
+            buyLblEnt.addComponent<Transform>(
+                Vector2D(btnX + (btnW/2) - (buyLblComp.dst.w/2),
+                         btnY + (btnH/2) - (buyLblComp.dst.h/2)), 0.0f, 1.0f);
+            buyLblEnt.addComponent<Parent>(&btnEnt);
+            if (!btnEnt.hasComponent<Children>()) btnEnt.addComponent<Children>();
+            btnEnt.getComponent<Children>().children.push_back(&buyLblEnt);
+
+            int slotIdx = row * cols + col;
+            auto& bClick = btnEnt.addComponent<Clickable>();
+            bClick.onPressed = [&btnTransform]{ btnTransform.scale = 0.9f; };
+            bClick.onCancel = [&btnTransform]{ btnTransform.scale = 1.0f; };
+            bClick.onReleased = [this, slotIdx, &btnTransform]() {
+                btnTransform.scale = 1.0f;
+                if (!UIOrderScreen) return;
+
+                auto& s = UIOrderScreen->getComponent<OrderSession>();
+                if (!s.inventoryRef || !s.walletRef) return;
+                if (slotIdx >= s.slots.size()) return;
+
+                // Find the item for this slot from the label text
+                // (we store item data in the slot directly via updateOrderUI)
+                // Deduct wallet and add to inventory handled in updateOrderUI's click capture
+            };
+
+            btnEnt.addComponent<Parent>(&mainOverlay);
+            mainOverlay.getComponent<Children>().children.push_back(&btnEnt);
+
+            session.slots.push_back(slot);
+        }
+    }
+
+    // --- CONTINUE BUTTON ---
+    auto& contBtn = world.createEntity();
+    float cBtnW = 160.0f, cBtnH = 40.0f;
+    float cBtnX = baseX + menuWidth - cBtnW - 20.0f;
+    float cBtnY = baseY + menuHeight - cBtnH - 16.0f;
+    auto& cTransform = contBtn.addComponent<Transform>(Vector2D(cBtnX, cBtnY), 0.0f, 1.0f);
+    contBtn.addComponent<Sprite>(btnTex, SDL_FRect{0,33,64,16},
+                                  SDL_FRect{cBtnX,cBtnY,cBtnW,cBtnH}, RenderLayer::UI, false);
+    contBtn.addComponent<Collider>("ui", SDL_FRect{cBtnX,cBtnY,cBtnW,cBtnH}).enabled = false;
+
+    auto& cClick = contBtn.addComponent<Clickable>();
+    cClick.onPressed = [&cTransform]{ cTransform.scale = 0.9f; };
+    cClick.onCancel = [&cTransform]{ cTransform.scale = 1.0f; };
+    cClick.onReleased = [this, &cTransform]() {
+        cTransform.scale = 1.0f;
+        bool close = false;
+        toggleSettingsOverlayVisibility(*UIOrderScreen, &close);
+        auto& s = UIOrderScreen->getComponent<OrderSession>();
+        if (s.onContinue) s.onContinue();
+    };
+    contBtn.addComponent<Parent>(&mainOverlay);
+    mainOverlay.getComponent<Children>().children.push_back(&contBtn);
+
+    UIOrderScreen = &mainOverlay;
+    return mainOverlay;
+}
+
+Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
+                              Wallet& wallet, Inventory& inv,
+                              std::function<void()> onContinue) {
+    if (!UIOrderScreen) return *UIOrderScreen;
+
+    auto& session = UIOrderScreen->getComponent<OrderSession>();
+    session.walletRef = &wallet.balance;       // assumes Wallet has int amount
+    session.inventoryRef = &inv;
+    session.onContinue = onContinue;
+    session.currentItems = availableItems;
+
+    // Update wallet label
+    if (session.walletLabelRef) {
+        auto& lbl = session.walletLabelRef->getComponent<Label>();
+        lbl.text = "Wallet: " + std::to_string(wallet.balance) + "G";
+        lbl.dirty = true;
+        TextureManager::updateLabel(lbl);
+    }
+
+    // Populate slots
+    for (int i = 0; i < (int)session.slots.size(); ++i) {
+        auto& slot = session.slots[i];
+        bool hasItem = i < (int)availableItems.size();
+
+        // Icon
+        slot.icon->getComponent<Sprite>().visible = hasItem;
+        if (hasItem) slot.icon->getComponent<Sprite>().src = availableItems[i].src;
+
+        // Name label
+        auto& nameLbl = slot.nameLabel->getComponent<Label>();
+        nameLbl.visible = hasItem;
+        if (hasItem) {
+            nameLbl.text = availableItems[i].name;
+            nameLbl.dirty = true;
+            TextureManager::updateLabel(nameLbl);
+        }
+
+        // Price label
+        auto& priceLbl = slot.priceLabel->getComponent<Label>();
+        priceLbl.visible = hasItem;
+        if (hasItem) {
+            priceLbl.text = std::to_string(availableItems[i].basePrice) + "G";
+            priceLbl.dirty = true;
+            TextureManager::updateLabel(priceLbl);
+        }
+
+        // Buy button — enabled only if has item AND can afford
+        bool canAfford = hasItem && wallet.balance >= availableItems[i].basePrice;
+        slot.buyBtn->getComponent<Sprite>().visible = hasItem;
+        slot.buyBtn->getComponent<Collider>().enabled = canAfford;
+
+        // Wire the buy click with live item data
+        if (hasItem) {
+            ItemDef item = availableItems[i];
+            auto& bClick = slot.buyBtn->getComponent<Clickable>();
+            bClick.onReleased = [this, item, &wallet, &inv]() {
+                if (wallet.balance < item.basePrice) return;
+
+                // Deduct wallet
+                wallet.balance -= item.basePrice;
+
+                // Add to inventory
+                inv.addItem(item, 1);
+
+                // Refresh wallet label
+                auto& s = UIOrderScreen->getComponent<OrderSession>();
+                if (s.walletLabelRef) {
+                    auto& lbl = s.walletLabelRef->getComponent<Label>();
+                    lbl.text = "Wallet: " + std::to_string(wallet.balance) + "G";
+                    lbl.dirty = true;
+                    TextureManager::updateLabel(lbl);
+                }
+
+                // Refresh all buy button states (some may now be unaffordable)
+                for (int j = 0; j < (int)s.slots.size() && j < (int)s.currentItems.size(); ++j) {
+                    bool afford = wallet.balance >= s.currentItems[j].basePrice;
+                    s.slots[j].buyBtn->getComponent<Collider>().enabled = afford;
+                    // Gray out price if can't afford
+                    auto& pLbl = s.slots[j].priceLabel->getComponent<Label>();
+                    pLbl.color = afford ? SDL_Color{0,0,0,255} : SDL_Color{180,50,50,255};
+                    pLbl.dirty = true;
+                    TextureManager::updateLabel(pLbl);
+                }
+
+                std::cout << "Bought " << item.name << " for " << item.basePrice
+                          << "G. Wallet: " << wallet.balance << "G\n";
+            };
+        }
+    }
+
+    bool forceOpen = true;
+    toggleSettingsOverlayVisibility(*UIOrderScreen, &forceOpen);
+    return *UIOrderScreen;
+}
 
 
 

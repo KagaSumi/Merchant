@@ -91,7 +91,7 @@ public:
         result.a = start.a + static_cast<int>((end.a - start.a) * t);
 
         return result;
-    }
+}
 
 
 private:

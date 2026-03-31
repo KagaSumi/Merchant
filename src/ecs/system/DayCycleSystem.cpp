@@ -78,3 +78,22 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
             break;
     }
 }
+//TODO For On Evening Start
+// void (Wallet& wallet, Inventory& inv) {
+//     // Filter items by rep level
+//     std::vector<ItemDef> available;
+//     for (auto& [id, item] : world.getItems().items) {
+//         if (item.requiredReputation <= Game::gameState.shopReputation) {
+//             available.push_back(item);
+//         }
+//     }
+//
+//     updateOrderUI(available, wallet, inv, [this, &wallet, &inv]() {
+//         // Build day summary and open it
+//         DaySummaryData summary;
+//         summary.currentBalance = wallet.amount;
+//         summary.weeklyPaymentAmount = Game::gameState.Debt / 10; // example
+//         summary.daysUntilPayment = 7; // track this properly later
+//         updateDaySummaryUI(summary);
+//     });
+// }
