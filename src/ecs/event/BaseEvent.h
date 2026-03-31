@@ -36,10 +36,7 @@ struct CollisionEvent : BaseEvent {
 };
 
 enum class PlayerAction {
-    Attack,
     Interact,
-    UseItem,
-    Jump
 };
 
 struct PlayerActionEvent : BaseEvent {
@@ -63,5 +60,6 @@ struct MouseInteractionEvent : BaseEvent {
         type = EventType::MouseInteraction;
     }
 };
+
 
 #endif //PROJECT_BASEEVENT_H

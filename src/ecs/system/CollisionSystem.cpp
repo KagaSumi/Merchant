@@ -5,14 +5,13 @@
 #include <iostream>
 
 #include "CollisionSystem.h"
-#include "Collission.h"
+#include "Collision.h"
 #include "World.h"
 
 //has two important functions
 // 1. first is position the collider with the transform
 // 2. checking for collisions
 void CollisionSystem::update(World &world) {
-
     //get a list of entities that have colliders and transforms
     const std::vector<Entity*> collidables = queryCollidables(world.getEntities());
 

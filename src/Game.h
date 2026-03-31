@@ -14,6 +14,10 @@
 
 struct GameState {
     int playerHealth;
+    int Wallet;
+    int Debt;
+    int DayCycle;
+    float shopReputation;
 };
 
 class Game {

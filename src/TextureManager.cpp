@@ -42,6 +42,14 @@ SDL_Texture *TextureManager::load(const char *path) {
     return texture;
 }
 
+SDL_Texture* TextureManager::get(const char* path) {
+    auto it = textures.find(path);
+    if (it != textures.end()) {
+        return it->second;
+    }
+    return nullptr;
+}
+
 void TextureManager::loadLabel(Label& label) {
     auto it = textures.find(label.textureCacheKey);
     if (it != textures.end()) {

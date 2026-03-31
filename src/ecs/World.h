@@ -11,11 +11,13 @@
 #include "CameraSystem.h"
 #include "CollisionSystem.h"
 #include "CustomerAISystem.h"
+#include "CustomerSpawnerSystem.h"
 #include "DayCycleSystem.h"
 #include "DestructionSystem.h"
 #include "Entity.h"
 #include "EventResponseSystem.h"
 #include "HUDSystem.h"
+#include "Items.h"
 #include "event/EventManager.h"
 #include "KeyboardInputSystem.h"
 #include "MainMenuSystem.h"
@@ -32,6 +34,7 @@ void printCollision(const CollisionEvent& collision);
 
 class World {
     Map map;
+    Items items;
     std::vector<std::unique_ptr<Entity>> entities;
     std::vector<std::unique_ptr<Entity>> deferredEntities;
     MovementSystem movementSystem;
@@ -51,8 +54,8 @@ class World {
     CustomerAISystem customerAISystem;
     PathfindingSystem pathfindingSystem;
     HUDSystem hudSystem;
+    CustomerSpawnerSystem customerSpawnerSystem;
     PreRenderSystem preRenderSystem;
-
 
     public:
     World() = default;
@@ -61,17 +64,18 @@ class World {
             //Main Menu Scene Update
             mainMenuSystem.update(event);
         }else {
-            keyboardInputSystem.update(entities, event);
-            customerAISystem.update(entities, dt);
+            keyboardInputSystem.update(entities, event,eventManager);
+            customerAISystem.update(entities, dt,dayCycleSystem);
             movementSystem.update(entities, dt);
             collisionSystem.update(*this);
             animationSystem.update(entities, dt);
-            cameraSystem.update(entities);
-            spawnTimerSystem.update(entities, dt);
-            destructionSystem.update(entities);
-            hudSystem.update(entities);
             dayCycleSystem.update(entities);
+            cameraSystem.update(entities);
+            customerSpawnerSystem.update(entities, dt);
+            //destructionSystem.update(entities);
+            hudSystem.update(entities);
         }
+
 
         mouseInputSystem.update(*this,event);
         preRenderSystem.update(entities);
@@ -131,6 +135,7 @@ class World {
 
     EventManager& getEventManager() {return eventManager;}
     Map& getMap(){return map;}
+    Items& getItems(){return items;}
 };
 
 #endif //PROJECT_WORLD_H

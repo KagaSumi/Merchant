@@ -6,6 +6,8 @@
 #include <iostream>
 #include <random>
 
+#include "DayCycleSystem.h"
+
 // Helper to convert pixel position to grid position (assuming 32x32 tiles)
 SDL_Point GetGridPos(const Transform& t) {
     return { static_cast<int>(t.position.x / 32), static_cast<int>(t.position.y / 32) };
@@ -65,8 +67,6 @@ void CustomerAISystem::HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v,
         if (ai.stateTimer <= 0.0f) {
             ai.isWaiting = false;
             ai.itemsBrowsed++; // <--- THEY FINISHED LOOKING AT AN ITEM!
-            // std::cout << "Finished looking at item " << ai.itemsBrowsed
-            //           << " out of " << ai.itemsToBrowse << std::endl;
         } else {
             return;
         }
@@ -112,7 +112,7 @@ void CustomerAISystem::HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v,
     CustomerAISystem::MoveAlongPath(ai, t, v);
 }
 
-void CustomerAISystem::HandleLeavingStore(Entity& entity,CustomerAI &ai, Transform &t, Velocity &v) {
+void CustomerAISystem::HandleLeavingStore(Entity& entity,CustomerAI &ai,DayCycleSystem& dayCycleSystem, Transform &t, Velocity &v) {
     if (ai.path.empty()) {
         SDL_Point startPos = GetGridPos(t);
         ai.path = PathfindingSystem::FindPath(startPos, Door);
@@ -124,6 +124,7 @@ void CustomerAISystem::HandleLeavingStore(Entity& entity,CustomerAI &ai, Transfo
     if (!ai.path.empty() && ai.pathIndex >= ai.path.size()) {
         std::cout << "Customer left the store!" << std::endl;
         // DO NOT FORGET TO DESTROY THE ENTITY HERE!
+        dayCycleSystem.customerDeparted();
         entity.destroy();
     }
 }
@@ -137,8 +138,8 @@ void CustomerAISystem::MoveAlongPath(CustomerAI& ai, Transform& t, Velocity& v) 
 
     // 1. Get the target grid tile and convert to dead-center PIXELS
     SDL_Point targetGrid = ai.path[ai.pathIndex];
-    float targetX = (targetGrid.x * 32.0f) + 16.0f;
-    float targetY = (targetGrid.y * 32.0f) + 16.0f;
+    float targetX = (targetGrid.x * 32.0f) - 16.0f; //Off set 16 pixels because scaling 32 sprite -> 64 pixel
+    float targetY = (targetGrid.y * 32.0f) - 16.0f; //Off set 16 pixels because scaling 32 sprite -> 64 pixel
 
     // 2. Math to find direction and distance
     float dirX = targetX - t.position.x;
@@ -152,9 +153,6 @@ void CustomerAISystem::MoveAlongPath(CustomerAI& ai, Transform& t, Velocity& v) 
         v.direction.x = dirX / distance;
         v.direction.y = dirY / distance;
     } else {
-        // --- THE DRIFT KILLER ---
-        // Violently snap the AI to the exact center of the tile before turning.
-        // This guarantees they never cut corners through your shelves.
         t.position.x = targetX;
         t.position.y = targetY;
 

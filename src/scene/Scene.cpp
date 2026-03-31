@@ -35,73 +35,57 @@ void Scene::initMainMenu(int windowWidth, int windowHeight) {
 
 void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight) {
     //load map
-    world.getMap().load(mapPath,TextureManager::load("../asset/Sprite-0002.png"));
-    for (auto& collider : world.getMap().colliders) {
-        auto& e = world.createEntity();
-        e.addComponent<Transform>(Vector2D(collider.rect.x,collider.rect.y),0.0f,1.0f);
-        auto& c = e.addComponent<Collider>("wall");
+    SDL_Texture* tilemapTex =TextureManager::load("../asset/Sprite-0002.png");
+    world.getMap().load(mapPath,tilemapTex);
+    SDL_Texture* itemsTex = TextureManager::load("../asset/items.png");
+    world.getItems().load("../asset/items.xml");
 
-        c.rect.x = collider.rect.x;
-        c.rect.y = collider.rect.y;
-        c.rect.w = collider.rect.w;
-        c.rect.h = collider.rect.h;
+     for (auto& collider : world.getMap().colliders) {
+         auto& e = world.createEntity();
+         e.addComponent<Transform>(Vector2D(collider.rect.x,collider.rect.y),0.0f,1.0f);
+         auto& c = e.addComponent<Collider>("wall");
 
-        SDL_Texture* tex = TextureManager::load("../asset/tileset.png");
-        SDL_FRect colSrc {0,32,32,32};
-        SDL_FRect colDst {c.rect.x,c.rect.y,c.rect.w,c.rect.h};
-        e.addComponent<Sprite>(tex,colSrc,colDst);
-    }
+         c.rect.x = collider.rect.x;
+         c.rect.y = collider.rect.y;
+         c.rect.w = collider.rect.w;
+         c.rect.h = collider.rect.h;
+
+         // SDL_Texture* tex = TextureManager::load("../asset/tileset.png");
+         // SDL_FRect colSrc {0,32,32,32};
+         // SDL_FRect colDst {c.rect.x,c.rect.y,c.rect.w,c.rect.h};
+         // e.addComponent<Sprite>(tex,colSrc,colDst);
+     }
 
     //PathFinding:
     //Find Non-Walkable layer
     PathfindingSystem::InitMap(25,19,32, world.getMap().AIWalkable);
 
 
-    //add coins
-    // for (auto& coin : world.getMap().coins) {
-    //     auto& item = world.createEntity();
-    //     item.addComponent<Transform>(Vector2D(coin.rect.x,coin.rect.y),0.0f,1.0f);
-    //     auto& c = item.addComponent<Collider>("item");
-    //
-    //     c.rect.x = coin.rect.x;
-    //     c.rect.y = coin.rect.y;
-    //
-    //     SDL_Texture* tex = TextureManager::load("../asset/coin.png");
-    //     SDL_FRect colSrc {0,0,32,32};
-    //     SDL_FRect colDst {c.rect.x,c.rect.y,32,32};
-    //     item.addComponent<Sprite>(tex,colSrc,colDs);
-    // }
-    // auto& item(world.createEntity());
-    // auto& itemTransform = item.addComponent<Transform>(Vector2D(100,200), 0.0f,1.0f);
-    //
-    // SDL_Texture*  itemTex = TextureManager::load("../asset/coin.png");
-    // SDL_FRect itemSrc{0,0,32,32};
-    //
-    // SDL_FRect itemDest {itemTransform.position.x, itemTransform.position.y,32,32};
-    // item.addComponent<Sprite>(itemTex,itemSrc,itemDest);
-    //
-    // auto& itemCollider = item.addComponent<Collider>("item");
-    // itemCollider.rect.w = itemDest.w;
-    // itemCollider.rect.h = itemDest.h;
-
+    //Create Camera:
     auto& cam = world.createEntity();
     SDL_FRect camView{};
     camView.w = windowWidth;
     camView.h = windowHeight;
     cam.addComponent<Camera>(camView, static_cast<float>(world.getMap().width * 32), static_cast<float>(world.getMap().height * 32));
 
+    //Store:
+    auto &store(world.createEntity());
+    store.addComponent<ShopReputation>(Game::gameState.shopReputation);
+    store.addComponent<Wallet>(Game::gameState.Wallet);
+    store.addComponent<Debt>(Game::gameState.Debt);
+    auto& dayCycle = store.addComponent<DayCycle>();
 
+    //Create Player
     auto& player(world.createEntity());
-    auto& playerTransform = player.addComponent<Transform>(Vector2D(0,0),1.0f);
+    auto& playerTransform = player.addComponent<Transform>(Vector2D(12*32,14*32),1.0f);
     player.addComponent<Velocity>(Vector2D(0,0), 120.0f);
 
     Animation anim = AssetManager::getAnimation("player");
     player.addComponent<Animation>(anim);
 
     SDL_Texture* tex = TextureManager::load("../asset/animations/fox_anim.png");
-    // SDL_FRect playerSrc {0,0,32,44};
     SDL_FRect playerSrc = anim.clips[anim.currentClip].frameIndicies[0];
-    SDL_FRect playerDst {playerTransform.position.x,playerTransform.position.y,64,64};
+    SDL_FRect playerDst {playerTransform.position.x,playerTransform.position.y,32,32};
     player.addComponent<Sprite>(tex,playerSrc,playerDst);
 
     auto& playerCollider = player.addComponent<Collider>("player");
@@ -109,45 +93,54 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
     playerCollider.rect.h = playerDst.h;
 
     player.addComponent<PlayerTag>();
-    player.addComponent<Health>(Game::gameState.playerHealth);
 
-    //Test Customer
-    // auto & customer (world.createEntity());
-    // customer.addComponent<Transform>(Vector2D(12,369),1.0f);
-    // customer.addComponent<Velocity>(Vector2D(0,0), 120.0f);
-    // customer.addComponent<CustomerAI>();
-    // SDL_Texture* texture = TextureManager::load("../asset/animations/bird_anim.png");
-    // SDL_FRect src = {0,0,32,32};
-    // SDL_FRect dst {651,369,32,32};
-    // customer.addComponent<Sprite>(texture,src,dst);
 
+    //Customers:
     std::vector<SDL_Texture*> customerTextures = {
         TextureManager::load("../asset/animations/CustomerA.png"),
         TextureManager::load("../asset/animations/CustomerF.png"),
         TextureManager::load("../asset/animations/CustomerM.png")
     };
-    int customerIndexCount = 0;
+    int customerIndexCount = 0; // Index on which Texture ^
 
     auto& spawner(world.createEntity());
-    Transform t = spawner.addComponent<Transform>(Vector2D(657,372),1.0f);
-    spawner.addComponent<TimedSpawner>(15.0f,[this,t,customerTextures,customerIndexCount]()mutable  {
-
-        //create projectiles
-        auto& e(world.createDeferredEntity());
-        e.addComponent<Transform>(Vector2D(t.position.x,t.position.y),1.0f);
-        e.addComponent<Velocity>(Vector2D(0,0),100.0f);
-        e.addComponent<CustomerAI>();
+    Transform t = spawner.addComponent<Transform>(Vector2D(20*32,4*32),1.0f);
+    spawner.addComponent<Spawner>([this,t,customerTextures,customerIndexCount]() mutable {
+        auto& e = world.createDeferredEntity();
+        e.addComponent<Transform>(Vector2D(t.position.x, t.position.y), 1.0f);
+        e.addComponent<Velocity>(Vector2D(0, 0), 100.0f);
+        e.addComponent<CustomerAI>(); // The AI takes over from here!
+        e.addComponent<Customer>();
 
         Animation anim = AssetManager::getAnimation("customer");
         e.addComponent<Animation>(anim);
 
-
+        // Your texture cycling logic here is excellent.
+        // Because the lambda is 'mutable', customerIndexCount will correctly increment across spawns.
         SDL_Texture* tex = customerTextures[customerIndexCount++ % customerTextures.size()];
-        SDL_FRect src = {0,0,32,32};
-        SDL_FRect dst {t.position.x,t.position.y,64,64};
-        e.addComponent<Sprite>(tex,src,dst);
-    });
+        SDL_FRect src= anim.clips[anim.currentClip].frameIndicies[0];
+        SDL_FRect dst {t.position.x, t.position.y, 64, 64};
+        e.addComponent<Sprite>(tex, src, dst);
 
+    });
+    //Display Case: (Test)
+    SDL_FRect src = {64,32,32,32};
+    SDL_FRect dst = {0,0,32,32};
+    createDisplaycase(Vector2D(21*32,15*32),tilemapTex ,{64,32,32,32},{0,0,32,32});
+    createDisplaycase(Vector2D(22*32,15*32),tilemapTex ,{64,32,32,32},{0,0,32,32});
+
+    //Cash Register
+    auto& cashRegister = world.createEntity();
+    cashRegister.addComponent<Transform>(Vector2D(20*32,17*32));
+    auto& c = cashRegister.addComponent<Collider>("wall");
+    c.rect = {20*32,17 * 32,32,32};
+    cashRegister.addComponent<Interaction>([&dayCycle]() {
+        if (dayCycle.currentPhase == DayPhase::Morning) {
+            std::cout << "Start the day ..." << std::endl;
+            dayCycle.phaseSwapReady = true;
+        }
+
+    }); // -> Interact to start morning
 
     //add scene state
     auto &state(world.createEntity());
@@ -155,6 +148,27 @@ void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight)
 
     //Add Label
     createPlayerPosLabel();
+}
+Entity& Scene::createDisplaycase(Vector2D location, SDL_Texture* texture,SDL_FRect src, SDL_FRect dst) {
+    auto& displayCase (world.createEntity());
+    displayCase.addComponent<Transform>(location,0.0f,1.0f);
+    displayCase.addComponent<DisplayStand>();
+    auto& c = displayCase.addComponent<Collider>("wall");
+    c.rect.w = 32;
+    c.rect.h = 32;
+    c.rect.x = location.x;
+    c.rect.y = location.y;
+    displayCase.addComponent<Sprite>(texture,src,dst);
+    displayCase.addComponent<Interaction>([&displayCase]() {
+        auto& dc = displayCase.getComponent<DisplayStand>();
+
+    if (dc.quantity > 0 && dc.item.id != -1) {
+        std::cout << "Display case has an "<< dc.item.name <<"! Opening modification UI...\n";
+    } else {
+        std::cout << "Display case is empty. Opening inventory UI to place item...\n";
+    }
+    });
+    return displayCase;
 }
 
 Entity& Scene::createSettingsOverlay(int windowWidth, int windowHeight) {

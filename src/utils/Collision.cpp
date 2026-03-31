@@ -4,7 +4,7 @@
 
 #include <SDL3/SDL_rect.h>
 
-#include "Collission.h"
+#include "Collision.h"
 
 
 //pass in rect

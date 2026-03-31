@@ -14,10 +14,11 @@
 
 class KeyboardInputSystem {
 public:
-    void update(const std::vector<std::unique_ptr<Entity>>& entities, const SDL_Event& event) {
+    void update(const std::vector<std::unique_ptr<Entity>>& entities, const SDL_Event& event,EventManager& eventManager) {
         for (auto& e : entities) {
             if (e-> hasComponent<Velocity>() && e-> hasComponent<PlayerTag>()) {
                 auto& v = e->getComponent<Velocity>();
+                auto& p = e->getComponent<PlayerTag>();
                 if (event.type == SDL_EVENT_KEY_DOWN) {
                     switch (event.key.key) {
                         case SDLK_W:
@@ -32,7 +33,11 @@ public:
                         case SDLK_D:
                             v.direction.x = 1;
                             break;
-                        default:
+                        case SDLK_E:
+                            PlayerActionEvent interactEvent(e.get(), PlayerAction::Interact);
+                            // Send it to your Event Bus / Event Manager to distribute to systems!
+                            eventManager.emit(interactEvent);
+
                             break;
                     }
                 }

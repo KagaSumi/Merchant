@@ -23,5 +23,8 @@ class Map {
     std::vector<int> AIWalkable;
     std::vector<Collider> colliders;
     std::vector<Collider> coins;
+    SDL_Point Door;
+    SDL_Point Register;
+
 };
 #endif //PROJECT_MAP_H

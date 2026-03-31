@@ -12,11 +12,12 @@
 #include <vector>
 
 #include "Components.h"
+#include "DayCycleSystem.h"
 #include "PathfindingSystem.h"
 
 class CustomerAISystem {
 public:
-    void update(std::vector<std::unique_ptr<Entity>>& entities,float deltaTime) {
+    void update(std::vector<std::unique_ptr<Entity>>& entities,float deltaTime, DayCycleSystem& dayCycleSystem) {
         for (auto &entity: entities) {
             if (entity->hasComponent<CustomerAI>() && entity->hasComponent<Transform>() && entity->hasComponent<Velocity>()) {
                 auto &ai = entity->getComponent<CustomerAI>();
@@ -33,18 +34,18 @@ public:
                         break;
                     case CustomerAIState::LeavingStore:
                         // Set velocity toward the shop exit
-                        HandleLeavingStore(*entity,ai,transform,velocity);
+                        HandleLeavingStore(*entity,ai,dayCycleSystem,transform,velocity);
                         break;
                 }
             }
         }
     }
-
-    void SetDoorLocation(int gridX, int gridY) {
-        Door = {gridX, gridY};
+    //TODO Setup auto polling for register or door
+ void setRegister(int x,int y) {
+        Register = {x,y};
     }
-    void SetRegisterLocation(int gridX, int gridY) {
-        Register = {gridX, gridY};
+void setDoor(int x,int y) {
+        Door = {x,y};
     }
 
 private:
@@ -52,12 +53,12 @@ private:
 
     // Removed EntityAdmin, added Velocity
     void HandleHeadingToRegister(CustomerAI &ai, Transform &t, Velocity &v);
-    void HandleLeavingStore(Entity& entity, CustomerAI &ai, Transform &t, Velocity &v);
+    void HandleLeavingStore(Entity& entity, CustomerAI &ai,DayCycleSystem& dayCycleSystem, Transform &t, Velocity &v);
 
     void MoveAlongPath(CustomerAI &ai, Transform &t, Velocity &v);
 
     SDL_Point Register{20,16};
-    SDL_Point Door{20,10};
+    SDL_Point Door{20,4};
 };
 
 #endif
