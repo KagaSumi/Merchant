@@ -32,10 +32,11 @@ void Scene::initMainMenu(int windowWidth, int windowHeight) {
     auto &settingsOverlay = createSettingsOverlay(windowWidth, windowHeight);
     // createCogButton(windowWidth, windowHeight, settingsOverlay);
 
-    auto &haggleOverlay = createHaggleUI(windowWidth, windowHeight);
-    auto &summaryOverlay = createDaySummaryUI(windowWidth,windowHeight);
+    auto &inventoryOverlay = createInventoryUI(windowWidth,windowHeight);
 
-    createCogButton(windowWidth,windowHeight,summaryOverlay);
+    //updateInventoryUI();
+
+    createCogButton(windowWidth,windowHeight,inventoryOverlay);
 }
 
 void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight) {
@@ -44,6 +45,10 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
     world.getMap().load(mapPath, tilemapTex);
     SDL_Texture *itemsTex = TextureManager::load("../asset/items.png");
     world.getItems().load("../asset/items.xml");
+
+    createHaggleUI(windowWidth, windowHeight);
+    createDaySummaryUI(windowWidth,windowHeight);
+    auto& inventoryUIRef = createInventoryUI(windowWidth,windowHeight);
 
     for (auto &collider: world.getMap().colliders) {
         auto &e = world.createEntity();
@@ -102,6 +107,28 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
     playerCollider.offsetX = 8.0f; // (32 - 16) / 2 = centers the box horizontally
     playerCollider.offsetY = 20.0f; // Pushes the box down so it only covers the legs/feet
 
+    auto& inv = player.addComponent<Inventory>();
+    inv.uiRef = &inventoryUIRef;
+    inv.onOpenUI = [this](const std::vector<InventoryEntry>& items) {
+        if (!UIInventory) return;
+
+        bool isCurrentlyOpen = UIInventory->getComponent<Sprite>().visible;
+        if (isCurrentlyOpen) {
+            // Just close it
+            toggleSettingsOverlayVisibility(*UIInventory, nullptr);
+        } else {
+            // Update data and open
+            updateInventoryUI(items);
+        }
+    };
+    auto& itemDB = world.getItems();
+    for (auto& [id, item] : itemDB.items) {
+        inv.addItem(item, 0);
+    }
+    inv.addItem(itemDB.items[1], 5);  // Minor Health Potion
+    inv.addItem(itemDB.items[7], 2);  // Iron Dagger
+    inv.addItem(itemDB.items[2], 1);  // Phoenix Feather
+    inv.addItem(itemDB.items[14], 3);
     player.addComponent<PlayerTag>();
 
 
@@ -463,7 +490,7 @@ Entity& Scene::createPriceSelection(int windowWidth, int windowHeight, Entity& o
         SDL_FRect destUp{colX, startY, btnWidth, btnHeight}; // Rendered larger!
 
         btnUp.addComponent<Sprite>(texButtons, srcUp, destUp, RenderLayer::UI, false);
-        btnUp.addComponent<Collider>("ui", destUp);
+        btnUp.addComponent<Collider>("ui", destUp).enabled =false;
 
         auto& clickUp = btnUp.addComponent<Clickable>();
         clickUp.onPressed = [&btnUpTransform] { btnUpTransform.scale = 0.8f; };
@@ -500,7 +527,7 @@ Entity& Scene::createPriceSelection(int windowWidth, int windowHeight, Entity& o
         SDL_FRect destDown{colX, downBtnY, btnWidth, btnHeight}; // Rendered larger!
 
         btnDown.addComponent<Sprite>(texButtons, srcDown, destDown, RenderLayer::UI, false);
-        btnDown.addComponent<Collider>("ui", destDown);
+        btnDown.addComponent<Collider>("ui", destDown).enabled = false;
 
         auto& clickDown = btnDown.addComponent<Clickable>();
         clickDown.onPressed = [&btnDownTransform] { btnDownTransform.scale = 0.8f; };
@@ -554,7 +581,8 @@ Entity& Scene::createHaggleButton(int windowWidth, int windowHeight, Entity& ove
     SDL_FRect haggleDest{scaleX, scaleY, displaySize, displaySize};
 
     haggleButton.addComponent<Sprite>(haggleTex, haggleSrc, haggleDest, RenderLayer::UI, false);
-    haggleButton.addComponent<Collider>("ui", haggleDest);
+    haggleButton.addComponent<Collider>("ui", haggleDest).enabled =false;
+
 
     auto& clickable = haggleButton.addComponent<Clickable>();
     clickable.onPressed = [&haggleTransform] { haggleTransform.scale = 0.9f; };
@@ -845,7 +873,7 @@ void Scene::createDaySummaryFooter(Entity& overlay, const DaySummaryData& data) 
     SDL_FRect btnDst{btnX, btnY, btnWidth, btnHeight};
 
     btnEnt.addComponent<Sprite>(texBtn, btnSrc, btnDst, RenderLayer::UI, false);
-    btnEnt.addComponent<Collider>("ui", btnDst);
+    btnEnt.addComponent<Collider>("ui", btnDst).enabled=false;
 
     // Click Logic
     auto& clickable = btnEnt.addComponent<Clickable>();
@@ -976,6 +1004,150 @@ Entity& Scene::updateDaySummaryUI(const DaySummaryData& data) {
     toggleSettingsOverlayVisibility(*UIDaySummary, &forceOpen);
 
     return *UIDaySummary;
+}
+
+//Inventory UI
+Entity& Scene::createInventoryUI(int windowWidth, int windowHeight) {
+    auto& mainOverlay = createBaseMenuOverlay(windowWidth, windowHeight);
+    mainOverlay.getComponent<Sprite>().visible = false;
+
+    auto& session = mainOverlay.addComponent<InventorySession>();
+    auto& overlayTransform = mainOverlay.getComponent<Transform>();
+    auto& overlaySprite = mainOverlay.getComponent<Sprite>();
+
+    float baseX = overlayTransform.position.x;
+    float baseY = overlayTransform.position.y;
+    float menuWidth = overlaySprite.dst.w;
+
+    // --- 1. TITLE ---
+    auto& titleLabel = world.createEntity();
+    Label tData = {"Stockroom Inventory", AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "invTitle"};
+    tData.dirty=true;
+    tData.visible = false;
+    TextureManager::updateLabel(titleLabel.addComponent<Label>(tData));
+    titleLabel.addComponent<Transform>(Vector2D(baseX + (menuWidth/2) - (titleLabel.getComponent<Label>().dst.w/2), baseY + 30.0f), 0.0f, 1.0f);
+    titleLabel.addComponent<Parent>(&mainOverlay);
+    mainOverlay.getComponent<Children>().children.push_back(&titleLabel);
+
+    // --- 2. 4x4 GRID SETUP ---
+    float padding = 40.0f;
+    float gridStartX = baseX + padding;
+    float gridStartY = baseY + 80.0f; // just below title
+
+    float menuHeight = overlaySprite.dst.h;
+
+    // Divide the full available width and height across 4 cols/rows
+    float colSpacing = (menuWidth - (padding * 2.0f)) / 4.0f;
+    float rowSpacing = (menuHeight - gridStartY + baseY - padding) / 4.0f;
+
+    SDL_Texture* itemsTex = TextureManager::load("../asset/items.png");
+
+    for (int row = 0; row < 4; ++row) {
+        for (int col = 0; col < 4; ++col) {
+            InventorySlotRefs slotRefs;
+            float iconSize = 48.0f;
+            float iconOffsetX = (colSpacing - iconSize) / 2.0f;
+            float iconOffsetY = (rowSpacing * 0.2f); // sits in upper portion of cell
+
+            float slotX = gridStartX + (col * colSpacing);
+            float slotY = gridStartY + (row * rowSpacing);
+
+            // Container
+            auto& container = world.createEntity();
+            container.addComponent<Transform>(Vector2D(slotX, slotY), 0.0f, 1.0f);
+            container.addComponent<Children>();
+            slotRefs.container = &container;
+
+            // Icon
+
+            auto& iconEnt = world.createEntity();
+            iconEnt.addComponent<Transform>(Vector2D(slotX + iconOffsetX, slotY + iconOffsetY), 0.0f, 1.0f);
+            SDL_FRect iconDst = {slotX + iconOffsetX, slotY + iconOffsetY, iconSize, iconSize};
+            iconEnt.addComponent<Sprite>(itemsTex, SDL_FRect{0,0,32,32}, iconDst, RenderLayer::UI, false).visible = false;
+            slotRefs.icon = &iconEnt;
+            iconEnt.addComponent<Parent>(&container);
+            container.getComponent<Children>().children.push_back(&iconEnt);
+
+            // Label (Vertical stacking: Text sits below the icon for 4x4)
+            auto& labelEnt = world.createEntity();
+            labelEnt.addComponent<Parent>(&container);
+            container.getComponent<Children>().children.push_back(&labelEnt);
+            Label lData = {"Empty", AssetManager::getFont("arial-small"), {0, 0, 0, 255}, LabelType::Static, "inv_" + std::to_string(row) + "_" + std::to_string(col)};
+            lData.dirty=true;
+            lData.visible = false;
+            TextureManager::updateLabel(labelEnt.addComponent<Label>(lData));
+            // Offset label below icon
+            labelEnt.addComponent<Transform>(Vector2D(slotX, slotY + iconOffsetY + iconSize + 6.0f), 0.0f, 1.0f);
+            slotRefs.label = &labelEnt;
+
+            iconEnt.addComponent<Parent>(&container);
+            labelEnt.addComponent<Parent>(&container);
+            container.addComponent<Parent>(&mainOverlay);
+            mainOverlay.getComponent<Children>().children.push_back(&container);
+
+            session.slots.push_back(slotRefs);
+            container.addComponent<Parent>(&mainOverlay);
+            mainOverlay.getComponent<Children>().children.push_back(&container);
+        }
+    }
+
+    UIInventory = &mainOverlay;
+    return mainOverlay;
+}
+
+Entity& Scene::updateInventoryUI(const std::vector<InventoryEntry>& inventoryData) {
+    if (!UIInventory) return *UIInventory;
+    auto& session = UIInventory->getComponent<InventorySession>();
+
+    // 1. Sort the entire 16-item list so it's always in the same order
+    auto sortedInv = inventoryData;
+    std::sort(sortedInv.begin(), sortedInv.end(), [](const InventoryEntry& a, const InventoryEntry& b) {
+        if (a.item.type != b.item.type) return static_cast<int>(a.item.type) < static_cast<int>(b.item.type);
+        return a.item.basePrice > b.item.basePrice;
+    });
+
+    // 2. Map to the 16 slots
+    for (size_t i = 0; i < session.slots.size(); ++i) {
+        auto& slot = session.slots[i];
+
+        if (i < sortedInv.size()) {
+            const auto& entry = sortedInv[i];
+            auto& label = slot.label->getComponent<Label>();
+            auto& iconSprite = slot.icon->getComponent<Sprite>();
+
+            // Always show the icon and the name
+            iconSprite.src = entry.item.src;
+            iconSprite.visible = true;
+            label.visible = true;
+            label.text = entry.item.name + " x" + std::to_string(entry.quantity);
+
+            // --- THE GRAY OUT LOGIC ---
+            if (entry.quantity <= 0) {
+                // Out of Stock: Light Gray text
+                label.color = {120, 120, 120, 255};
+            } else {
+                // In Stock: Black text
+                label.color = {0, 0, 0, 255};
+
+            }
+
+            label.dirty = true;
+            TextureManager::updateLabel(label);
+
+            // Re-center
+            float iconX = slot.icon->getComponent<Transform>().position.x;
+            label.dst.x = (iconX + 24.0f) - (label.dst.w / 2.0f);
+
+        } else {
+            // If the XML has fewer than 16 items, hide the extra slots
+            slot.icon->getComponent<Sprite>().visible = true;
+            slot.label->getComponent<Label>().visible = true;
+        }
+    }
+
+    bool forceOpen = true;
+    toggleSettingsOverlayVisibility(*UIInventory, &forceOpen);
+    return *UIInventory;
 }
 
 //UI Utils

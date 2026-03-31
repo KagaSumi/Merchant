@@ -38,7 +38,7 @@ class Scene {
         }
     };
 
-    //Data Package
+    //Data Packages
     struct DaySummaryData {
         int grossSales = 0;
         int customerPurchases = 0;
@@ -47,9 +47,10 @@ class Scene {
         int daysUntilPayment = 0;
 
         int getGrossProfit() const {
-            return grossSales - customerPurchases; // Or + depending on how you store customer purchases
+            return grossSales - customerPurchases;
         }
     };
+
     struct DaySummarySession {
         DaySummaryData currentData;
 
@@ -64,6 +65,18 @@ class Scene {
         Entity* debtSubTextRef = nullptr;
         Entity* balanceTextRef = nullptr;
     };
+
+    struct InventorySlotRefs {
+        Entity* container = nullptr;
+        Entity* icon = nullptr;
+        Entity* label = nullptr;
+    };
+
+    struct InventorySession {
+        std::vector<InventoryEntry> cachedInventory;
+        std::vector<InventorySlotRefs> slots;
+    };
+
 
 
 public:
@@ -81,6 +94,11 @@ public:
     World world;
 
     const std::string& getName() const {return name;}
+
+    Entity* UIInventory = nullptr;
+    void openInventory(const std::vector<InventoryEntry>& items) {
+        updateInventoryUI(items);
+    }
 
 private:
     std::string name;
@@ -114,9 +132,8 @@ private:
     Entity& createHaggleButton(int windowWidth, int windowHeight, Entity& overlay); // Confirm Button
 
     //Inventory UI
-    Entity* UIInventory = nullptr;
-    Entity& createItemInventoryOverlay(int windowWidth, int windowHeight, Entity& overlay);
-    Entity& createInventoryOverlay(int windowWidth, int windowHeight, Entity& overlay);
+    Entity& createInventoryUI(int windowWidth, int windowHeight);
+    Entity& updateInventoryUI(const std::vector<InventoryEntry>& inventoryData);
 
     //Summary UI
     Entity* UIDaySummary = nullptr;

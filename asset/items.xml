@@ -1,125 +1,123 @@
 <items>
-    <item>
+    <item type="Consumable">
         <name>Minor Health Potion</name>
         <basePrice>15</basePrice>
         <source x="0" y="0" w="32" h="32" />
         <tags>
-            <tag>Consumable</tag>
+            <tag>Liquid</tag>
+            <tag>Healing</tag>
         </tags>
         <requiredRep rep="1"/>
     </item>
-    <item>
+    <item type="Material">
         <name>Phoenix Feather</name>
         <basePrice>50</basePrice>
         <source x="32" y="0" w="32" h="32" />
         <tags>
-            <tag>Material</tag>
             <tag>Rare</tag>
+            <tag>Alchemical</tag>
         </tags>
         <requiredRep rep="1"/>
     </item>
-    <item>
+    <item type="Luxury">
         <name>Treasure Map</name>
         <basePrice>150</basePrice>
         <source x="64" y="0" w="32" h="32" />
         <tags>
-            <tag>Luxury</tag>
+            <tag>Paper</tag>
             <tag>Rare</tag>
         </tags>
         <requiredRep rep="2"/>
     </item>
-    <item>
+    <item type="Equipment">
         <name>Hunter's Bow</name>
         <basePrice>80</basePrice>
         <source x="96" y="0" w="32" h="32" />
         <tags>
-            <tag>Equipment</tag>
             <tag>Weapon</tag>
             <tag>Wood</tag>
         </tags>
         <requiredRep rep="1"/>
     </item>
 
-    <item>
+    <item type="Consumable">
         <name>Health Flask</name>
         <basePrice>35</basePrice>
         <source x="0" y="32" w="32" h="32" />
         <tags>
-            <tag>Consumable</tag>
+            <tag>Liquid</tag>
+            <tag>Healing</tag>
         </tags>
         <requiredRep rep="1"/>
     </item>
-    <item>
+    <item type="Equipment">
         <name>Wooden Shield</name>
         <basePrice>60</basePrice>
         <source x="32" y="32" w="32" h="32" />
         <tags>
-            <tag>Equipment</tag>
             <tag>Armor</tag>
             <tag>Wood</tag>
         </tags>
         <requiredRep rep="1"/>
     </item>
-    <item>
+    <item type="Equipment">
         <name>Iron Dagger</name>
         <basePrice>40</basePrice>
         <source x="64" y="32" w="32" h="32" />
         <tags>
-            <tag>Equipment</tag>
             <tag>Weapon</tag>
             <tag>Metal</tag>
         </tags>
         <requiredRep rep="1"/>
     </item>
-    <item>
+    <item type="Equipment">
         <name>Steel Rapier</name>
         <basePrice>120</basePrice>
         <source x="96" y="32" w="32" h="32" />
         <tags>
-            <tag>Equipment</tag>
             <tag>Weapon</tag>
             <tag>Metal</tag>
         </tags>
         <requiredRep rep="2"/>
     </item>
 
-    <item>
+    <item type="Consumable">
         <name>Major Health Potion</name>
         <basePrice>75</basePrice>
         <source x="0" y="64" w="32" h="32" />
         <tags>
-            <tag>Consumable</tag>
+            <tag>Liquid</tag>
             <tag>Magic</tag>
+            <tag>Healing</tag>
         </tags>
         <requiredRep rep="2"/>
     </item>
-    <item>
+    <item type="Consumable">
         <name>Antidote</name>
         <basePrice>20</basePrice>
         <source x="32" y="64" w="32" h="32" />
         <tags>
-            <tag>Consumable</tag>
+            <tag>Liquid</tag>
+            <tag>Medicine</tag>
         </tags>
         <requiredRep rep="1"/>
     </item>
-    <item>
+    <item type="Equipment">
         <name>Mage's Staff</name>
         <basePrice>300</basePrice>
         <source x="64" y="64" w="32" h="32" />
         <tags>
-            <tag>Equipment</tag>
             <tag>Weapon</tag>
             <tag>Magic</tag>
             <tag>Wood</tag>
         </tags>
         <requiredRep rep="3"/>
     </item>
-    <item>
+    <item type="Equipment">
         <name>Elven Bow</name>
         <basePrice>250</basePrice>
         <source x="96" y="64" w="32" h="32" />
         <tags>
-            <tag>Equipment</tag>
             <tag>Weapon</tag>
             <tag>Magic</tag>
             <tag>Wood</tag>
@@ -127,44 +125,43 @@
         <requiredRep rep="3"/>
     </item>
 
-    <item>
+    <item type="Material">
         <name>Dragon Scale</name>
         <basePrice>400</basePrice>
         <source x="0" y="96" w="32" h="32" />
         <tags>
-            <tag>Material</tag>
             <tag>Rare</tag>
             <tag>Magic</tag>
+            <tag>Monster</tag>
         </tags>
         <requiredRep rep="3"/>
     </item>
-    <item>
+    <item type="Consumable">
         <name>Mana Flask</name>
         <basePrice>40</basePrice>
         <source x="32" y="96" w="32" h="32" />
         <tags>
-            <tag>Consumable</tag>
+            <tag>Liquid</tag>
             <tag>Magic</tag>
         </tags>
         <requiredRep rep="1"/>
     </item>
-    <item>
+    <item type="Luxury">
         <name>Holy Relic</name>
         <basePrice>1000</basePrice>
         <source x="64" y="96" w="32" h="32" />
         <tags>
-            <tag>Luxury</tag>
             <tag>Rare</tag>
             <tag>Magic</tag>
+            <tag>Artifact</tag>
         </tags>
         <requiredRep rep="4"/>
     </item>
-    <item>
+    <item type="Equipment">
         <name>Curved Scimitar</name>
         <basePrice>180</basePrice>
         <source x="96" y="96" w="32" h="32" />
         <tags>
-            <tag>Equipment</tag>
             <tag>Weapon</tag>
             <tag>Metal</tag>
         </tags>

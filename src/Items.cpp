@@ -4,11 +4,18 @@
 
 #include "Items.h"
 
+#include <map>
 #include <tinyxml2.h>
 
 #include "TextureManager.h"
 
 void Items::load(const char *path) {
+    std::map<std::string, ItemType> typeMap = {
+        {"Equipment", ItemType::Equipment},
+        {"Consumable", ItemType::Consumable},
+        {"Material", ItemType::Material},
+        {"Luxury", ItemType::Luxury}
+    };
     tinyxml2::XMLDocument doc;
     if (doc.LoadFile(path) != tinyxml2::XML_SUCCESS) return;
 
@@ -52,6 +59,9 @@ void Items::load(const char *path) {
         if (auto *requiredRepElem = itemElem->FirstChildElement("requiredRep")) {
             requiredRepElem->QueryFloatAttribute("rep", &itemObj.requiredReputation);
         }
+
+        const char* typeStr = itemElem->Attribute("type");
+        itemObj.type = typeMap[typeStr];
 
         items[global_id] = itemObj;
         global_id++;

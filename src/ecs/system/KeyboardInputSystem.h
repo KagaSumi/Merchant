@@ -11,7 +11,6 @@
 
 #include "Components.h"
 #include "Entity.h"
-enum class InputMode { World, UI };
 
 class KeyboardInputSystem {
 public:
@@ -35,12 +34,18 @@ public:
                         case SDLK_D:
                             v.direction.x = 1;
                             break;
-                        case SDLK_E:
+                        case SDLK_E: {
                             PlayerActionEvent interactEvent(e.get(), PlayerAction::Interact);
                             // Send it to your Event Bus / Event Manager to distribute to systems!
                             eventManager.emit(interactEvent);
-
                             break;
+                        }
+                        case SDLK_I: {
+                            PlayerActionEvent inventoryEvent(e.get(), PlayerAction::Inventory);
+                            eventManager.emit(inventoryEvent);
+                            std::cout << "[EventResponseSystem] Inventory Update Triggered\n";
+                            break;
+                        }
                     }
                 }
 

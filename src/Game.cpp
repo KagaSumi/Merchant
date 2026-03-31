@@ -59,6 +59,7 @@ void Game::init(const char *title, int width, int height, bool fullscreen) {
     }
     //load fonts
     AssetManager::loadFont("arial","../asset/fonts/arial.ttf",16);
+    AssetManager::loadFont("arial-small", "../asset/fonts/arial.ttf", 13);
 
     //load asset
     AssetManager::loadAnimation("player","../asset/animations/fox_animations.xml");
@@ -83,11 +84,6 @@ void Game::init(const char *title, int width, int height, bool fullscreen) {
     onSceneChangeRequest = [this](std::string sceneName) {
 
         //some game state happening here
-        if (sceneManager.currentScene->getName() == "level2" && sceneName == "level2") {
-            std::cout <<"You win!" << std::endl;
-            isRunning = false;
-            return;
-        }
         if (sceneName == "gameover") {
             std::cout <<"You lose!" << std::endl;
             isRunning = false;

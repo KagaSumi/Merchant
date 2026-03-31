@@ -198,13 +198,32 @@ struct CustomerAI {
     int itemsBrowsed = 0; // How many they have visited so far
 };
 
+struct InventoryEntry {
+    ItemDef item;
+    int quantity;
+};
+
 struct Inventory {
-    //Iron Sword : 100g
-    std::unordered_map<std::string, int> inventory;
+    std::vector<InventoryEntry> items;
+    Entity* uiRef = nullptr;
+    std::function<void(const std::vector<InventoryEntry>&)> onOpenUI;
+
+    void openUI() {
+        if (onOpenUI) onOpenUI(items);
+    }
+    void addItem(const ItemDef& def, int count) {
+        for (auto& entry : items) {
+            if (entry.item.name == def.name) {
+                entry.quantity += count;
+                return;
+            }
+        }
+        items.push_back({def, count});
+    }
 };
 
 struct ShopReputation {
-    float Reputation = 1;
+    int Reputation = 1;
 };
 
 struct Interaction {

@@ -15,7 +15,7 @@ int main(){
     float deltaTime = 0.0f;
     int actualFrameTime ;
 
-    game = new Game();
+   game = new Game();
     game->init("Assignment 1", 800,600, false);
 
     while (game->running()) {
