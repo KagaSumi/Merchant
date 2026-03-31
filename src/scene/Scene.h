@@ -113,6 +113,10 @@ class Scene {
         InventoryUIState state = InventoryUIState::Grid;
         QuantitySession quantitySession;
 
+        Entity* targetStockIconRef = nullptr;
+        Entity* targetStockLabelRef = nullptr;
+        DisplayStand* currentStand = nullptr;
+
         // grid root container ref so you can hide/show the whole grid at once
         Entity* gridContainerRef = nullptr;
         // quantity panel root ref
@@ -174,7 +178,7 @@ private:
 
     //Inventory UI
     Entity& createInventoryUI(int windowWidth, int windowHeight);
-    Entity& updateInventoryUI(const std::vector<InventoryEntry>& inventoryData, InventoryMode mode);
+    Entity& updateInventoryUI(const std::vector<InventoryEntry>& inventoryData, InventoryMode mode, DisplayStand* targetStand = nullptr);
 
     //Summary UI
     Entity* UIDaySummary = nullptr;

@@ -235,29 +235,44 @@ Entity &Scene::createDisplaycase(Vector2D location, SDL_Texture *texture, SDL_FR
         auto &dc = casePtr->getComponent<DisplayStand>();
 
         if (cyclePtr->currentPhase != DayPhase::Morning) return;
-        if (dc.quantity > 0) return;
         if (!playerRef || !playerRef->hasComponent<Inventory>()) return;
 
         auto &inv = playerRef->getComponent<Inventory>();
         auto &session = UIInventory->getComponent<InventorySession>();
 
+        // --- THE SEAMLESS SWAP CALLBACK ---
         session.quantitySession.onConfirm = [casePtr, playerRef](InventoryEntry entry, int qty) {
-            // Re-fetch the component when the button is actually clicked
             auto &stand = casePtr->getComponent<DisplayStand>();
+            auto &playerInv = playerRef->getComponent<Inventory>().items;
+
+            // 1. REFUND OLD ITEMS (If the stand isn't empty)
+            if (stand.quantity > 0) {
+                for (auto &e: playerInv) {
+                    if (e.item.name == stand.item.name) {
+                        e.quantity += stand.quantity;
+                        std::cout << "Auto-Retrieved " << stand.quantity << "x " << stand.item.name << "\n";
+                        break;
+                    }
+                }
+            }
+
+            // 2. SET NEW ITEMS IN STAND
             stand.item = entry.item;
             stand.quantity = qty;
 
-            // Deduct from player inventory
-            for (auto &e: playerRef->getComponent<Inventory>().items) {
+            // 3. DEDUCT NEW ITEMS FROM PLAYER
+            for (auto &e: playerInv) {
                 if (e.item.name == entry.item.name) {
                     e.quantity -= qty;
                     break;
                 }
             }
+
             std::cout << "Placed " << qty << "x " << entry.item.name << " in display case\n";
         };
 
-        updateInventoryUI(inv.items, InventoryMode::PlaceItem);
+        // Open the inventory menu and pass the Display Stand so the Top-Right UI updates!
+        updateInventoryUI(inv.items, InventoryMode::PlaceItem, &dc);
     });
     return displayCase;
 }
@@ -1091,6 +1106,31 @@ Entity &Scene::createInventoryUI(int windowWidth, int windowHeight) {
     titleLabel.addComponent<Parent>(&mainOverlay);
     mainOverlay.getComponent<Children>().children.push_back(&titleLabel);
 
+    //Stock Indicator
+    float stockX = baseX + menuWidth - 160.0f; // Anchor to the right side
+    float stockY = baseY + 24.0f;
+
+    auto& stockIcon = world.createEntity();
+    stockIcon.addComponent<Transform>(Vector2D(stockX, stockY), 0.0f, 1.0f);
+    SDL_Texture* itemsTex = TextureManager::load("../asset/items.png");
+    stockIcon.addComponent<Sprite>(itemsTex, SDL_FRect{0,0,32,32}, SDL_FRect{stockX, stockY, 32, 32}, RenderLayer::UI, false).visible = false;
+    stockIcon.addComponent<Parent>(&mainOverlay);
+    mainOverlay.getComponent<Children>().children.push_back(&stockIcon);
+    session.targetStockIconRef = &stockIcon;
+
+    // The Text Label (e.g. "x2 / 4")
+    auto& stockLabel = world.createEntity();
+    Label stkData = {"Empty (0/4)", AssetManager::getFont("arial-small"), {0,0,0,255}, LabelType::Static, "invStockLbl"};
+    auto& stkComp = stockLabel.addComponent<Label>(stkData);
+    stkComp.visible = false;
+    TextureManager::updateLabel(stkComp);
+
+    // Position text next to the icon
+    stockLabel.addComponent<Transform>(Vector2D(stockX + 36.0f, stockY + 6.0f), 0.0f, 1.0f);
+    stockLabel.addComponent<Parent>(&mainOverlay);
+    mainOverlay.getComponent<Children>().children.push_back(&stockLabel);
+    session.targetStockLabelRef = &stockLabel;
+
     // --- 2. 4x4 GRID SETUP ---
     float padding = 40.0f;
     float gridStartX = baseX + padding;
@@ -1101,8 +1141,6 @@ Entity &Scene::createInventoryUI(int windowWidth, int windowHeight) {
     // Divide the full available width and height across 4 cols/rows
     float colSpacing = (menuWidth - (padding * 2.0f)) / 4.0f;
     float rowSpacing = (menuHeight - gridStartY + baseY - padding) / 4.0f;
-
-    SDL_Texture *itemsTex = TextureManager::load("../asset/items.png");
 
     for (int row = 0; row < 4; ++row) {
         for (int col = 0; col < 4; ++col) {
@@ -1196,9 +1234,9 @@ Entity &Scene::createInventoryUI(int windowWidth, int windowHeight) {
                             maxToPlace,
                             s.quantitySession.onConfirm,
                             [this]() {
-                                // On Cancel: Reopen the inventory!
-                                bool open = true;
-                                toggleSettingsOverlayVisibility(*UIInventory, &open);
+                                auto &session = UIInventory->getComponent<InventorySession>();
+                                // Safely reopen the inventory by passing the data back through our main pipeline!
+                                updateInventoryUI(session.cachedInventory, session.mode, session.currentStand);
                             }
                         );
                     }
@@ -1224,10 +1262,40 @@ Entity &Scene::createInventoryUI(int windowWidth, int windowHeight) {
 }
 
 Entity &Scene::updateInventoryUI(const std::vector<InventoryEntry> &inventoryData,
-                                 InventoryMode mode) {
+                                 InventoryMode mode, DisplayStand* targetStand) {
     if (!UIInventory) return *UIInventory;
     auto &session = UIInventory->getComponent<InventorySession>();
+    session.currentStand = targetStand;
     session.mode = mode;
+
+    //Update Stock If there is something
+    if (session.targetStockIconRef && session.targetStockLabelRef) {
+        auto& iconSprite = session.targetStockIconRef->getComponent<Sprite>();
+        auto& labelComp = session.targetStockLabelRef->getComponent<Label>();
+
+        if (mode == InventoryMode::PlaceItem && targetStand != nullptr) {
+            if (targetStand->quantity > 0) {
+                // Shelf has items: Show sprite and count
+                iconSprite.src = targetStand->item.src;
+                iconSprite.visible = true;
+                labelComp.text = "x" + std::to_string(targetStand->quantity) + " / 4";
+                labelComp.visible = true;
+            } else {
+                // Shelf is empty
+                iconSprite.visible = false;
+                labelComp.text = "Empty (0/4)";
+                labelComp.visible = true;
+            }
+            labelComp.dirty = true;
+            TextureManager::updateLabel(labelComp);
+        } else {
+            // Browsing mode: Hide the indicator entirely
+            iconSprite.visible = false;
+            labelComp.visible = false;
+        }
+    }
+
+
     // 1. Sort the entire 16-item list so it's always in the same order
     auto sortedInv = inventoryData;
     std::sort(sortedInv.begin(), sortedInv.end(), [](const InventoryEntry &a, const InventoryEntry &b) {
@@ -1275,6 +1343,48 @@ Entity &Scene::updateInventoryUI(const std::vector<InventoryEntry> &inventoryDat
 
     bool forceOpen = true;
     toggleSettingsOverlayVisibility(*UIInventory, &forceOpen);
+    for (size_t i = 0; i < session.slots.size(); ++i) {
+        auto& slot = session.slots[i];
+        bool isClickable = false;
+
+        // As long as they have the item in stock, let them click it!
+        // The seamless swap logic handles the rest.
+        if (i < sortedInv.size() && sortedInv[i].quantity > 0 && session.mode == InventoryMode::PlaceItem) {
+            isClickable = true;
+        }
+
+        // Force the icon's collider to obey the rules
+        if (slot.icon->hasComponent<Collider>()) {
+            slot.icon->getComponent<Collider>().enabled = isClickable;
+        }
+    }
+
+    if (session.targetStockIconRef && session.targetStockLabelRef) {
+        auto& iconSprite = session.targetStockIconRef->getComponent<Sprite>();
+        auto& labelComp = session.targetStockLabelRef->getComponent<Label>();
+
+        if (mode == InventoryMode::PlaceItem && targetStand != nullptr) {
+            labelComp.visible = true; // Label is always visible in Place Mode
+
+            if (targetStand->quantity > 0) {
+                // Shelf has items: Show sprite and count
+                iconSprite.src = targetStand->item.src;
+                iconSprite.visible = true; // Sledgehammer turned this on, we keep it on
+                labelComp.text = "x" + std::to_string(targetStand->quantity) + " / 4";
+            } else {
+                // Shelf is empty: Force the sprite back OFF
+                iconSprite.visible = false;
+                labelComp.text = "Empty (0/4)";
+            }
+
+            labelComp.dirty = true;
+            TextureManager::updateLabel(labelComp);
+        } else {
+            // Browsing mode: Force hide the indicator entirely
+            iconSprite.visible = false;
+            labelComp.visible = false;
+        }
+    }
     return *UIInventory;
 }
 
@@ -1422,6 +1532,9 @@ void Scene::openQuantityScreen(const InventoryEntry &item, int maxQty,
         TextureManager::updateLabel(lbl);
     }
 
+    bool forceOpen = true;
+    toggleSettingsOverlayVisibility(*UIQuantityScreen, &forceOpen);
+
     // 3. Layout the buttons
     auto &overlaySprite = UIQuantityScreen->getComponent<Sprite>();
     auto &overlayTransform = UIQuantityScreen->getComponent<Transform>();
@@ -1460,13 +1573,10 @@ void Scene::openQuantityScreen(const InventoryEntry &item, int maxQty,
             numLabel.visible = true;
         } else {
             sprite.visible = false;
+            col.enabled = false;
             numLabel.visible = false;
         }
     }
-
-    // 4. Force open the new screen! (This will also enable the colliders safely)
-    bool forceOpen = true;
-    toggleSettingsOverlayVisibility(*UIQuantityScreen, &forceOpen);
 }
 
 
