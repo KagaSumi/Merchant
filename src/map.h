@@ -6,8 +6,8 @@
 #define PROJECT_MAP_H
 
 #include <vector>
-#include <SDL3/SDL.h>
 #include <Components.h>
+#include <map>
 
 class Map {
     public:
@@ -16,16 +16,15 @@ class Map {
 
     void load(const char *path, SDL_Texture *ts);
     void drawLayer(const std::vector<std::vector<int>>& layer,const Camera& cam, int firstGid);
-    void debugDrawNavMesh(const Camera& cam, SDL_Renderer* renderer);
 
     SDL_Texture *tileset = nullptr;
     int width{}, height{};
     std::vector<std::vector<int>> floorData;
     std::vector<std::vector<int>> wallData;
     std::vector<std::vector<int>> furnitureData;
+    std::map<int,Vector2D> displayCaseSpawns;
     std::vector<int> AIWalkable;
     std::vector<Collider> colliders;
-    std::vector<Collider> coins;
     SDL_Point Door;
     SDL_Point Register;
 

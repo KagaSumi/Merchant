@@ -111,6 +111,26 @@ void Map::load(const char *path, SDL_Texture *ts) {
                 colliders.push_back(c);
             }
         }
+        if (groupName =="Display Cases") {
+            for (auto *obj = objectGroup->FirstChildElement("object");
+             obj != nullptr;
+             obj = obj->NextSiblingElement("object")) {
+
+                // 1. Get the "name" attribute as a string, then convert to int for our order (1-15)
+                const char* nameAttr = obj->Attribute("name");
+                if (nameAttr != nullptr) {
+                    int order = std::stoi(nameAttr);
+
+                    // 2. Extract X and Y.
+                    // Since the XML provides raw pixel values (64, 160), we don't need to multiply or divide by 32!
+                    float x = obj->FloatAttribute("x");
+                    float y = obj->FloatAttribute("y");
+
+                    // 3. Save it to the map
+                    displayCaseSpawns[order] = Vector2D(x, y);
+                }
+             }
+        }
         if (groupName =="Door") {
             auto *obj = objectGroup->FirstChildElement("object");
             Door = {
