@@ -16,7 +16,7 @@ int main(){
     int actualFrameTime ;
 
    game = new Game();
-    game->init("Assignment 1", 800,600, false);
+    game->init("Relics & Reciepts", 800,600, false);
 
     while (game->running()) {
 

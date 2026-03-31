@@ -25,8 +25,8 @@ void Scene::initMainMenu(int windowWidth, int windowHeight) {
     auto menuTransform = menu.addComponent<Transform>(Vector2D(0, 0), 0.0f, 1.0f);
 
     SDL_Texture *texture = TextureManager::load("../asset/menu.png");
-    SDL_FRect menuSrc{0, 0, (float) windowWidth, (float) windowHeight};
-    SDL_FRect menuDst{menuTransform.position.x, menuTransform.position.y, menuSrc.w, menuSrc.h};
+    SDL_FRect menuSrc{0, 0, (float) 1200, (float) 896};
+    SDL_FRect menuDst{0,0, (float) windowWidth, (float) windowHeight};
     menu.addComponent<Sprite>(texture, menuSrc, menuDst);
 
     auto &settingsOverlay = createSettingsOverlay(windowWidth, windowHeight);
