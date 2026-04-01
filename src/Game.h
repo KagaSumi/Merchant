@@ -13,18 +13,26 @@
 #include "manager/SceneManager.h"
 
 struct GameState {
-    int playerHealth;
-    int Wallet;
-    int Debt;
-    int DayCycle;
+    //Initial Game State
+    int playerHealth = 5;
     int shopReputation = 1;
-    int currentRepXP = 0;      // This increases after every sale
-    int xpToNextLevel = 100;   // Threshold to level up
+    int currentRepXP = 0;
+    int xpToNextLevel = 100;
+    int displayCasesUnlocked = 3;
+    int dayCount = 1;
 
-    int displayCasesUnlocked = 3; // Start with 3 Shelves
+    // Wallet
+    int walletBalance = 500;
+    int dailyIncome = 0;
+    int dailyExpenses = 0;
+
+    // Debt
+    int debtTotal = 5000;
+    int debtNextPayment = 500;
+    int debtDaysRemaining = 7;
 };
 
-/* To be added in haggle system
+/* TODO To be added in haggle system
 void onSuccessfulSale(int profitMargin) {
     // Better haggling = more XP
     int xpGained = 10 + (profitMargin / 10);

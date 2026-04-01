@@ -141,6 +141,7 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
     dayCycleSystem.onMorningStart = [this,&store]() {
         auto& wallet = store.getComponent<Wallet>();
         wallet.dailyIncome = 0; // Reset Daily Income
+        wallet.dailyExpenses = 0; // Reset Daily Income
         // Nothing for now - player is free to roam
         std::cout << "Morning started\n";
     };
@@ -152,6 +153,15 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
     };
 
     dayCycleSystem.onEveningStart = [this, &player, &store, dayCycle]() {
+        //Sync Game State
+        auto& wallet = store.getComponent<Wallet>();
+        auto& debt = store.getComponent<Debt>();
+
+        Game::gameState.walletBalance = wallet.balance;
+        Game::gameState.dailyIncome = wallet.dailyIncome;
+        Game::gameState.dailyExpenses = wallet.dailyExpenses;
+        Game::gameState.debtDaysRemaining--;
+
         // 1. Filter available items by rep
         std::vector<ItemDef> available;
         for (auto& [id, item] : world.getItems().items) {
@@ -1672,7 +1682,7 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
     auto& tComp = titleEnt.addComponent<Label>(tData);
     tComp.dirty = true; tComp.visible = false;
     TextureManager::updateLabel(tComp);
-    titleEnt.addComponent<Transform>(Vector2D(centerX - tComp.dst.w / 2.0f, baseY + 16.0f), 0.0f, 1.0f);
+    titleEnt.addComponent<Transform>(Vector2D(centerX - tComp.dst.w / 2.0f, baseY + 30.0f), 0.0f, 1.0f);
     titleEnt.addComponent<Parent>(&mainOverlay);
     mainOverlay.getComponent<Children>().children.push_back(&titleEnt);
 
@@ -1682,7 +1692,7 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
     auto& wComp = walletEnt.addComponent<Label>(wData);
     wComp.dirty = true; wComp.visible = false;
     TextureManager::updateLabel(wComp);
-    walletEnt.addComponent<Transform>(Vector2D(baseX + 20.0f, baseY + 16.0f), 0.0f, 1.0f);
+    walletEnt.addComponent<Transform>(Vector2D(baseX + 30.0f, baseY + 20.0f), 0.0f, 1.0f);
     walletEnt.addComponent<Parent>(&mainOverlay);
     mainOverlay.getComponent<Children>().children.push_back(&walletEnt);
     session.walletLabelRef = &walletEnt;
@@ -1690,7 +1700,7 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
     // --- GRID: 4 cols x 4 rows = 16 slots ---
     // Reserve bottom strip for Continue button
     float footerH = 70.0f;
-    float gridTop = baseY + 55.0f;
+    float gridTop = baseY + 80.0f;
     float gridBottom = baseY + menuHeight - footerH;
     float gridH = gridBottom - gridTop;
 
@@ -1734,6 +1744,8 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
             slot.nameLabel = &nameEnt;
 
             // Price label
+            float btnY = slotY + padding + nComp.dst.h + 4.0f;
+            float btnW = 48.0f, btnH = 22.0f;
             auto& priceEnt = world.createEntity();
             Label pData = {"0G", AssetManager::getFont("arial-small"), {0,0,0,255}, LabelType::Static,
                            "ord_price_" + std::to_string(row) + "_" + std::to_string(col)};
@@ -1741,16 +1753,14 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
             pComp.dirty = true; pComp.visible = false;
             TextureManager::updateLabel(pComp);
             priceEnt.addComponent<Transform>(
-                Vector2D(slotX + colW - 40.0f, slotY + padding), 0.0f, 1.0f);
+                Vector2D(slotX + padding + iconSize + btnW + 4.0f, btnY + 2.0f), 0.0f, 1.0f);
             priceEnt.addComponent<Parent>(&mainOverlay);
             mainOverlay.getComponent<Children>().children.push_back(&priceEnt);
             slot.priceLabel = &priceEnt;
 
             // Buy button
             auto& btnEnt = world.createEntity();
-            float btnW = 48.0f, btnH = 22.0f;
             float btnX = slotX + padding + iconSize + 4.0f;
-            float btnY = slotY + padding + nComp.dst.h + 4.0f;
 
             auto& btnTransform = btnEnt.addComponent<Transform>(Vector2D(btnX, btnY), 0.0f, 1.0f);
             SDL_FRect btnDst = {btnX, btnY, btnW, btnH};
@@ -1796,6 +1806,56 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
             session.slots.push_back(slot);
         }
     }
+    // --- ADDITIONAL SHELF UPGRADE (Footer) ---
+    float shelfX = baseX + 40.0f; // Put it on the bottom left
+    float shelfY = gridBottom + 15.0f;
+
+    // Shelf Icon
+    auto& shelfIcon = world.createEntity();
+    shelfIcon.addComponent<Transform>(Vector2D(shelfX, shelfY), 0.0f, 1.0f);
+    // Assuming you have a shelf graphic in itemsTex, or just reuse an icon for now
+    shelfIcon.addComponent<Sprite>(itemsTex, SDL_FRect{0, 0, 32, 32}, SDL_FRect{shelfX, shelfY, 36.0f, 36.0f}, RenderLayer::UI, false);
+    shelfIcon.addComponent<Parent>(&mainOverlay);
+    mainOverlay.getComponent<Children>().children.push_back(&shelfIcon);
+
+    // Shelf Name Label
+    auto& shelfName = world.createEntity();
+    Label sNameData = {"Additional Shelf", AssetManager::getFont("arial-small"), {0,0,0,255}, LabelType::Static, "shelfName"};
+    auto& sNameComp = shelfName.addComponent<Label>(sNameData);
+    sNameComp.dirty = true; sNameComp.visible = false;
+    TextureManager::updateLabel(sNameComp);
+    shelfName.addComponent<Transform>(Vector2D(shelfX + 45.0f, shelfY), 0.0f, 1.0f);
+    shelfName.addComponent<Parent>(&mainOverlay);
+    mainOverlay.getComponent<Children>().children.push_back(&shelfName);
+
+    // Shelf Price Label
+    auto& shelfPrice = world.createEntity();
+    Label sPriceData = {"500G", AssetManager::getFont("arial-small"), {0,0,0,255}, LabelType::Static, "shelfPrice"};
+    auto& sPriceComp = shelfPrice.addComponent<Label>(sPriceData);
+    sPriceComp.dirty = true; sPriceComp.visible = false;
+    TextureManager::updateLabel(sPriceComp);
+    shelfPrice.addComponent<Transform>(Vector2D(shelfX + 45.0f, shelfY + 20.0f), 0.0f, 1.0f);
+    shelfPrice.addComponent<Parent>(&mainOverlay);
+    mainOverlay.getComponent<Children>().children.push_back(&shelfPrice);
+    session.shelfPriceLabel = &shelfPrice;
+
+    // Shelf Buy Button
+    auto& sBtnEnt = world.createEntity();
+    float sBtnW = 64.0f, sBtnH = 24.0f;
+    float sBtnX = shelfX + 160.0f;
+    auto& sBtnTransform = sBtnEnt.addComponent<Transform>(Vector2D(sBtnX, shelfY + 6.0f), 0.0f, 1.0f);
+    sBtnEnt.addComponent<Sprite>(btnTex, SDL_FRect{0,0,32,16}, SDL_FRect{sBtnX, shelfY + 6.0f, sBtnW, sBtnH}, RenderLayer::UI, false);
+    sBtnEnt.addComponent<Collider>("ui", SDL_FRect{sBtnX, shelfY + 6.0f, sBtnW, sBtnH}).enabled = false;
+
+    // Add Clickable (Logic will be wired in updateOrderUI)
+    auto& sClick = sBtnEnt.addComponent<Clickable>();
+    sClick.onPressed = [&sBtnTransform]{ sBtnTransform.scale = 0.9f; };
+    sClick.onCancel = [&sBtnTransform]{ sBtnTransform.scale = 1.0f; };
+    sClick.onReleased = [&sBtnTransform]{ sBtnTransform.scale = 1.0f; }; // To prevent crash
+
+    sBtnEnt.addComponent<Parent>(&mainOverlay);
+    mainOverlay.getComponent<Children>().children.push_back(&sBtnEnt);
+    session.shelfBuyBtn = &sBtnEnt;
 
     // --- CONTINUE BUTTON ---
     auto& contBtn = world.createEntity();
@@ -1912,6 +1972,51 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
                           << "G. Wallet: " << wallet.balance << "G\n";
             };
         }
+        else {
+            slot.icon->getComponent<Sprite>().visible = false;
+            slot.nameLabel->getComponent<Label>().visible = false;
+            slot.priceLabel->getComponent<Label>().visible = false;
+            slot.buyBtn->getComponent<Sprite>().visible = false;
+            slot.buyBtn->getComponent<Collider>().enabled = false;
+            // Also hide the Buy text label inside the button
+            if (slot.buyBtn->hasComponent<Children>()) {
+                for (auto* child : slot.buyBtn->getComponent<Children>().children) {
+                    if (child && child->hasComponent<Label>())
+                        child->getComponent<Label>().visible = false;
+                }
+            }
+        }
+    }
+    if (session.shelfBuyBtn && session.shelfPriceLabel) {
+        // TODO Buying Shelf Logic
+        // bool canAffordShelf = (wallet.balance >= currentShelfPrice);
+        //
+        // // Update price text visually
+        // auto& pLbl = session.shelfPriceLabel->getComponent<Label>();
+        // pLbl.text = std::to_string(currentShelfPrice) + "G";
+        // pLbl.color = canAffordShelf ? SDL_Color{0,0,0,255} : SDL_Color{180,50,50,255};
+        // pLbl.dirty = true;
+        // TextureManager::updateLabel(pLbl);
+        //
+        // session.shelfBuyBtn->getComponent<Collider>().enabled = canAffordShelf;
+        //
+        // // Wire the click event
+        // auto& sClick = session.shelfBuyBtn->getComponent<Clickable>();
+        // sClick.onReleased = [this, currentShelfPrice, &wallet, onBuyShelf]() {
+        //     auto& sBtnTransform = session.shelfBuyBtn->getComponent<Transform>();
+        //     sBtnTransform.scale = 1.0f;
+        //
+        //     if (wallet.balance >= currentShelfPrice) {
+        //         // Deduct Wallet
+        //         wallet.balance -= currentShelfPrice;
+        //
+        //         // FIRE THE CALLBACK!
+        //         // The UI doesn't know what this does, it just pushes the button.
+        //         if (onBuyShelf) {
+        //             onBuyShelf();
+        //         }
+        //     }
+        // };
     }
 
     bool forceOpen = true;

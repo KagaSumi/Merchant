@@ -139,6 +139,9 @@ class Scene {
         int* walletRef = nullptr; // live pointer to game wallet
         Inventory* inventoryRef = nullptr;
         std::function<void()> onContinue;
+        Entity* shelfBuyBtn = nullptr;
+        Entity* shelfPriceLabel = nullptr;
+        int currentShelfPrice = 500;
     };
 
 
