@@ -51,6 +51,9 @@ struct Sprite {
 struct Collider {
     std::string tag;
     SDL_FRect rect{};
+    // How far to push the box away from the Transform's top-left origin
+    float offsetX = 0.0f;
+    float offsetY = 0.0f;
     bool enabled = true;
 };
 
@@ -86,9 +89,6 @@ struct SceneState {
     int coinsCollected = 0;
 };
 
-struct Health {
-    int currentHealth{};
-};
 
 struct Clickable {
     std::function<void()> onPressed{};
@@ -107,8 +107,7 @@ struct Children {
 
 enum class LabelType {
     PlayerPosition,
-    Damage,
-    Health
+    Static
 };
 
 struct Label {
@@ -130,6 +129,7 @@ enum class DayPhase {
     Morning,
     ShopOpen,
     Evening,
+    FadeToBlack,
     GameOver
 };
 
@@ -142,12 +142,10 @@ struct DayCycle {
     bool phaseSwapReady = false;
 };
 
-struct MarketTrend {
-    std::unordered_map<std::string, float> Trend;
-};
-
 struct Wallet {
     int balance;
+    int dailyIncome;
+    int dailyExpenses;
 };
 
 struct Debt {
@@ -161,7 +159,7 @@ struct DisplayStand {
 };
 
 struct Customer {
-    DisplayStand *DisplayStand{};
+    DisplayStand *displayStand;
     int budget{}; // Maybe simplify and remove budget rng, and just deal with basevalue manip
     float mood{}; // Maybe simplify and remove budget rng, and just deal with basevalue manip
     int patience = 3;
@@ -175,55 +173,54 @@ struct CustomerAIState {
     };
 };
 
-// TODO: Break out Customer AI with Pathfinding Component
-// struct PathFinding {
-//     std::vector<SDL_Point> path; // List of grid coordinates from A*
-//     int pathIndex = 0;           // Which node we are currently walking toward
-// };
+struct PathFinding {
+    std::vector<SDL_Point> path;
+    int pathIndex = 0;
+    SDL_Point targetGridPos;
+};
 
 struct CustomerAI {
     CustomerAIState::state currentState = CustomerAIState::Browsing;
-    // Pathfinding data
-    std::vector<SDL_Point> path; // List of grid coordinates from A*
-    int pathIndex = 0; // Which node we are currently walking toward
-
-    // Logic Timers
-    float stateTimer = 0.0f; // Stay in "Browsing" for 5 seconds
+    float stateTimer = 0.0f;
     bool isWaiting = false;
-    SDL_Point targetGridpos; // Current heading
+    int itemsToBrowse = 3;
+    int itemsBrowsed = 0;
+};
 
-    int itemsToBrowse = 3; // How many shelves to visit before paying
-    int itemsBrowsed = 0; // How many they have visited so far
+struct InventoryEntry {
+    ItemDef item;
+    int quantity;
 };
 
 struct Inventory {
-    //Iron Sword : 100g
-    std::unordered_map<std::string, int> inventory;
+    std::vector<InventoryEntry> items;
+    Entity* uiRef = nullptr;
+    std::function<void(const std::vector<InventoryEntry>&)> onOpenUI;
+
+    void openUI() {
+        if (onOpenUI) onOpenUI(items);
+    }
+    void addItem(const ItemDef& def, int count) {
+        for (auto& entry : items) {
+            if (entry.item.name == def.name) {
+                entry.quantity += count;
+                return;
+            }
+        }
+        items.push_back({def, count});
+    }
 };
 
 struct ShopReputation {
-    float Reputation = 1;
+    int reputation = 1;
+    ShopReputation(int rep) : reputation(rep) {}
 };
 
 struct Interaction {
     std::function<void()> onInteract;
-
     Interaction() = default;
-
     Interaction(std::function<void()> callback) : onInteract(callback) {
     }
 };
-
-
-struct Dialogue {
-    //Defunct: Label
-    std::string text;
-};
-
-struct UIElement {
-    int width;
-    int height;
-};
-
 
 #endif //PROJECT_COMPONENTS_H

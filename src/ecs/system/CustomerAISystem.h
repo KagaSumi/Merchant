@@ -13,52 +13,62 @@
 
 #include "Components.h"
 #include "DayCycleSystem.h"
+#include "HaggleSystem.h"
 #include "PathfindingSystem.h"
+
 
 class CustomerAISystem {
 public:
-    void update(std::vector<std::unique_ptr<Entity>>& entities,float deltaTime, DayCycleSystem& dayCycleSystem) {
+    void update(std::vector<std::unique_ptr<Entity>>& entities,float deltaTime, DayCycleSystem& dayCycleSystem, HaggleSystem* haggleSystem) {
         for (auto &entity: entities) {
             if (entity->hasComponent<CustomerAI>() && entity->hasComponent<Transform>() && entity->hasComponent<Velocity>()) {
                 auto &ai = entity->getComponent<CustomerAI>();
+                auto &pf = entity->getComponent<PathFinding>();
                 auto &transform = entity->getComponent<Transform>();
                 auto &velocity = entity->getComponent<Velocity>();
+                auto &anim = entity->getComponent<Animation>();
+
 
                 switch (ai.currentState) {
                     case CustomerAIState::Browsing:
-                        HandleBrowsing(ai, transform, velocity, deltaTime);
+                        HandleBrowsing(ai,pf, transform, velocity,anim, deltaTime);
                         break;
                     case CustomerAIState::HeadingToRegister:
                         // If path is empty, request new A* path to register coords
-                        HandleHeadingToRegister(ai, transform, velocity);
+                        HandleHeadingToRegister(*entity, ai,pf, transform, anim, velocity,haggleSystem);
                         break;
                     case CustomerAIState::LeavingStore:
                         // Set velocity toward the shop exit
-                        HandleLeavingStore(*entity,ai,dayCycleSystem,transform,velocity);
+                        HandleLeavingStore(*entity,ai,pf ,dayCycleSystem,transform,velocity);
                         break;
                 }
             }
         }
     }
-    //TODO Setup auto polling for register or door
- void setRegister(int x,int y) {
-        Register = {x,y};
+ void setRegister(SDL_Point reg) {
+        if (reg.x == -1 and reg.y == -1) {
+            std::cerr <<"Register Not Initialized" <<std::endl;
+            return;
+        }
+        Register = {reg.x,reg.y};
     }
-void setDoor(int x,int y) {
-        Door = {x,y};
+void setDoor(SDL_Point door) {
+        if (door.x == -1 and door.y == -1) {
+            std::cerr <<"Door Not Initialized" <<std::endl;
+            return;
+        }
+        Door = {door.x,door.y};
     }
 
 private:
-    void HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v,float deltaTime);
+    void HandleHeadingToRegister(Entity& entity, CustomerAI &ai, PathFinding &pf, Transform &t, Animation &anim, Velocity &v,
+                                 HaggleSystem *haggleSystem);
+    void HandleBrowsing(CustomerAI& ai, PathFinding& pf, Transform& t, Velocity& v, Animation& anim, float deltaTime);
+    void HandleLeavingStore(Entity& entity, CustomerAI& ai, PathFinding& pf, DayCycleSystem& dcs, Transform& t, Velocity& v);
+    void MoveAlongPath(PathFinding& pf, Transform& t, Velocity& v);
 
-    // Removed EntityAdmin, added Velocity
-    void HandleHeadingToRegister(CustomerAI &ai, Transform &t, Velocity &v);
-    void HandleLeavingStore(Entity& entity, CustomerAI &ai,DayCycleSystem& dayCycleSystem, Transform &t, Velocity &v);
-
-    void MoveAlongPath(CustomerAI &ai, Transform &t, Velocity &v);
-
-    SDL_Point Register{20,16};
-    SDL_Point Door{20,4};
+    SDL_Point Register{-1,-1};
+    SDL_Point Door{-1,-1};
 };
 
 #endif

@@ -47,6 +47,10 @@ add_executable(Project src/main.cpp
         src/ecs/system/DebtSystem.cpp
         src/ecs/system/CustomerSpawnerSystem.cpp
         src/Items.cpp
+        src/scene/SceneUI.cpp
+        src/scene/SceneDisplayCase.cpp
+        src/ecs/system/HaggleSystem.cpp
+        src/ecs/system/MarketTrendSystem.cpp
 )
 
 target_link_libraries(Project

@@ -3,11 +3,12 @@
 //
 
 #include "../scene/Scene.h"
+#include "DebtSystem.h"
 #include "../manager/AssetManager.h"
 #include "Game.h"
 
-Scene::Scene(SceneType sceneType, const char *sceneName, const char *mapPath, int windowWidth, int windowHeight): name(sceneName), type(sceneType){
-
+Scene::Scene(SceneType sceneType, const char *sceneName, const char *mapPath, int windowWidth,
+             int windowHeight) : name(sceneName), type(sceneType) {
     if (sceneType == SceneType::MainMenu) {
         initMainMenu(windowWidth, windowHeight);
         return;
@@ -18,269 +19,392 @@ Scene::Scene(SceneType sceneType, const char *sceneName, const char *mapPath, in
 
 void Scene::initMainMenu(int windowWidth, int windowHeight) {
     //camera
-    auto& cam = world.createEntity();
+    auto &cam = world.createEntity();
     cam.addComponent<Camera>();
     //menu
-    auto& menu(world.createEntity());
-    auto menuTransform = menu.addComponent<Transform>(Vector2D(0,0),0.0f, 1.0f);
+    auto &menu(world.createEntity());
+    auto menuTransform = menu.addComponent<Transform>(Vector2D(0, 0), 0.0f, 1.0f);
 
     SDL_Texture *texture = TextureManager::load("../asset/menu.png");
-    SDL_FRect menuSrc {0,0,(float) windowWidth,(float) windowHeight};
-    SDL_FRect menuDst {menuTransform.position.x,menuTransform.position.y,menuSrc.w, menuSrc.h};
-    menu.addComponent<Sprite>(texture,menuSrc,menuDst);
+    SDL_FRect menuSrc{0, 0, (float) 1200, (float) 896};
+    SDL_FRect menuDst{0, 0, (float) windowWidth, (float) windowHeight};
+    menu.addComponent<Sprite>(texture, menuSrc, menuDst);
 
-    auto& settingsOverlay = createSettingsOverlay(windowWidth,windowHeight);
-    createCogButton(windowWidth,windowHeight,settingsOverlay);
+    auto &settingsOverlay = createSettingsOverlay(windowWidth, windowHeight);
+    createCogButton(windowWidth, windowHeight, settingsOverlay);
 }
 
-void Scene::initGameplay(const char* mapPath, int windowWidth, int windowHeight) {
+void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight) {
     //load map
-    SDL_Texture* tilemapTex =TextureManager::load("../asset/Sprite-0002.png");
-    world.getMap().load(mapPath,tilemapTex);
-    SDL_Texture* itemsTex = TextureManager::load("../asset/items.png");
+    SDL_Texture *tilemapTex = TextureManager::load("../asset/SpriteSheet.png");
+    world.getMap().load(mapPath, tilemapTex);
+    SDL_Texture *itemsTex = TextureManager::load("../asset/items.png");
     world.getItems().load("../asset/items.xml");
+    world.getMarketTrendSystem().load("../asset/market_trends.xml");
+    world.getMarketTrendSystem().rollDailyTrend();
 
-     for (auto& collider : world.getMap().colliders) {
-         auto& e = world.createEntity();
-         e.addComponent<Transform>(Vector2D(collider.rect.x,collider.rect.y),0.0f,1.0f);
-         auto& c = e.addComponent<Collider>("wall");
 
-         c.rect.x = collider.rect.x;
-         c.rect.y = collider.rect.y;
-         c.rect.w = collider.rect.w;
-         c.rect.h = collider.rect.h;
+    //Create UI
+    createHaggleUI(windowWidth, windowHeight);
+    auto &inventoryUIRef = createInventoryUI(windowWidth, windowHeight);
+    createQuantityScreen(windowWidth, windowHeight);
+    auto &invSession = inventoryUIRef.getComponent<InventorySession>();
+    if (invSession.quantityPanelRef) {
+        bool hide = false;
+        toggleSettingsOverlayVisibility(*invSession.quantityPanelRef, &hide);
+    }
+    createOrderUI(windowWidth, windowHeight);
+    auto &orderSession = UIOrderScreen->getComponent<OrderSession>();
+    orderSession.getShelfPrice = [](int currentCount) -> int {
+        // Each shelf costs more than the last
+        // Shelf 4: 500G, 5: 1000G, 6: 1750G, 7: 2750G... escalating
+        switch (currentCount) {
+            case 3: return 500;
+            case 4: return 1000;
+            case 5: return 1750;
+            case 6: return 2750;
+            case 7: return 4000;
+            case 8: return 5500;
+            case 9: return 7500;
+            case 10: return 10000;
+            case 11: return 13000;
+            case 12: return 17000;
+            case 13: return 22000;
+            case 14: return 28000;
+            default: return 999999; // maxed
+        }
+    };
+    orderSession.currentShelfPrice = orderSession.getShelfPrice(Game::gameState.displayCasesUnlocked);
+    createDialogueUI(windowWidth, windowHeight);
+    createHUD(windowWidth, windowHeight);
 
-         // SDL_Texture* tex = TextureManager::load("../asset/tileset.png");
-         // SDL_FRect colSrc {0,32,32,32};
-         // SDL_FRect colDst {c.rect.x,c.rect.y,c.rect.w,c.rect.h};
-         // e.addComponent<Sprite>(tex,colSrc,colDst);
-     }
+    for (auto &collider: world.getMap().colliders) {
+        auto &e = world.createEntity();
+        e.addComponent<Transform>(Vector2D(collider.rect.x, collider.rect.y), 0.0f, 1.0f);
+        auto &c = e.addComponent<Collider>("wall");
+
+        c.rect.x = collider.rect.x;
+        c.rect.y = collider.rect.y;
+        c.rect.w = collider.rect.w;
+        c.rect.h = collider.rect.h;
+    }
 
     //PathFinding:
     //Find Non-Walkable layer
-    PathfindingSystem::InitMap(25,19,32, world.getMap().AIWalkable);
+    PathfindingSystem::InitMap(25, 19, 32, world.getMap().AIWalkable);
+
+    //Customer AI Setup Door and Register
+    SDL_Point door = world.getMap().Door;
+    SDL_Point regi = world.getMap().Register;
+
+    world.getCustomerAISystem().setDoor(door);
+    world.getCustomerAISystem().setRegister(regi);
 
 
     //Create Camera:
-    auto& cam = world.createEntity();
+    auto &cam = world.createEntity();
     SDL_FRect camView{};
     camView.w = windowWidth;
     camView.h = windowHeight;
-    cam.addComponent<Camera>(camView, static_cast<float>(world.getMap().width * 32), static_cast<float>(world.getMap().height * 32));
+    cam.addComponent<Camera>(camView, static_cast<float>(world.getMap().width * 32),
+                             static_cast<float>(world.getMap().height * 32));
 
     //Store:
     auto &store(world.createEntity());
     store.addComponent<ShopReputation>(Game::gameState.shopReputation);
-    store.addComponent<Wallet>(Game::gameState.Wallet);
-    store.addComponent<Debt>(Game::gameState.Debt);
-    auto& dayCycle = store.addComponent<DayCycle>();
+    auto &wallet = store.addComponent<Wallet>(Game::gameState.walletBalance);
+    store.addComponent<Debt>(Game::gameState.debtTotal);
+    auto &dayCycle = store.addComponent<DayCycle>();
+    dayCycle.date = Game::gameState.dayCount;
+
+    //Update HUD
+    updateHUD(wallet, dayCycle);
+
+    //Needed For Confirm Button
+    createDaySummaryUI(windowWidth, windowHeight, dayCycle);
 
     //Create Player
-    auto& player(world.createEntity());
-    auto& playerTransform = player.addComponent<Transform>(Vector2D(12*32,14*32),1.0f);
-    player.addComponent<Velocity>(Vector2D(0,0), 120.0f);
+    auto &player(world.createEntity());
+    // player.addComponent<Transform>(Vector2D(door.x * 32, door.y * 32), 1.0f);
+    player.addComponent<Transform>(Vector2D(196, 481), 1.0f); // Dev Spot
+    player.addComponent<Velocity>(Vector2D(0, 0), 150.0f);
 
-    Animation anim = AssetManager::getAnimation("player");
+    Animation anim = AssetManager::getAnimation("customer");
     player.addComponent<Animation>(anim);
 
-    SDL_Texture* tex = TextureManager::load("../asset/animations/fox_anim.png");
+    SDL_Texture *tex = TextureManager::load("../asset/animations/CustomerA.png");
     SDL_FRect playerSrc = anim.clips[anim.currentClip].frameIndicies[0];
-    SDL_FRect playerDst {playerTransform.position.x,playerTransform.position.y,32,32};
-    player.addComponent<Sprite>(tex,playerSrc,playerDst);
+    SDL_FRect playerDst{-16, -16, 64, 64};
+    player.addComponent<Sprite>(tex, playerSrc, playerDst);
 
-    auto& playerCollider = player.addComponent<Collider>("player");
-    playerCollider.rect.w = playerDst.w;
-    playerCollider.rect.h = playerDst.h;
+    auto &playerCollider = player.addComponent<Collider>("player");
+    playerCollider.rect.w = 16.0f; // Half the width of the tile
+    playerCollider.rect.h = 12.0f; // Roughly the bottom third of the sprite
+    playerCollider.offsetX = 8.0f; // (32 - 16) / 2 = centers the box horizontally
+    playerCollider.offsetY = 20.0f; // Pushes the box down so it only covers the legs/feet
 
+    auto &inv = player.addComponent<Inventory>();
+    inv.uiRef = &inventoryUIRef;
+    inv.onOpenUI = [this](const std::vector<InventoryEntry> &items) {
+        if (!UIInventory) return;
+
+        bool isCurrentlyOpen = UIInventory->getComponent<Sprite>().visible;
+        if (isCurrentlyOpen) {
+            // Just close it
+            toggleSettingsOverlayVisibility(*UIInventory, nullptr);
+        } else {
+            // Update data and open
+            updateInventoryUI(items, InventoryMode::Browse);
+        }
+    };
+    auto &itemDB = world.getItems();
+    for (auto &[id,item]: itemDB.items) {
+        inv.addItem(item, 0);
+    }
+    inv.addItem(itemDB.items[1], 5); // Minor Health Potion
+    inv.addItem(itemDB.items[7], 2); // Iron Dagger
+    inv.addItem(itemDB.items[2], 1); // Phoenix Feather
+    inv.addItem(itemDB.items[14], 3);
     player.addComponent<PlayerTag>();
 
 
+    // Setup HaggleSystem callbacks
+    auto &haggleSystem = world.getHaggleSystem();
+    haggleSystem.onSaleComplete = [this, &store](int salePrice, int profitMargin) {
+        auto &wallet = store.getComponent<Wallet>();
+        auto &rep = store.getComponent<ShopReputation>();
+        auto &dayCycle = store.getComponent<DayCycle>();
+
+        // --- WALLET ---
+        wallet.balance += salePrice;
+        wallet.dailyIncome += salePrice;
+
+        // --- REP XP ---
+        // Better margin = more XP. Selling at base = 10xp, every 10% over base = +5xp
+        int xpGained = 10;
+        if (profitMargin > 0) {
+            float marginPercent = static_cast<float>(profitMargin) / salePrice;
+            xpGained += static_cast<int>(marginPercent * 50.0f); // up to +50xp at 100% margin
+        }
+
+        Game::gameState.currentRepXP += xpGained;
+        std::cout << "+" << xpGained << " Rep XP (" << Game::gameState.currentRepXP
+                << "/" << Game::gameState.xpToNextLevel << ")\n";
+
+        // --- LEVEL UP CHECK ---
+        while (Game::gameState.currentRepXP >= Game::gameState.xpToNextLevel) {
+            Game::gameState.currentRepXP -= Game::gameState.xpToNextLevel;
+            Game::gameState.xpToNextLevel = static_cast<int>(Game::gameState.xpToNextLevel * 1.5f);
+            Game::gameState.shopReputation++;
+
+            // Sync to the component
+            rep.reputation = Game::gameState.shopReputation;
+
+            std::cout << "LEVEL UP! Shop Reputation now: " << Game::gameState.shopReputation << "\n";
+
+            updateDialogueUI(
+                "Store Reputation increased to " + std::to_string(Game::gameState.shopReputation) +
+                "!",
+                [this]() {
+                    world.getHaggleSystem().resumeQueue();
+                }
+            );
+            world.getHaggleSystem().pauseQueue();
+        }
+
+        updateHUD(wallet, dayCycle);
+    };
+
+    haggleSystem.getPriceModifier = [this](const ItemDef &item) {
+        return world.getMarketTrendSystem().getModifier(item);
+    };
+
+    haggleSystem.onBeginHaggle = [this](const ItemDef &item) {
+        updateHaggleUI(const_cast<ItemDef &>(item));
+    };
+
+    haggleSystem.onShowFeedback = [this](const std::string &msg) {
+        updateDialogueUI(msg, [this]() {
+            world.getHaggleSystem().dismissFeedback();
+        });
+    };
+
+    //Setup DayCycle System callback:
+    auto &dayCycleSystem = world.getDayCycleSystem();
+
+    // Wire up the phase callbacks
+    dayCycleSystem.onMorningStart = [this,&store]() {
+        auto &wallet = store.getComponent<Wallet>();
+        auto &dayCycle = store.getComponent<DayCycle>();
+        wallet.dailyIncome = 0; // Reset Daily Income
+        wallet.dailyExpenses = 0; // Reset Daily Income
+
+        //Roll new Market Trend
+        world.getMarketTrendSystem().rollDailyTrend();
+        updateHUD(wallet, dayCycle);
+    };
+
+    dayCycleSystem.onShopOpenStart = [this, &store]() {
+        auto &wallet = store.getComponent<Wallet>();
+        auto &dayCycle = store.getComponent<DayCycle>();
+        updateHUD(wallet, dayCycle);
+    };
+
+    dayCycleSystem.onEveningStart = [this, &player, &store, tilemapTex]() {
+        auto &wallet = store.getComponent<Wallet>();
+        auto &dayCycle = store.getComponent<DayCycle>();
+        updateHUD(wallet, dayCycle);
+        auto &debt = store.getComponent<Debt>();
+
+        bool isPaymentDay = (dayCycle.date > 0) && (dayCycle.date % 7 == 0);
+        int snapshotDebt = world.getDebtSystem().getNextPayment(debt);
+
+        if (isPaymentDay) {
+            world.getDebtSystem().payDebt(wallet, debt);
+        }
+
+        // Snapshot AFTER debt payment, BEFORE order screen
+        int snapshotIncome = wallet.dailyIncome;
+        int snapshotBalanceBeforeOrders = wallet.balance;
+
+        // Sync save state
+        Game::gameState.walletBalance = wallet.balance;
+        Game::gameState.debtTotal = debt.amount;
+        Game::gameState.dayCount = dayCycle.date;
+
+        auto &rep = store.getComponent<ShopReputation>();
+        std::vector<ItemDef> available;
+        for (auto &[id, item]: world.getItems().items) {
+            if (item.requiredReputation <= rep.reputation)
+                available.push_back(item);
+        }
+
+        auto &inv = player.getComponent<Inventory>();
+
+        updateOrderUI(available, wallet, inv,
+                      [this, &store, snapshotIncome,snapshotDebt ,isPaymentDay, &debt]() {
+                          auto &wallet = store.getComponent<Wallet>();
+
+                          DaySummaryData summary;
+                          summary.grossSales = snapshotIncome;
+                          summary.orderExpenses = wallet.dailyExpenses; // live - includes orders bought
+                          summary.currentBalance = wallet.balance;
+                          summary.weeklyPayment = isPaymentDay ? snapshotDebt : 0;
+                          summary.weeklyPaymentAmount = snapshotDebt;
+                          summary.daysUntilPayment = isPaymentDay ? 7 : (7 - (store.getComponent<DayCycle>().date % 7));
+
+                          updateDaySummaryUI(summary);
+                      },
+                      [this, &store, &dayCycle, &player, tilemapTex]() {
+                          int nextIdx = Game::gameState.displayCasesUnlocked + 1;
+                          if (nextIdx > 15) return;
+
+                          auto &wallet = store.getComponent<Wallet>();
+                          auto &s = UIOrderScreen->getComponent<OrderSession>();
+                          int cost = s.getShelfPrice
+                                         ? s.getShelfPrice(Game::gameState.displayCasesUnlocked)
+                                         : 500;
+                          if (wallet.balance < cost) return;
+
+                          wallet.balance -= cost;
+                          wallet.dailyExpenses += cost; // track it as an expense
+
+                          auto &displayCaseLocations = world.getMap().displayCaseSpawns;
+                          if (displayCaseLocations.count(nextIdx)) {
+                              Vector2D loc = displayCaseLocations.at(nextIdx);
+                              SDL_FRect src = {16 * 32.0f, 8 * 32.0f, 96, 128};
+                              SDL_FRect dst = {-32.0f, 2 * -32.0f, 96, 128};
+                              createDisplaycase(loc, tilemapTex, src, dst, dayCycle, &player);
+                          }
+
+                          Game::gameState.displayCasesUnlocked = nextIdx;
+                          std::cout << "Purchased shelf #" << nextIdx << "\n";
+                      }
+        );
+    };
+
+    dayCycleSystem.onHudVisibilityChange = [this](bool visible) {
+        if (!UIHud) return;
+        bool v = visible;
+        toggleSettingsOverlayVisibility(*UIHud, &v);
+    };
+
     //Customers:
-    std::vector<SDL_Texture*> customerTextures = {
-        TextureManager::load("../asset/animations/CustomerA.png"),
+    std::vector<SDL_Texture *> customerTextures = {
         TextureManager::load("../asset/animations/CustomerF.png"),
         TextureManager::load("../asset/animations/CustomerM.png")
     };
     int customerIndexCount = 0; // Index on which Texture ^
 
-    auto& spawner(world.createEntity());
-    Transform t = spawner.addComponent<Transform>(Vector2D(20*32,4*32),1.0f);
+    auto &spawner(world.createEntity());
+    Transform t = spawner.addComponent<Transform>(Vector2D(door.x * 32, door.y * 32), 1.0f);
     spawner.addComponent<Spawner>([this,t,customerTextures,customerIndexCount]() mutable {
-        auto& e = world.createDeferredEntity();
+        auto &e = world.createDeferredEntity();
         e.addComponent<Transform>(Vector2D(t.position.x, t.position.y), 1.0f);
         e.addComponent<Velocity>(Vector2D(0, 0), 100.0f);
-        e.addComponent<CustomerAI>(); // The AI takes over from here!
+        e.addComponent<CustomerAI>();
         e.addComponent<Customer>();
+        e.addComponent<PathFinding>();
 
         Animation anim = AssetManager::getAnimation("customer");
         e.addComponent<Animation>(anim);
 
         // Your texture cycling logic here is excellent.
         // Because the lambda is 'mutable', customerIndexCount will correctly increment across spawns.
-        SDL_Texture* tex = customerTextures[customerIndexCount++ % customerTextures.size()];
-        SDL_FRect src= anim.clips[anim.currentClip].frameIndicies[0];
-        SDL_FRect dst {t.position.x, t.position.y, 64, 64};
+        SDL_Texture *tex = customerTextures[customerIndexCount++ % customerTextures.size()];
+        SDL_FRect src = anim.clips[anim.currentClip].frameIndicies[0];
+        SDL_FRect dst{-16.0f, -16.0f, 64, 64};
         e.addComponent<Sprite>(tex, src, dst);
-
     });
-    //Display Case: (Test)
-    SDL_FRect src = {64,32,32,32};
-    SDL_FRect dst = {0,0,32,32};
-    createDisplaycase(Vector2D(21*32,15*32),tilemapTex ,{64,32,32,32},{0,0,32,32});
-    createDisplaycase(Vector2D(22*32,15*32),tilemapTex ,{64,32,32,32},{0,0,32,32});
+
+    //Display Case:
+    std::map<int, Vector2D> displayCaseLocations = world.getMap().displayCaseSpawns;
+    for (const auto &[order, location]: displayCaseLocations) {
+        if (order <= Game::gameState.displayCasesUnlocked) {
+            // Spawn owned display case
+            SDL_FRect src = {16 * 32.0f, 8 * 32.0f, 96, 128};
+            SDL_FRect dst = {-32.0, 2 * -32.0, 96, 128};
+            createDisplaycase(location, tilemapTex, src, dst, dayCycle, &player);
+        }
+    }
 
     //Cash Register
-    auto& cashRegister = world.createEntity();
-    cashRegister.addComponent<Transform>(Vector2D(20*32,17*32));
-    auto& c = cashRegister.addComponent<Collider>("wall");
-    c.rect = {20*32,17 * 32,32,32};
+    auto &cashRegister = world.createEntity();
+    cashRegister.addComponent<Transform>(Vector2D(regi.x * 32, (regi.y + 2) * 32));
+    auto &c = cashRegister.addComponent<Collider>("wall");
+    c.rect = {regi.x * 32.0f - 64.0f, (regi.y + 2) * 32 + 32.0f, 160.0f, 62.0f};
+    c.offsetX = -64.0f;
+    c.offsetY = -14.0f;
     cashRegister.addComponent<Interaction>([&dayCycle]() {
         if (dayCycle.currentPhase == DayPhase::Morning) {
             std::cout << "Start the day ..." << std::endl;
             dayCycle.phaseSwapReady = true;
         }
+    });
+    SDL_FRect regSrc = {160.0f, 256.0f, 160.0f, 96.0f};
+    SDL_FRect regDst = {2 * -32.0f, -32.0f, 160.0f, 96.0f};
+    cashRegister.addComponent<Sprite>(tilemapTex, regSrc, regDst);
 
-    }); // -> Interact to start morning
+    // 5. Interaction
+    cashRegister.addComponent<Interaction>([&dayCycle]() {
+        if (dayCycle.currentPhase == DayPhase::Morning) {
+            std::cout << "Start the day ..." << std::endl;
+            dayCycle.phaseSwapReady = true;
+        }
+    });
+
+
+    //Message Board
+    auto &bulletinBoard = world.createEntity();
+    bulletinBoard.addComponent<Transform>(Vector2D(17 * 32, 5 * 32), 1.0f);
+    bulletinBoard.addComponent<Interaction>([this]() {
+        MarketTrend currentTrend = world.getMarketTrendSystem().getActiveTrend();
+        updateDialogueUI(currentTrend.blurb, [] {
+        });
+    });
+
 
     //add scene state
     auto &state(world.createEntity());
     state.addComponent<SceneState>();
-
-    //Add Label
-    createPlayerPosLabel();
-}
-Entity& Scene::createDisplaycase(Vector2D location, SDL_Texture* texture,SDL_FRect src, SDL_FRect dst) {
-    auto& displayCase (world.createEntity());
-    displayCase.addComponent<Transform>(location,0.0f,1.0f);
-    displayCase.addComponent<DisplayStand>();
-    auto& c = displayCase.addComponent<Collider>("wall");
-    c.rect.w = 32;
-    c.rect.h = 32;
-    c.rect.x = location.x;
-    c.rect.y = location.y;
-    displayCase.addComponent<Sprite>(texture,src,dst);
-    displayCase.addComponent<Interaction>([&displayCase]() {
-        auto& dc = displayCase.getComponent<DisplayStand>();
-
-    if (dc.quantity > 0 && dc.item.id != -1) {
-        std::cout << "Display case has an "<< dc.item.name <<"! Opening modification UI...\n";
-    } else {
-        std::cout << "Display case is empty. Opening inventory UI to place item...\n";
-    }
-    });
-    return displayCase;
-}
-
-Entity& Scene::createSettingsOverlay(int windowWidth, int windowHeight) {
-    auto& overlay(world.createEntity());
-    SDL_Texture* overlayTex = TextureManager::load("../asset/ui/settings.jpg");
-    SDL_FRect overlaySrc {0,0,windowWidth*0.85f,windowHeight*0.85f};
-    SDL_FRect overlayDest {(float) windowWidth/2 - overlaySrc.w /2, (float) windowHeight/2 - overlaySrc.h/2, overlaySrc.w,overlaySrc.h};
-    overlay.addComponent<Transform>(Vector2D{overlayDest.x,overlayDest.y},0.0f,1.0f);
-    overlay.addComponent<Sprite>(overlayTex,overlaySrc,overlayDest, RenderLayer::UI,false);
-
-    createSettingsUIComponents(overlay);
-    return overlay;
-}
-
-Entity& Scene::createCogButton(int windowWidth, int windowHeight, Entity& overlay) {
-    auto& cog = world.createEntity();
-    auto& cogTransform = cog.addComponent<Transform>(Vector2D((float) windowWidth - 50,(float) windowHeight- 50), 0.0f,1.0f);
-
-    SDL_Texture *texture = TextureManager::load("../asset/ui/cog.png");
-    SDL_FRect cogSrc {0,0,32,32};
-    SDL_FRect cogDest {cogTransform.position.x,cogTransform.position.y, cogSrc.w, cogSrc.h};
-    cog.addComponent<Sprite>(texture,cogSrc,cogDest, RenderLayer::UI);
-    cog.addComponent<Collider>("ui", cogDest);
-
-    auto& clickable = cog.addComponent<Clickable>();
-    clickable.onPressed = [&cogTransform] {
-        cogTransform.scale = 0.5f;
-    };
-
-    clickable.onReleased = [&cogTransform, this ,&overlay] {
-        cogTransform.scale = 1.0f;
-        toggleSettingsOverlayVisibility(overlay);
-    };
-
-    clickable.onCancel = [&cogTransform] {
-        cogTransform.scale = 1.0f;
-    };
-
-    return cog;
-}
-
-void Scene::createSettingsUIComponents(Entity& overlay) {
-    if (!overlay.hasComponent<Children>()) {
-        overlay.addComponent<Children>();
-    }
-
-    auto& overlayTransform = overlay.getComponent<Transform>();
-    auto& overlaySprite = overlay.getComponent<Sprite>();
-
-    float baseX = overlayTransform.position.x;
-    float baseY = overlayTransform.position.y;
-
-    auto& closeButton = world.createEntity();
-    auto& closeTransform = closeButton.addComponent<Transform>(Vector2D(baseX + overlaySprite.dst.w - 40, baseY + 10 ), 0.0f, 1.0f);
-
-    SDL_Texture *texture = TextureManager::load("../asset/ui/close.png");
-    SDL_FRect closeSrc {0,0,32,32};
-    SDL_FRect closeDest {closeTransform.position.x,closeTransform.position.y,closeSrc.w, closeSrc.h};
-    closeButton.addComponent<Sprite>(texture,closeSrc,closeDest,RenderLayer::UI,false);
-    closeButton.addComponent<Collider>("ui",closeDest);
-
-    auto& clickable = closeButton.addComponent<Clickable>();
-    clickable.onPressed = [&closeTransform] {
-        closeTransform.scale = 0.5f;
-    };
-    clickable.onReleased = [this,&overlay,&closeTransform] {
-        closeTransform.scale = 1.0f;
-        toggleSettingsOverlayVisibility(overlay);
-    };
-    clickable.onCancel = [&closeTransform] {
-        closeTransform.scale = 1.0f;
-    };
-
-    closeButton.addComponent<Parent>(&overlay);
-    auto& parentChildren = overlay.getComponent<Children>();
-    parentChildren.children.push_back(&closeButton);
-}
-
-void Scene::toggleSettingsOverlayVisibility(Entity& overlay) {
-    auto& sprite = overlay.getComponent<Sprite>();
-    bool newVisibility = !sprite.visible;
-    sprite.visible = newVisibility;
-
-    if (overlay.hasComponent<Children>()) {
-        auto& c = overlay.getComponent<Children>();
-
-        for (auto& child : c.children) {
-            if (child && child->hasComponent<Sprite>()) {
-                child->getComponent<Sprite>().visible = newVisibility;
-            }
-
-            if (child && child->hasComponent<Collider>()) {
-                child->getComponent<Collider>().enabled = newVisibility;
-            }
-        }
-    }
-
-}
-
-Entity &Scene::createPlayerPosLabel() {
-    auto & playerPosLabel(world.createEntity());
-    Label label = {
-        "Text String",
-        AssetManager::getFont("arial"),
-        {255,255,255,255},
-        LabelType::PlayerPosition,
-        "playerPos"
-    };
-    TextureManager::loadLabel(label);
-    playerPosLabel.addComponent<Label>(label);
-    playerPosLabel.addComponent<Transform>(Vector2D(10,10), 0.0f,1.0f);
-    return playerPosLabel;
-
-
-}
+};

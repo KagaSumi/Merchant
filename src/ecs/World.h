@@ -13,15 +13,18 @@
 #include "CustomerAISystem.h"
 #include "CustomerSpawnerSystem.h"
 #include "DayCycleSystem.h"
+#include "DebtSystem.h"
 #include "DestructionSystem.h"
 #include "Entity.h"
 #include "EventResponseSystem.h"
+#include "HaggleSystem.h"
 #include "HUDSystem.h"
 #include "Items.h"
 #include "event/EventManager.h"
 #include "KeyboardInputSystem.h"
 #include "MainMenuSystem.h"
 #include "Map.h"
+#include "MarketTrendSystem.h"
 #include "MovementSystem.h"
 #include "RenderSystem.h"
 #include "SpawnTimerSystem.h"
@@ -45,7 +48,6 @@ class World {
     CameraSystem cameraSystem;
     EventManager eventManager;
     SpawnTimerSystem spawnTimerSystem;
-    DestructionSystem destructionSystem;
     EventResponseSystem eventResponseSystem{*this};
     MainMenuSystem mainMenuSystem;
     UIRenderSystem uiRenderSystem;
@@ -56,6 +58,9 @@ class World {
     HUDSystem hudSystem;
     CustomerSpawnerSystem customerSpawnerSystem;
     PreRenderSystem preRenderSystem;
+    DebtSystem debtSystem;
+    HaggleSystem haggleSystem;
+    MarketTrendSystem marketTrendSystem;
 
     public:
     World() = default;
@@ -65,14 +70,14 @@ class World {
             mainMenuSystem.update(event);
         }else {
             keyboardInputSystem.update(entities, event,eventManager);
-            customerAISystem.update(entities, dt,dayCycleSystem);
+            customerAISystem.update(entities, dt,dayCycleSystem,&haggleSystem);
             movementSystem.update(entities, dt);
             collisionSystem.update(*this);
             animationSystem.update(entities, dt);
-            dayCycleSystem.update(entities);
+            dayCycleSystem.update(entities,dt);
+            haggleSystem.update();
             cameraSystem.update(entities);
             customerSpawnerSystem.update(entities, dt);
-            //destructionSystem.update(entities);
             hudSystem.update(entities);
         }
 
@@ -87,7 +92,10 @@ class World {
     void render() {
         for (auto& entity : entities) {
             if (entity->hasComponent<Camera>()) {
-                map.draw(entity->getComponent<Camera>());
+                auto& camera = entity->getComponent<Camera>();
+                map.drawLayer(map.floorData,camera,7);
+                map.drawLayer(map.wallData,camera,7);
+                map.drawLayer(map.furnitureData,camera,7);
                 break;
             }
         }
@@ -136,6 +144,11 @@ class World {
     EventManager& getEventManager() {return eventManager;}
     Map& getMap(){return map;}
     Items& getItems(){return items;}
+    CustomerAISystem& getCustomerAISystem() {return customerAISystem;}
+    DayCycleSystem& getDayCycleSystem() {return dayCycleSystem;}
+    DebtSystem& getDebtSystem() {return debtSystem;}
+    HaggleSystem& getHaggleSystem() {return haggleSystem;}
+    MarketTrendSystem& getMarketTrendSystem() { return marketTrendSystem; }
 };
 
 #endif //PROJECT_WORLD_H

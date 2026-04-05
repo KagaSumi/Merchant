@@ -13,7 +13,7 @@ int PathfindingSystem::mapHeight = 0;
 int PathfindingSystem::tileSize = 32;
 std::vector<int> PathfindingSystem::grid;
 std::vector<SDL_Point> PathfindingSystem::walkableNodes;
-std::vector<SDL_Point> PathfindingSystem::browseNodes;
+std::vector<BrowsePoint> PathfindingSystem::browseNodes;
 std::mt19937 PathfindingSystem::rng(static_cast<unsigned int>(std::time(nullptr)));
 
 // --- Initialization ---
@@ -41,8 +41,6 @@ void PathfindingSystem::InitMap(int width, int height, int tSize, const std::vec
         }
     }
 
-    // Automatically pick 5 random spots around the store for customers to browse
-    GenerateBrowsePoints(5);
 }
 
 // --- Helper Functions ---
@@ -62,7 +60,7 @@ int PathfindingSystem::GetTile(int x, int y) {
 
 bool PathfindingSystem::IsValid(int x, int y) {
     if (grid.empty()) return false;
-    return GetTile(x, y) != 0; // Anything not 0 is considered walkable
+    return GetTile(x, y) == 3  ; // Anything not 0 is considered walkable
 }
 
 int PathfindingSystem::GetHeuristic(SDL_Point a, SDL_Point b) {
@@ -74,25 +72,10 @@ int GetKey(int x, int y, int width) {
 }
 
 // --- Random Point Generation ---
-void PathfindingSystem::GenerateBrowsePoints(int numberOfPoints) {
-    browseNodes.clear();
-    if (walkableNodes.empty()) return;
-
-    std::uniform_int_distribution<> dist(0, walkableNodes.size() - 1);
-
-    for (int i = 0; i < numberOfPoints; i++) {
-        // Use the shared rng!
-        browseNodes.push_back(walkableNodes[dist(rng)]);
-    }
-}
-
 SDL_Point PathfindingSystem::GetRandomBrowsePoint() {
-    if (browseNodes.empty()) return {1, 1};
-
-    std::uniform_int_distribution<> dist(0, browseNodes.size() - 1);
-
-    // Use the shared rng!
-    return browseNodes[dist(rng)];
+    if (browseNodes.empty()) return {5, 5};
+    std::uniform_int_distribution<int> dist(0, browseNodes.size() - 1);
+    return browseNodes[dist(rng)].gridPos;
 }
 
 // --- Core A* Pathfinder ---
@@ -100,7 +83,15 @@ std::vector<SDL_Point> PathfindingSystem::FindPath(SDL_Point start, SDL_Point ta
     std::vector<SDL_Point> path;
 
     if (grid.empty() || mapWidth <= 0 || mapHeight <= 0) return path;
-    if (!IsValid(start.x, start.y) || !IsValid(target.x, target.y)) return path;
+    // DEBUG: If pathfinding is failing, this will tell you exactly why.
+    if (!IsValid(start.x, start.y)) {
+        std::cout << "A* FAIL: Start (" << start.x << "," << start.y << ") is a wall! (Value: " << GetTile(start.x, start.y) << ")\n";
+        return path;
+    }
+    if (!IsValid(target.x, target.y)) {
+        std::cout << "A* FAIL: Target (" << target.x << "," << target.y << ") is a wall! (Value: " << GetTile(target.x, target.y) << ")\n";
+        return path;
+    }
     if (start.x == target.x && start.y == target.y) return path;
 
     std::priority_queue<PathNode, std::vector<PathNode>, std::greater<PathNode>> openSet;
@@ -144,6 +135,19 @@ std::vector<SDL_Point> PathfindingSystem::FindPath(SDL_Point start, SDL_Point ta
         }
     }
     return path;
+}
+
+void PathfindingSystem::AddBrowsePoint(SDL_Point tilePos, Entity* standEntity) {
+    SDL_Point point = {tilePos.x, tilePos.y + 1};
+    browseNodes.push_back({point, standEntity});
+}
+
+const std::vector<BrowsePoint>& PathfindingSystem::GetBrowsePoints() {
+    return browseNodes;
+}
+
+void PathfindingSystem::ClearBrowsePoints() {
+    browseNodes.clear();
 }
 
 std::vector<SDL_Point> PathfindingSystem::RetracePath(const std::unordered_map<int, PathNode>& allNodes, SDL_Point start, SDL_Point target) {

@@ -19,8 +19,8 @@ void CollisionSystem::update(World &world) {
     for (auto entity: collidables) {
         auto& t = entity->getComponent<Transform>();
         auto& c = entity->getComponent<Collider>();
-        c.rect.x =t.position.x;
-        c.rect.y =t.position.y;
+        c.rect.x =t.position.x + c.offsetX;
+        c.rect.y =t.position.y + c.offsetY;
     }
 
     std::set<CollisionKey> currentCollisions;

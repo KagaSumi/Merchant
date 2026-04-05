@@ -22,8 +22,9 @@ public:
     std::function<void()> onShopOpenStart;
     std::function<void()> onEveningStart;
     std::function<void()> onWeekPassed;
+    std::function<void(bool)> onHudVisibilityChange;
 
-    void update(const std::vector<std::unique_ptr<Entity>> &entities);
+    void update(const std::vector<std::unique_ptr<Entity>> &entities, float dt);
 
     void openStore() {
         if (cycle->currentPhase != DayPhase::Morning) return;
@@ -40,16 +41,19 @@ public:
         if (onEveningStart) onEveningStart();
     }
     void finishEvening() {
-        if (cycle->currentPhase != DayPhase::Evening) return;
+        if (cycle->currentPhase != DayPhase::FadeToBlack) return;
 
-        cycle->currentPhase = DayPhase::Morning;
+        // Advance the date
         cycle->date++;
         cycle->weekDay = (cycle->weekDay + 1) % 7;
 
+        // Fire morning callback (resets dailyIncome/dailyExpenses etc)
         if (onMorningStart) onMorningStart();
 
-        // Trigger weekly events
+        // Weekly payment trigger
         if (cycle->weekDay == 0 && onWeekPassed) onWeekPassed();
+
+        // Phase stays FadeToBlack — the fade-in case will set it to Morning when done
     }
 
     void customerDeparted() {
@@ -91,12 +95,23 @@ public:
         result.a = start.a + static_cast<int>((end.a - start.a) * t);
 
         return result;
-    }
+}
 
 
 private:
     rgba evening_target = {255,180,120,220};
     rgba morning_target = {255,255,255,255};
+    rgba black_target = {0, 0, 0, 255};
+
+    float fadeTimer = 0.0f;
+    float fadeDuration = 1.5f; // seconds for full fade to black
+    float holdDuration = 0.3f; // brief pause at full black
+    float holdTimer = 0.0f;
+    bool fadedToBlack = false;
+    bool fadingIn = false;
+    float fadeInTimer = 0.0f;
+    float fadeInDuration = 1.0f;
+
     int totalCustomersForDay = 0;
     int customersServed = 0;
 };

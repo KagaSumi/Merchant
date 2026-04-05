@@ -57,6 +57,7 @@ public:
         }
     }
 
+    Scene* getCurrentScene() {return currentScene.get();}
     void render() const {
         if (currentScene) currentScene->render();
     }

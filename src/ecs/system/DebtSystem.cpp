@@ -23,3 +23,24 @@ void DebtSystem::payDebt(Wallet &wallet, Debt &debt) {
         // trigger game over
     }
 }
+int DebtSystem::getNextPayment(const Debt& debt) const {
+    // Preview what NEXT week's payment will be
+    int nextPayment = basePayment + (weeklyIncrement * (weeksPassed + 1));
+    return std::min(nextPayment, debt.amount);
+}
+
+int DebtSystem::calculatePayment(const Debt& debt) const {
+    // Calculate the expected payment based on how many weeks have passed
+    int expectedPayment = basePayment + (weeklyIncrement * weeksPassed);
+
+    // Get the total remaining debt (assuming your Debt class has a getter like this)
+    int remainingDebt = debt.amount;
+
+    // If the expected payment is larger than the remaining debt,
+    // just return the remaining debt so the player doesn't overpay.
+    if (expectedPayment > remainingDebt) {
+        return remainingDebt;
+    }
+
+    return expectedPayment;
+}

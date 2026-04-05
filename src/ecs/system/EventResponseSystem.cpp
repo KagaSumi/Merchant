@@ -51,7 +51,7 @@ void EventResponseSystem::onPlayerAction(Entity* player, PlayerAction action, Wo
             auto& pAnim = player->getComponent<Animation>();
 
             // 2. Calculate target point
-            float reachDistance = 64.0f; // Tweak this for your grid!
+            float reachDistance = 32.0f; // Tweak this for your grid!
             Vector2D targetPoint = pTransform.position;
 
             switch (pAnim.direction) {
@@ -93,6 +93,15 @@ void EventResponseSystem::onPlayerAction(Entity* player, PlayerAction action, Wo
                 std::cout << "[EventResponseSystem] Swished at the air. Nothing in range.\n";
             }
             break; // Break out of the switch case
+        }
+        case PlayerAction::Inventory: {
+            if (player && player->hasComponent<Inventory>()) {
+                auto& inv = player->getComponent<Inventory>();
+                if (inv.uiRef) {
+                    player->getComponent<Inventory>().openUI();
+                }
+            }
+            break;
         }
 
     }
@@ -144,21 +153,6 @@ void EventResponseSystem::onCollision(const CollisionEvent &e, const char *other
 
         auto &t = player->getComponent<Transform>();
         t.position = t.oldPosition;
-    } else if (std::string(otherTag) == "projectile") {
-        if (e.state != CollisionState::Enter) return;
-
-        //Simple and Direct
-        //But Ideally we would only operate on data in an update function (hinting at transient entities)
-        auto &health = player->getComponent<Health>();
-        health.currentHealth--;
-
-        Game::gameState.playerHealth = health.currentHealth;
-
-        if (health.currentHealth <= 0) {
-            player->destroy();
-            //change scenes defer
-            Game::onSceneChangeRequest("gameover");
-        }
     }
 }
 

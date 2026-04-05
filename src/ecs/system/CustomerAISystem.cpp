@@ -10,57 +10,89 @@
 
 // Helper to convert pixel position to grid position (assuming 32x32 tiles)
 SDL_Point GetGridPos(const Transform& t) {
-    return { static_cast<int>(t.position.x / 32), static_cast<int>(t.position.y / 32) };
+    // We move the check point slightly INWARD from the edges (2 pixels)
+    // This prevents "A* FAIL" when brushing against a wall.
+    float centerX = t.position.x + 16.0f;
+
+    // Instead of 31 (the very edge), use 28 or 30.
+    // This ensures we are checking the floor the feet are ON,
+    // not the tile the feet are touching at the bottom edge.
+    float feetY = t.position.y + 28.0f;
+
+    return {
+        static_cast<int>(std::floor(centerX / 32.0f)),
+        static_cast<int>(std::floor(feetY / 32.0f))
+    };
 }
 
-void CustomerAISystem::HandleHeadingToRegister(CustomerAI& ai, Transform& t, Velocity& v) {
+void CustomerAISystem::HandleHeadingToRegister(Entity& entity, CustomerAI& ai,PathFinding& pf, Transform& t,Animation& anim, Velocity& v,HaggleSystem* haggleSystem) {
     // 1. ARE WE CURRENTLY IN THE MINI-GAME?
     if (ai.isWaiting) {
-
-        // ==========================================
-        // WAIT FOR MINI-GAME TO FINISH
-        // ==========================================
-        // Instead of a timer, check a boolean from your HaggleSystem.
-        // e.g., if (HaggleSystem::IsComplete(ai.customerID)) {
-        //     ai.isWaiting = false;
-        //     ai.currentState = CustomerAIState::LeavingStore;
-        // }
-        // ==========================================
-
-        ai.isWaiting = false;
-        ai.currentState = CustomerAIState::LeavingStore;
-
+        // The HaggleSystem will set ai.isWaiting = false and change state when done
         return; // Lock the AI in place while the player plays the mini-game
     }
 
     // 2. GET PATH TO REGISTER
-    if (ai.path.empty()) {
+    if (pf.path.empty()) {
         SDL_Point startPos = GetGridPos(t);
-        ai.path = PathfindingSystem::FindPath(startPos, Register);
-        ai.pathIndex = 0;
+        pf.path = PathfindingSystem::FindPath(startPos, Register);
+        pf.pathIndex = 0;
     }
 
     // 3. WALK
-    CustomerAISystem::MoveAlongPath(ai, t, v);
+    CustomerAISystem::MoveAlongPath(pf, t, v);
 
     // 4. DID WE JUST ARRIVE AT THE REGISTER?
-    if (!ai.path.empty() && ai.pathIndex >= ai.path.size()) {
-        ai.path.clear();
-        v.direction.x = 0.0f;
-        v.direction.y = 0.0f;
+    if (!pf.path.empty() && pf.pathIndex >= pf.path.size()) {
+        pf.path.clear();
+        v.direction = {0, 0};
+        anim.direction = 2;
+        ai.isWaiting = true;
 
-        ai.isWaiting = true; // Freeze the customer
+        if (haggleSystem) {
+            auto& customer = entity.getComponent<Customer>();
 
-        // ==========================================
-        // TRIGGER HAGGLE MINI-GAME HERE
-        // ==========================================
-        std::cout << "Customer reached register! Press 'E' to Haggle!" << std::endl;
-        // e.g., HaggleSystem::QueueCustomer(entity);
-        // ==========================================
+            // Build list of stands that have stock AND aren't fully reserved
+            auto& browsePoints = PathfindingSystem::GetBrowsePoints();
+            std::vector<DisplayStand*> available;
+
+            for (auto& bp : browsePoints) {
+                if (!bp.standEntity) continue;
+                if (!bp.standEntity->hasComponent<DisplayStand>()) continue;
+
+                auto& stand = bp.standEntity->getComponent<DisplayStand>();
+
+                // Stand must have actual items placed on it
+                if (stand.quantity <= 0) continue;
+
+                // Stand must have an actual item assigned (not default empty ItemDef)
+                if (stand.item.name.empty()) continue;
+
+                // Must have unreserved stock remaining
+                if (stand.reserved_quantity >= stand.quantity) continue;
+
+                available.push_back(&stand);
+            }
+
+            if (available.empty()) {
+                // Nothing to buy at all, just leave politely
+                ai.isWaiting = false;
+                ai.currentState = CustomerAIState::LeavingStore;
+                return;
+            }
+
+            // Pick a random available stand
+            std::mt19937 rng(std::random_device{}());
+            int idx = std::uniform_int_distribution<int>(0, (int)available.size() - 1)(rng);
+            customer.displayStand = available[idx];
+            customer.displayStand->reserved_quantity++;
+
+            haggleSystem->enqueue(&entity);
+        }
     }
 }
 
-void CustomerAISystem::HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v,float deltaTime) {
+void CustomerAISystem::HandleBrowsing(CustomerAI &ai, PathFinding& pf,Transform &t, Velocity &v,Animation& anim, float deltaTime){
     // 1. ARE WE CURRENTLY WAITING?
     if (ai.isWaiting) {
         ai.stateTimer -= deltaTime;
@@ -73,17 +105,18 @@ void CustomerAISystem::HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v,
     }
 
     // 2. DID WE JUST ARRIVE?
-    if (!ai.path.empty() && ai.pathIndex >= ai.path.size()) {
-        ai.path.clear();
+    if (!pf.path.empty() && pf.pathIndex >= pf.path.size()) {
+        pf.path.clear();
         v.direction.x = 0.0f;
         v.direction.y = 0.0f;
         ai.isWaiting = true;
-        ai.stateTimer = 5.0f;
+        ai.stateTimer = 3.0f;
+        anim.direction = 1; //Face up while at shelf
         return;
     }
 
     // 3. FIND A NEW PATH
-    if (ai.path.empty() && !ai.isWaiting) {
+    if (pf.path.empty() && !ai.isWaiting) {
 
         // --- CHECK IF DONE SHOPPING ---
         if (ai.itemsBrowsed >= ai.itemsToBrowse) {
@@ -104,24 +137,24 @@ void CustomerAISystem::HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v,
         } while (startPos.x == randomTarget.x && startPos.y == randomTarget.y && attempts < 10);
 
         // Generate the path to the new shelf
-        ai.path = PathfindingSystem::FindPath(startPos, randomTarget);
-        ai.pathIndex = 0;
+        pf.path = PathfindingSystem::FindPath(startPos, randomTarget);
+        pf.pathIndex = 0;
     }
 
     // 4. WALK
-    CustomerAISystem::MoveAlongPath(ai, t, v);
+    CustomerAISystem::MoveAlongPath(pf, t, v);
 }
 
-void CustomerAISystem::HandleLeavingStore(Entity& entity,CustomerAI &ai,DayCycleSystem& dayCycleSystem, Transform &t, Velocity &v) {
-    if (ai.path.empty()) {
+void CustomerAISystem::HandleLeavingStore(Entity& entity,CustomerAI &ai,PathFinding& pf, DayCycleSystem& dayCycleSystem, Transform &t, Velocity &v) {
+    if (pf.path.empty()) {
         SDL_Point startPos = GetGridPos(t);
-        ai.path = PathfindingSystem::FindPath(startPos, Door);
-        ai.pathIndex = 0;
+        pf.path = PathfindingSystem::FindPath(startPos, Door);
+        pf.pathIndex = 0;
     }
 
-    CustomerAISystem::MoveAlongPath(ai, t, v);
+    CustomerAISystem::MoveAlongPath(pf, t, v);
 
-    if (!ai.path.empty() && ai.pathIndex >= ai.path.size()) {
+    if (!pf.path.empty() && pf.pathIndex >= pf.path.size()) {
         std::cout << "Customer left the store!" << std::endl;
         // DO NOT FORGET TO DESTROY THE ENTITY HERE!
         dayCycleSystem.customerDeparted();
@@ -129,17 +162,17 @@ void CustomerAISystem::HandleLeavingStore(Entity& entity,CustomerAI &ai,DayCycle
     }
 }
 
-void CustomerAISystem::MoveAlongPath(CustomerAI& ai, Transform& t, Velocity& v) {
-    if (ai.pathIndex >= ai.path.size()) {
+void CustomerAISystem::MoveAlongPath(PathFinding& pf, Transform& t, Velocity& v) {
+    if (pf.pathIndex >= pf.path.size()) {
         v.direction.x = 0.0f;
         v.direction.y = 0.0f;
         return;
     }
 
     // 1. Get the target grid tile and convert to dead-center PIXELS
-    SDL_Point targetGrid = ai.path[ai.pathIndex];
-    float targetX = (targetGrid.x * 32.0f) - 16.0f; //Off set 16 pixels because scaling 32 sprite -> 64 pixel
-    float targetY = (targetGrid.y * 32.0f) - 16.0f; //Off set 16 pixels because scaling 32 sprite -> 64 pixel
+    SDL_Point targetGrid = pf.path[pf.pathIndex];
+    float targetX = (targetGrid.x * 32.0f) ; //Off set 16 pixels because scaling 32 sprite -> 64 pixel
+    float targetY = (targetGrid.y * 32.0f) ; //Off set 16 pixels because scaling 32 sprite -> 64 pixel
 
     // 2. Math to find direction and distance
     float dirX = targetX - t.position.x;
@@ -149,7 +182,7 @@ void CustomerAISystem::MoveAlongPath(CustomerAI& ai, Transform& t, Velocity& v) 
     // 3. Move or Snap!
     // IMPORTANT: If your AI moves 2 pixels per frame, this number MUST be > 2.0f.
     // 3.0f is a safe sweet spot to prevent overshooting.
-    if (distance > 3.0f) {
+    if (distance > 4.0f) {
         v.direction.x = dirX / distance;
         v.direction.y = dirY / distance;
     } else {
@@ -157,6 +190,6 @@ void CustomerAISystem::MoveAlongPath(CustomerAI& ai, Transform& t, Velocity& v) 
         t.position.y = targetY;
 
         // Target the next tile in the path
-        ai.pathIndex++;
+        pf.pathIndex++;
     }
 }

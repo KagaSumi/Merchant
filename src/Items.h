@@ -10,6 +10,12 @@
 #include <SDL3/SDL_rect.h>
 #include <SDL3/SDL_render.h>
 
+enum class ItemType {
+    Consumable,
+    Material,
+    Equipment,
+    Luxury
+};
 struct ItemDef {
     int id = -1; //Empty
     std::string name = "Empty";
@@ -17,6 +23,7 @@ struct ItemDef {
     std::vector<std::string> tags = {};
     SDL_FRect src{};
     float requiredReputation = 1.0f;
+    ItemType type = ItemType::Material;
 };
 
 class Items {

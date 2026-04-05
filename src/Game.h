@@ -13,12 +13,15 @@
 #include "manager/SceneManager.h"
 
 struct GameState {
-    int playerHealth;
-    int Wallet;
-    int Debt;
-    int DayCycle;
-    float shopReputation;
+    int shopReputation = 1;
+    int currentRepXP = 0;
+    int xpToNextLevel = 100;
+    int displayCasesUnlocked = 3;
+    int walletBalance = 5000;
+    int debtTotal = 5000;
+    int dayCount = 1;
 };
+
 
 class Game {
 public:

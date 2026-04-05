@@ -9,6 +9,8 @@
 #include <vector>
 #include <SDL3/SDL_rect.h>
 
+#include "Entity.h"
+
 struct PathNode {
     SDL_Point pos;
     int gCost = 0; // Cost from start
@@ -23,6 +25,11 @@ struct PathNode {
     }
 };
 
+struct BrowsePoint {
+    SDL_Point gridPos;
+    Entity* standEntity = nullptr;
+};
+
 class PathfindingSystem {
 public:
     static void InitMap(int width, int height, int tSize, const std::vector<int>& collisionLayer);
@@ -33,6 +40,10 @@ public:
     static int GetTile(int x, int y);
     static bool IsValid(int x, int y);
 
+    static void AddBrowsePoint(SDL_Point tilePos, Entity* standEntity);
+    static const std::vector<BrowsePoint>& GetBrowsePoints();
+    static void ClearBrowsePoints();
+
 private:
     static int mapWidth;
     static int mapHeight;
@@ -40,7 +51,7 @@ private:
     static std::mt19937 rng;
     static std::vector<int> grid;
     static std::vector<SDL_Point> walkableNodes;
-    static std::vector<SDL_Point> browseNodes;
+    static std::vector<BrowsePoint> browseNodes;
 
     static int GetHeuristic(SDL_Point a, SDL_Point b);
     static std::vector<SDL_Point> RetracePath(const std::unordered_map<int, PathNode>& allNodes, SDL_Point start, SDL_Point target);
