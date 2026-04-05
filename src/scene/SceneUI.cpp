@@ -1519,6 +1519,12 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
         cTransform.scale = 1.0f;
         bool close = false;
         toggleSettingsOverlayVisibility(*UIOrderScreen, &close);
+
+        if (UIHud) {
+            bool showHud = true;
+            toggleSettingsOverlayVisibility(*UIHud, &showHud);
+        }
+
         auto& s = UIOrderScreen->getComponent<OrderSession>();
         if (s.onContinue) s.onContinue();
     };
@@ -1737,6 +1743,11 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
     bool forceOpen = true;
     toggleSettingsOverlayVisibility(*UIOrderScreen, &forceOpen);
 
+    if (UIHud) {
+        bool hideHud = false;
+        toggleSettingsOverlayVisibility(*UIHud, &hideHud);
+    }
+
     //apply hidden on items you can't buy yet
     for (int i = 0; i < (int)session.slots.size(); ++i) {
         auto& slot = session.slots[i];
@@ -1815,6 +1826,11 @@ Entity& Scene::createDialogueUI(int windowWidth, int windowHeight) {
         bool close = false;
         toggleSettingsOverlayVisibility(*UIDialogue, &close);
 
+        if (UIHud) {
+            bool showHud = true;
+            toggleSettingsOverlayVisibility(*UIHud, &showHud);
+        }
+
         auto& s = UIDialogue->getComponent<DialogueSession>();
         if (s.onConfirm) s.onConfirm();
         s.onConfirm = nullptr; // clear so it doesn't fire twice
@@ -1844,6 +1860,11 @@ Entity& Scene::updateDialogueUI(const std::string& message, std::function<void()
 
     bool forceOpen = true;
     toggleSettingsOverlayVisibility(*UIDialogue, &forceOpen);
+
+    if (UIHud) {
+        bool hideHud = false;
+        toggleSettingsOverlayVisibility(*UIHud, &hideHud);
+    }
 
     return *UIDialogue;
 }

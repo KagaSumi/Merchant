@@ -189,7 +189,25 @@ private:
     //void createProjectile(Vector2D pos, Vector2D dir, int speed);
 
     void initMainMenu(int windowWidth, int windowHeight);
+    //Init Gameplay
     void initGameplay(const char* mapPath, int windowWidth, int windowHeight);
+
+    //Gameplay Helpers
+    void initAssets(const char* mapPath);
+    void initUI(int windowWidth, int windowHeight);
+    void initWorld(int windowWidth, int windowHeight);
+    void initPlayer(int windowWidth, int windowHeight);
+    void initSystems(int windowWidth, int windowHeight);
+    void initHaggleSystem();
+    void initDayCycleCallbacks();
+    void initEntities(int windowWidth, int windowHeight);
+    //Cached pointers
+    Entity* storeEntity = nullptr;
+    Entity* playerEntity = nullptr;
+    Entity* spawnerEntity = nullptr;
+    SDL_Texture* tilemapTex = nullptr;
+
+
 
     //Helper Function
     Entity& createDisplaycase(Vector2D location, SDL_Texture* texture,SDL_FRect src, SDL_FRect dst, DayCycle& dayCycle,Entity* playerRef);

@@ -1,0 +1,91 @@
+<customerDialogue>
+    <!-- OPENING lines shown when haggle begins, varies by mood -->
+    <opening mood="high">
+        <line>I've been looking for one of these! What's your price?</line>
+        <line>Ah, excellent quality! How much are you asking?</line>
+        <line>I heard good things about this shop. What will this cost me?</line>
+        <line>Perfect, I've been needing this. Name your price!</line>
+        <line>Oh this is exactly what I need. How much?</line>
+    </opening>
+
+    <opening mood="medium">
+        <line>Hmm, I might be interested. What are you asking for it?</line>
+        <line>I suppose I could use one of these. What's the price?</line>
+        <line>Let's see what you want for this...</line>
+        <line>I've seen better, but it'll do. What's the cost?</line>
+        <line>Alright, what's your asking price?</line>
+    </opening>
+
+    <opening mood="low">
+        <line>I'm not made of gold, you know. What do you want for it?</line>
+        <line>This better be worth my time. How much?</line>
+        <line>Fine, fine. What are you charging?</line>
+        <line>I've had a rough week. Don't fleece me. Price?</line>
+        <line>I'll hear your price, but don't get greedy.</line>
+    </opening>
+
+    <!-- REJECTION lines when offer is too high, varies by patience remaining -->
+    <rejection patience="high">
+        <line>Ha! That's a bit steep, friend. Try again.</line>
+        <line>I don't think so. I know what this is worth.</line>
+        <line>That price feels a little ambitious, don't you think?</line>
+        <line>Hmm, not quite. I was expecting something more reasonable.</line>
+        <line>I appreciate the confidence, but no. Come down a little.</line>
+    </rejection>
+
+    <rejection patience="medium">
+        <line>Still too much. I'm losing patience here.</line>
+        <line>You're testing my goodwill. Lower the price.</line>
+        <line>I've seen this same item cheaper down the road.</line>
+        <line>That's not going to work for me. Last chance to be reasonable.</line>
+        <line>You're pushing it. I won't wait forever.</line>
+    </rejection>
+
+    <rejection patience="low">
+        <line>This is my final offer consideration. Don't waste my time.</line>
+        <line>One more ridiculous price and I'm walking out.</line>
+        <line>I'm about to leave. Is that really the best you can do?</line>
+        <line>I'm already halfway to the door. Make it worth my while.</line>
+        <line>Last chance. My patience has run out.</line>
+    </rejection>
+
+    <!-- WALKAWAY lines when customer leaves without buying -->
+    <walkaway>
+        <line>Forget it. I'll find a better deal elsewhere.</line>
+        <line>You clearly don't want my business. Good day.</line>
+        <line>What a waste of time. I'm leaving.</line>
+        <line>I can't believe I waited this long. Goodbye.</line>
+        <line>Your prices are highway robbery. I'll shop somewhere else.</line>
+        <line>Next time, try being reasonable.</line>
+        <line>I hope your other customers are more patient than me.</line>
+    </walkaway>
+
+    <!-- SUCCESS lines when customer accepts, varies by how good the deal was for them -->
+    <success value="great">
+        <!-- Player sold near or below base price — great deal for customer -->
+        <line>Now THAT is a fair price. You've made a friend today!</line>
+        <line>Wonderful! I'll be back again soon at these prices.</line>
+        <line>Excellent! A pleasure doing business with you.</line>
+        <line>Ha! My lucky day. Thank you, shopkeeper!</line>
+        <line>This is exactly what I needed. You've earned my loyalty!</line>
+    </success>
+
+    <success value="fair">
+        <!-- Player sold at a reasonable markup -->
+        <line>Deal. Pleasure doing business.</line>
+        <line>Fair enough. I'll take it.</line>
+        <line>Agreed. You drive a hard bargain, but a fair one.</line>
+        <line>That works for me. Thank you.</line>
+        <line>Good doing business with you.</line>
+    </success>
+
+    <success value="steep">
+        <!-- Player sold at high markup — customer accepted but wasn't thrilled -->
+        <line>Fine. I need it more than I need my coin apparently.</line>
+        <line>You got me. Don't expect me to recommend you to friends.</line>
+        <line>Robbery, but I'll take it. Don't push your luck next time.</line>
+        <line>I paid too much and we both know it. Good day.</line>
+        <line>Take my gold then. I'll remember this price.</line>
+    </success>
+
+</customerDialogue>
