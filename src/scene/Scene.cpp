@@ -27,7 +27,7 @@ void Scene::initMainMenu(int windowWidth, int windowHeight) {
 
     SDL_Texture *texture = TextureManager::load("../asset/menu.png");
     SDL_FRect menuSrc{0, 0, (float) 1200, (float) 896};
-    SDL_FRect menuDst{0,0, (float) windowWidth, (float) windowHeight};
+    SDL_FRect menuDst{0, 0, (float) windowWidth, (float) windowHeight};
     menu.addComponent<Sprite>(texture, menuSrc, menuDst);
 
     auto &settingsOverlay = createSettingsOverlay(windowWidth, windowHeight);
@@ -40,6 +40,9 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
     world.getMap().load(mapPath, tilemapTex);
     SDL_Texture *itemsTex = TextureManager::load("../asset/items.png");
     world.getItems().load("../asset/items.xml");
+    world.getMarketTrendSystem().load("../asset/market_trends.xml");
+    world.getMarketTrendSystem().rollDailyTrend();
+
 
     //Create UI
     createHaggleUI(windowWidth, windowHeight);
@@ -51,7 +54,29 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
         toggleSettingsOverlayVisibility(*invSession.quantityPanelRef, &hide);
     }
     createOrderUI(windowWidth, windowHeight);
+    auto &orderSession = UIOrderScreen->getComponent<OrderSession>();
+    orderSession.getShelfPrice = [](int currentCount) -> int {
+        // Each shelf costs more than the last
+        // Shelf 4: 500G, 5: 1000G, 6: 1750G, 7: 2750G... escalating
+        switch (currentCount) {
+            case 3: return 500;
+            case 4: return 1000;
+            case 5: return 1750;
+            case 6: return 2750;
+            case 7: return 4000;
+            case 8: return 5500;
+            case 9: return 7500;
+            case 10: return 10000;
+            case 11: return 13000;
+            case 12: return 17000;
+            case 13: return 22000;
+            case 14: return 28000;
+            default: return 999999; // maxed
+        }
+    };
+    orderSession.currentShelfPrice = orderSession.getShelfPrice(Game::gameState.displayCasesUnlocked);
     createDialogueUI(windowWidth, windowHeight);
+    createHUD(windowWidth, windowHeight);
 
     for (auto &collider: world.getMap().colliders) {
         auto &e = world.createEntity();
@@ -87,10 +112,13 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
     //Store:
     auto &store(world.createEntity());
     store.addComponent<ShopReputation>(Game::gameState.shopReputation);
-    store.addComponent<Wallet>(Game::gameState.walletBalance);
+    auto &wallet = store.addComponent<Wallet>(Game::gameState.walletBalance);
     store.addComponent<Debt>(Game::gameState.debtTotal);
-    auto& dayCycle = store.addComponent<DayCycle>();
+    auto &dayCycle = store.addComponent<DayCycle>();
     dayCycle.date = Game::gameState.dayCount;
+
+    //Update HUD
+    updateHUD(wallet, dayCycle);
 
     //Needed For Confirm Button
     createDaySummaryUI(windowWidth, windowHeight, dayCycle);
@@ -98,7 +126,7 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
     //Create Player
     auto &player(world.createEntity());
     // player.addComponent<Transform>(Vector2D(door.x * 32, door.y * 32), 1.0f);
-    player.addComponent<Transform>(Vector2D(196,481), 1.0f); // Dev Spot
+    player.addComponent<Transform>(Vector2D(196, 481), 1.0f); // Dev Spot
     player.addComponent<Velocity>(Vector2D(0, 0), 150.0f);
 
     Animation anim = AssetManager::getAnimation("customer");
@@ -139,20 +167,60 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
     inv.addItem(itemDB.items[14], 3);
     player.addComponent<PlayerTag>();
 
-    //Setup DayCycle System callback:
-    auto& dayCycleSystem = world.getDayCycleSystem(); // however you access it
 
     // Setup HaggleSystem callbacks
-    auto& haggleSystem = world.getHaggleSystem();
-    haggleSystem.onSaleComplete = [&store](int salePrice, int profitMargin) {
-        auto& wallet = store.getComponent<Wallet>();
+    auto &haggleSystem = world.getHaggleSystem();
+    haggleSystem.onSaleComplete = [this, &store](int salePrice, int profitMargin) {
+        auto &wallet = store.getComponent<Wallet>();
+        auto &rep = store.getComponent<ShopReputation>();
+        auto &dayCycle = store.getComponent<DayCycle>();
+
+        // --- WALLET ---
         wallet.balance += salePrice;
         wallet.dailyIncome += salePrice;
-        std::cout << "Sale! +" << salePrice << "G (Profit: " << profitMargin << "G)\n";
+
+        // --- REP XP ---
+        // Better margin = more XP. Selling at base = 10xp, every 10% over base = +5xp
+        int xpGained = 10;
+        if (profitMargin > 0) {
+            float marginPercent = static_cast<float>(profitMargin) / salePrice;
+            xpGained += static_cast<int>(marginPercent * 50.0f); // up to +50xp at 100% margin
+        }
+
+        Game::gameState.currentRepXP += xpGained;
+        std::cout << "+" << xpGained << " Rep XP (" << Game::gameState.currentRepXP
+                << "/" << Game::gameState.xpToNextLevel << ")\n";
+
+        // --- LEVEL UP CHECK ---
+        while (Game::gameState.currentRepXP >= Game::gameState.xpToNextLevel) {
+            Game::gameState.currentRepXP -= Game::gameState.xpToNextLevel;
+            Game::gameState.xpToNextLevel = static_cast<int>(Game::gameState.xpToNextLevel * 1.5f);
+            Game::gameState.shopReputation++;
+
+            // Sync to the component
+            rep.reputation = Game::gameState.shopReputation;
+
+            std::cout << "LEVEL UP! Shop Reputation now: " << Game::gameState.shopReputation << "\n";
+
+            updateDialogueUI(
+                "Store Reputation increased to " + std::to_string(Game::gameState.shopReputation) +
+                "!",
+                [this]() {
+                    world.getHaggleSystem().resumeQueue();
+                }
+            );
+            world.getHaggleSystem().pauseQueue();
+        }
+
+        updateHUD(wallet, dayCycle);
     };
 
-    haggleSystem.onBeginHaggle = [this](const ItemDef& item) {
-        updateHaggleUI(const_cast<ItemDef&>(item));
+    haggleSystem.getPriceModifier = [this](const ItemDef &item) {
+        return world.getMarketTrendSystem().getModifier(item);
+    };
+
+    haggleSystem.onBeginHaggle = [this](const ItemDef &item) {
+        updateHaggleUI(const_cast<ItemDef &>(item));
     };
 
     haggleSystem.onShowFeedback = [this](const std::string &msg) {
@@ -161,88 +229,105 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
         });
     };
 
+    //Setup DayCycle System callback:
+    auto &dayCycleSystem = world.getDayCycleSystem();
+
     // Wire up the phase callbacks
     dayCycleSystem.onMorningStart = [this,&store]() {
-        auto& wallet = store.getComponent<Wallet>();
+        auto &wallet = store.getComponent<Wallet>();
+        auto &dayCycle = store.getComponent<DayCycle>();
         wallet.dailyIncome = 0; // Reset Daily Income
         wallet.dailyExpenses = 0; // Reset Daily Income
-        // Nothing for now - player is free to roam
-        std::cout << "Morning started\n";
+
+        //Roll new Market Trend
+        world.getMarketTrendSystem().rollDailyTrend();
+        updateHUD(wallet, dayCycle);
     };
 
-    dayCycleSystem.onShopOpenStart = [this]() {
-        // Spawn customers, lock display cases, etc.
-        std::cout << "Shop is open!\n";
-        //TODO Lock Player??
+    dayCycleSystem.onShopOpenStart = [this, &store]() {
+        auto &wallet = store.getComponent<Wallet>();
+        auto &dayCycle = store.getComponent<DayCycle>();
+        updateHUD(wallet, dayCycle);
     };
 
-    dayCycleSystem.onEveningStart = [this, &player, &store, &dayCycle, tilemapTex]() {
-    auto& wallet = store.getComponent<Wallet>();
-    auto& debt = store.getComponent<Debt>();
+    dayCycleSystem.onEveningStart = [this, &player, &store, tilemapTex]() {
+        auto &wallet = store.getComponent<Wallet>();
+        auto &dayCycle = store.getComponent<DayCycle>();
+        updateHUD(wallet, dayCycle);
+        auto &debt = store.getComponent<Debt>();
 
-    bool isPaymentDay = (dayCycle.date > 0) && (dayCycle.date % 7 == 0);
-    int snapshotDebt = world.getDebtSystem().getNextPayment(debt);
+        bool isPaymentDay = (dayCycle.date > 0) && (dayCycle.date % 7 == 0);
+        int snapshotDebt = world.getDebtSystem().getNextPayment(debt);
 
-    if (isPaymentDay) {
-        world.getDebtSystem().payDebt(wallet, debt);
-    }
-
-    // Snapshot AFTER debt payment, BEFORE order screen
-    int snapshotIncome = wallet.dailyIncome;
-    int snapshotBalanceBeforeOrders = wallet.balance;
-
-    // Sync save state
-    Game::gameState.walletBalance = wallet.balance;
-    Game::gameState.debtTotal = debt.amount;
-    Game::gameState.dayCount = dayCycle.date;
-
-    std::vector<ItemDef> available;
-    for (auto& [id, item] : world.getItems().items) {
-        if (item.requiredReputation <= Game::gameState.shopReputation)
-            available.push_back(item);
-    }
-
-    auto& inv = player.getComponent<Inventory>();
-
-    updateOrderUI(available, wallet, inv,
-        [this, &store, snapshotIncome,snapshotDebt ,isPaymentDay, &debt]() {
-            auto& wallet = store.getComponent<Wallet>();
-
-            DaySummaryData summary;
-            summary.grossSales = snapshotIncome;
-            summary.orderExpenses = wallet.dailyExpenses; // live - includes orders bought
-            summary.currentBalance = wallet.balance;
-            summary.weeklyPayment = isPaymentDay ? snapshotDebt : 0;
-            summary.weeklyPaymentAmount = snapshotDebt;
-            summary.daysUntilPayment = isPaymentDay ? 7 : (7 - (store.getComponent<DayCycle>().date % 7));
-
-            updateDaySummaryUI(summary);
-        },
-        [this, &store, &dayCycle, &player, tilemapTex]() {
-            int nextIdx = Game::gameState.displayCasesUnlocked + 1;
-            if (nextIdx > 15) return;
-
-            auto& wallet = store.getComponent<Wallet>();
-            int cost = 500;
-            if (wallet.balance < cost) return;
-
-            wallet.balance -= cost;
-            wallet.dailyExpenses += cost; // track it as an expense
-
-            auto& displayCaseLocations = world.getMap().displayCaseSpawns;
-            if (displayCaseLocations.count(nextIdx)) {
-                Vector2D loc = displayCaseLocations.at(nextIdx);
-                SDL_FRect src = {16 * 32.0f, 8 * 32.0f, 96, 128};
-                SDL_FRect dst = {-32.0f, 2 * -32.0f, 96, 128};
-                createDisplaycase(loc, tilemapTex, src, dst, dayCycle, &player);
-            }
-
-            Game::gameState.displayCasesUnlocked = nextIdx;
-            std::cout << "Purchased shelf #" << nextIdx << "\n";
+        if (isPaymentDay) {
+            world.getDebtSystem().payDebt(wallet, debt);
         }
-    );
-};
 
+        // Snapshot AFTER debt payment, BEFORE order screen
+        int snapshotIncome = wallet.dailyIncome;
+        int snapshotBalanceBeforeOrders = wallet.balance;
+
+        // Sync save state
+        Game::gameState.walletBalance = wallet.balance;
+        Game::gameState.debtTotal = debt.amount;
+        Game::gameState.dayCount = dayCycle.date;
+
+        auto &rep = store.getComponent<ShopReputation>();
+        std::vector<ItemDef> available;
+        for (auto &[id, item]: world.getItems().items) {
+            if (item.requiredReputation <= rep.reputation)
+                available.push_back(item);
+        }
+
+        auto &inv = player.getComponent<Inventory>();
+
+        updateOrderUI(available, wallet, inv,
+                      [this, &store, snapshotIncome,snapshotDebt ,isPaymentDay, &debt]() {
+                          auto &wallet = store.getComponent<Wallet>();
+
+                          DaySummaryData summary;
+                          summary.grossSales = snapshotIncome;
+                          summary.orderExpenses = wallet.dailyExpenses; // live - includes orders bought
+                          summary.currentBalance = wallet.balance;
+                          summary.weeklyPayment = isPaymentDay ? snapshotDebt : 0;
+                          summary.weeklyPaymentAmount = snapshotDebt;
+                          summary.daysUntilPayment = isPaymentDay ? 7 : (7 - (store.getComponent<DayCycle>().date % 7));
+
+                          updateDaySummaryUI(summary);
+                      },
+                      [this, &store, &dayCycle, &player, tilemapTex]() {
+                          int nextIdx = Game::gameState.displayCasesUnlocked + 1;
+                          if (nextIdx > 15) return;
+
+                          auto &wallet = store.getComponent<Wallet>();
+                          auto &s = UIOrderScreen->getComponent<OrderSession>();
+                          int cost = s.getShelfPrice
+                                         ? s.getShelfPrice(Game::gameState.displayCasesUnlocked)
+                                         : 500;
+                          if (wallet.balance < cost) return;
+
+                          wallet.balance -= cost;
+                          wallet.dailyExpenses += cost; // track it as an expense
+
+                          auto &displayCaseLocations = world.getMap().displayCaseSpawns;
+                          if (displayCaseLocations.count(nextIdx)) {
+                              Vector2D loc = displayCaseLocations.at(nextIdx);
+                              SDL_FRect src = {16 * 32.0f, 8 * 32.0f, 96, 128};
+                              SDL_FRect dst = {-32.0f, 2 * -32.0f, 96, 128};
+                              createDisplaycase(loc, tilemapTex, src, dst, dayCycle, &player);
+                          }
+
+                          Game::gameState.displayCasesUnlocked = nextIdx;
+                          std::cout << "Purchased shelf #" << nextIdx << "\n";
+                      }
+        );
+    };
+
+    dayCycleSystem.onHudVisibilityChange = [this](bool visible) {
+        if (!UIHud) return;
+        bool v = visible;
+        toggleSettingsOverlayVisibility(*UIHud, &v);
+    };
 
     //Customers:
     std::vector<SDL_Texture *> customerTextures = {
@@ -312,15 +397,14 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
     //Message Board
     auto &bulletinBoard = world.createEntity();
     bulletinBoard.addComponent<Transform>(Vector2D(17 * 32, 5 * 32), 1.0f);
-    bulletinBoard.addComponent<Interaction>([]() {
-        std::cout << "Display Market Conditions ..." << std::endl;
+    bulletinBoard.addComponent<Interaction>([this]() {
+        MarketTrend currentTrend = world.getMarketTrendSystem().getActiveTrend();
+        updateDialogueUI(currentTrend.blurb, [] {
+        });
     });
 
 
     //add scene state
     auto &state(world.createEntity());
     state.addComponent<SceneState>();
-
-    //Add Label
-    createPlayerPosLabel();
-}
+};

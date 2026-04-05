@@ -36,7 +36,7 @@ public:
 
         // 3. Initialize Daily Customer
         if (spawner.spawnCount == 0 && index == 0) {
-            spawner.spawnCount = calculateCustomer(store.Reputation);
+            spawner.spawnCount = calculateCustomer(store.reputation);
             customerCount = spawner.spawnCount;
         }
 

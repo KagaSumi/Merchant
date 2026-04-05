@@ -22,6 +22,7 @@ public:
     std::function<void()> onShopOpenStart;
     std::function<void()> onEveningStart;
     std::function<void()> onWeekPassed;
+    std::function<void(bool)> onHudVisibilityChange;
 
     void update(const std::vector<std::unique_ptr<Entity>> &entities, float dt);
 

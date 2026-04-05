@@ -144,6 +144,7 @@ class Scene {
         Entity* shelfBuyBtn = nullptr;
         Entity* shelfPriceLabel = nullptr;
         int currentShelfPrice = 500;
+        std::function<int(int currentCount)> getShelfPrice;
         std::function<void()> onBuyShelf;
     };
 
@@ -154,6 +155,12 @@ class Scene {
         Entity* confirmBtnRef = nullptr;
     };
 
+    struct HUDSession {
+        Entity* dayLabelRef = nullptr;
+        Entity* phaseLabelRef = nullptr;
+        Entity* walletLabelRef = nullptr;
+        Entity* walletIconRef = nullptr;
+    };
 
 public:
     Scene(SceneType sceneType, const char* sceneName, const char* mapPath, int windowWidth, int windowHeight);
@@ -232,13 +239,16 @@ private:
                               Wallet& wallet, Inventory& inv,
                               std::function<void()> onContinue,
                               std::function<void()> onBuyShelf);
-    void refreshOrderSlot(int slotIdx, const ItemDef& item, int walletAmount);
-
     //Dialogue Screen
     Entity* UIDialogue = nullptr;
-
     Entity& createDialogueUI(int windowWidth, int windowHeight);
     Entity& updateDialogueUI(const std::string& message, std::function<void()> onConfirm);
+
+    //HUD
+    Entity* UIHud = nullptr;
+    Entity& createHUD(int windowWidth, int windowHeight);
+    void updateHUD(const Wallet &wallet, const DayCycle &dayCycle);
+
 
     void createSettingsUIComponents(Entity& overlay);
 

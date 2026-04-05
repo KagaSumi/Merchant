@@ -86,6 +86,8 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
                     holdTimer = 0.0f;
                 }
                 rgba current = lerpRGBA(evening_target, black_target, t);
+                if (fadeTimer == 0.0f && onHudVisibilityChange)  // first frame of fade
+                    onHudVisibilityChange(false);
                 applyTint(entities, current);
 
             } else if (!fadingIn) {
@@ -114,6 +116,7 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
                     holdTimer = 0.0f;
                 }
                 rgba current = lerpRGBA(black_target, morning_target, t);
+                if (onHudVisibilityChange) onHudVisibilityChange(true);
                 applyTint(entities, current);
             }
             break;

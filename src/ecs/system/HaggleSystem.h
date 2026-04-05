@@ -20,6 +20,11 @@ public:
     void update();
     void submitOffer(int offeredPrice);
     void dismissFeedback();
+    void pauseQueue() { showingFeedback = true; }
+    void resumeQueue() {
+        showingFeedback = false;
+        update();
+    }
 
     // --- WIRED FROM initGameplay ---
     std::function<void(int salePrice, int profitMargin)> onSaleComplete;

@@ -24,6 +24,7 @@
 #include "KeyboardInputSystem.h"
 #include "MainMenuSystem.h"
 #include "Map.h"
+#include "MarketTrendSystem.h"
 #include "MovementSystem.h"
 #include "RenderSystem.h"
 #include "SpawnTimerSystem.h"
@@ -59,6 +60,7 @@ class World {
     PreRenderSystem preRenderSystem;
     DebtSystem debtSystem;
     HaggleSystem haggleSystem;
+    MarketTrendSystem marketTrendSystem;
 
     public:
     World() = default;
@@ -146,6 +148,7 @@ class World {
     DayCycleSystem& getDayCycleSystem() {return dayCycleSystem;}
     DebtSystem& getDebtSystem() {return debtSystem;}
     HaggleSystem& getHaggleSystem() {return haggleSystem;}
+    MarketTrendSystem& getMarketTrendSystem() { return marketTrendSystem; }
 };
 
 #endif //PROJECT_WORLD_H

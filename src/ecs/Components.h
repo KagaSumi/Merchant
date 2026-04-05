@@ -142,10 +142,6 @@ struct DayCycle {
     bool phaseSwapReady = false;
 };
 
-struct MarketTrend {
-    std::unordered_map<std::string, float> Trend;
-};
-
 struct Wallet {
     int balance;
     int dailyIncome;
@@ -216,7 +212,8 @@ struct Inventory {
 };
 
 struct ShopReputation {
-    int Reputation = 1;
+    int reputation = 1;
+    ShopReputation(int rep) : reputation(rep) {}
 };
 
 struct Interaction {
