@@ -25,7 +25,7 @@ SDL_Point GetGridPos(const Transform& t) {
     };
 }
 
-void CustomerAISystem::HandleHeadingToRegister(CustomerAI& ai, Transform& t, Velocity& v) {
+void CustomerAISystem::HandleHeadingToRegister(CustomerAI& ai,PathFinding& pf, Transform& t, Velocity& v) {
     // 1. ARE WE CURRENTLY IN THE MINI-GAME?
     if (ai.isWaiting) {
 
@@ -46,18 +46,18 @@ void CustomerAISystem::HandleHeadingToRegister(CustomerAI& ai, Transform& t, Vel
     }
 
     // 2. GET PATH TO REGISTER
-    if (ai.path.empty()) {
+    if (pf.path.empty()) {
         SDL_Point startPos = GetGridPos(t);
-        ai.path = PathfindingSystem::FindPath(startPos, Register);
-        ai.pathIndex = 0;
+        pf.path = PathfindingSystem::FindPath(startPos, Register);
+        pf.pathIndex = 0;
     }
 
     // 3. WALK
-    CustomerAISystem::MoveAlongPath(ai, t, v);
+    CustomerAISystem::MoveAlongPath(pf, t, v);
 
     // 4. DID WE JUST ARRIVE AT THE REGISTER?
-    if (!ai.path.empty() && ai.pathIndex >= ai.path.size()) {
-        ai.path.clear();
+    if (!pf.path.empty() && pf.pathIndex >= pf.path.size()) {
+        pf.path.clear();
         v.direction.x = 0.0f;
         v.direction.y = 0.0f;
 
@@ -72,7 +72,7 @@ void CustomerAISystem::HandleHeadingToRegister(CustomerAI& ai, Transform& t, Vel
     }
 }
 
-void CustomerAISystem::HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v,float deltaTime) {
+void CustomerAISystem::HandleBrowsing(CustomerAI &ai, PathFinding& pf,Transform &t, Velocity &v,float deltaTime) {
     // 1. ARE WE CURRENTLY WAITING?
     if (ai.isWaiting) {
         ai.stateTimer -= deltaTime;
@@ -85,8 +85,8 @@ void CustomerAISystem::HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v,
     }
 
     // 2. DID WE JUST ARRIVE?
-    if (!ai.path.empty() && ai.pathIndex >= ai.path.size()) {
-        ai.path.clear();
+    if (!pf.path.empty() && pf.pathIndex >= pf.path.size()) {
+        pf.path.clear();
         v.direction.x = 0.0f;
         v.direction.y = 0.0f;
         ai.isWaiting = true;
@@ -95,7 +95,7 @@ void CustomerAISystem::HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v,
     }
 
     // 3. FIND A NEW PATH
-    if (ai.path.empty() && !ai.isWaiting) {
+    if (pf.path.empty() && !ai.isWaiting) {
 
         // --- CHECK IF DONE SHOPPING ---
         if (ai.itemsBrowsed >= ai.itemsToBrowse) {
@@ -116,24 +116,24 @@ void CustomerAISystem::HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v,
         } while (startPos.x == randomTarget.x && startPos.y == randomTarget.y && attempts < 10);
 
         // Generate the path to the new shelf
-        ai.path = PathfindingSystem::FindPath(startPos, randomTarget);
-        ai.pathIndex = 0;
+        pf.path = PathfindingSystem::FindPath(startPos, randomTarget);
+        pf.pathIndex = 0;
     }
 
     // 4. WALK
-    CustomerAISystem::MoveAlongPath(ai, t, v);
+    CustomerAISystem::MoveAlongPath(pf, t, v);
 }
 
-void CustomerAISystem::HandleLeavingStore(Entity& entity,CustomerAI &ai,DayCycleSystem& dayCycleSystem, Transform &t, Velocity &v) {
-    if (ai.path.empty()) {
+void CustomerAISystem::HandleLeavingStore(Entity& entity,CustomerAI &ai,PathFinding& pf, DayCycleSystem& dayCycleSystem, Transform &t, Velocity &v) {
+    if (pf.path.empty()) {
         SDL_Point startPos = GetGridPos(t);
-        ai.path = PathfindingSystem::FindPath(startPos, Door);
-        ai.pathIndex = 0;
+        pf.path = PathfindingSystem::FindPath(startPos, Door);
+        pf.pathIndex = 0;
     }
 
-    CustomerAISystem::MoveAlongPath(ai, t, v);
+    CustomerAISystem::MoveAlongPath(pf, t, v);
 
-    if (!ai.path.empty() && ai.pathIndex >= ai.path.size()) {
+    if (!pf.path.empty() && pf.pathIndex >= pf.path.size()) {
         std::cout << "Customer left the store!" << std::endl;
         // DO NOT FORGET TO DESTROY THE ENTITY HERE!
         dayCycleSystem.customerDeparted();
@@ -141,15 +141,15 @@ void CustomerAISystem::HandleLeavingStore(Entity& entity,CustomerAI &ai,DayCycle
     }
 }
 
-void CustomerAISystem::MoveAlongPath(CustomerAI& ai, Transform& t, Velocity& v) {
-    if (ai.pathIndex >= ai.path.size()) {
+void CustomerAISystem::MoveAlongPath(PathFinding& pf, Transform& t, Velocity& v) {
+    if (pf.pathIndex >= pf.path.size()) {
         v.direction.x = 0.0f;
         v.direction.y = 0.0f;
         return;
     }
 
     // 1. Get the target grid tile and convert to dead-center PIXELS
-    SDL_Point targetGrid = ai.path[ai.pathIndex];
+    SDL_Point targetGrid = pf.path[pf.pathIndex];
     float targetX = (targetGrid.x * 32.0f) ; //Off set 16 pixels because scaling 32 sprite -> 64 pixel
     float targetY = (targetGrid.y * 32.0f) ; //Off set 16 pixels because scaling 32 sprite -> 64 pixel
 
@@ -169,6 +169,6 @@ void CustomerAISystem::MoveAlongPath(CustomerAI& ai, Transform& t, Velocity& v) 
         t.position.y = targetY;
 
         // Target the next tile in the path
-        ai.pathIndex++;
+        pf.pathIndex++;
     }
 }

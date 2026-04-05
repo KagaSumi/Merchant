@@ -23,7 +23,11 @@ void DebtSystem::payDebt(Wallet &wallet, Debt &debt) {
         // trigger game over
     }
 }
-
+int DebtSystem::getNextPayment(const Debt& debt) const {
+    // Preview what NEXT week's payment will be
+    int nextPayment = basePayment + (weeklyIncrement * (weeksPassed + 1));
+    return std::min(nextPayment, debt.amount);
+}
 
 int DebtSystem::calculatePayment(const Debt& debt) const {
     // Calculate the expected payment based on how many weeks have passed

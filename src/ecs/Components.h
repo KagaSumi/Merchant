@@ -89,9 +89,6 @@ struct SceneState {
     int coinsCollected = 0;
 };
 
-struct Health {
-    int currentHealth{};
-};
 
 struct Clickable {
     std::function<void()> onPressed{};
@@ -132,6 +129,7 @@ enum class DayPhase {
     Morning,
     ShopOpen,
     Evening,
+    FadeToBlack,
     GameOver
 };
 
@@ -179,25 +177,18 @@ struct CustomerAIState {
     };
 };
 
-// TODO: Break out Customer AI with Pathfinding Component
-// struct PathFinding {
-//     std::vector<SDL_Point> path; // List of grid coordinates from A*
-//     int pathIndex = 0;           // Which node we are currently walking toward
-// };
+struct PathFinding {
+    std::vector<SDL_Point> path;
+    int pathIndex = 0;
+    SDL_Point targetGridPos;
+};
 
 struct CustomerAI {
     CustomerAIState::state currentState = CustomerAIState::Browsing;
-    // Pathfinding data
-    std::vector<SDL_Point> path; // List of grid coordinates from A*
-    int pathIndex = 0; // Which node we are currently walking toward
-
-    // Logic Timers
     float stateTimer = 0.0f;
     bool isWaiting = false;
-    SDL_Point targetGridpos; // Current heading
-
-    int itemsToBrowse = 3; // How many shelves to visit before paying
-    int itemsBrowsed = 0; // How many they have visited so far
+    int itemsToBrowse = 3;
+    int itemsBrowsed = 0;
 };
 
 struct InventoryEntry {

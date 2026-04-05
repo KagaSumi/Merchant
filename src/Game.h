@@ -13,23 +13,13 @@
 #include "manager/SceneManager.h"
 
 struct GameState {
-    //Initial Game State
-    int playerHealth = 5;
     int shopReputation = 1;
     int currentRepXP = 0;
     int xpToNextLevel = 100;
     int displayCasesUnlocked = 3;
-    int dayCount = 1;
-
-    // Wallet
-    int walletBalance = 500;
-    int dailyIncome = 0;
-    int dailyExpenses = 0;
-
-    // Debt
+    int walletBalance = 5000;
     int debtTotal = 5000;
-    int debtNextPayment = 500;
-    int debtDaysRemaining = 7;
+    int dayCount = 1;
 };
 
 /* TODO To be added in haggle system

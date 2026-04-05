@@ -21,20 +21,21 @@ public:
         for (auto &entity: entities) {
             if (entity->hasComponent<CustomerAI>() && entity->hasComponent<Transform>() && entity->hasComponent<Velocity>()) {
                 auto &ai = entity->getComponent<CustomerAI>();
+                auto &pf = entity->getComponent<PathFinding>();
                 auto &transform = entity->getComponent<Transform>();
                 auto &velocity = entity->getComponent<Velocity>();
 
                 switch (ai.currentState) {
                     case CustomerAIState::Browsing:
-                        HandleBrowsing(ai, transform, velocity, deltaTime);
+                        HandleBrowsing(ai,pf, transform, velocity, deltaTime);
                         break;
                     case CustomerAIState::HeadingToRegister:
                         // If path is empty, request new A* path to register coords
-                        HandleHeadingToRegister(ai, transform, velocity);
+                        HandleHeadingToRegister(ai,pf, transform, velocity);
                         break;
                     case CustomerAIState::LeavingStore:
                         // Set velocity toward the shop exit
-                        HandleLeavingStore(*entity,ai,dayCycleSystem,transform,velocity);
+                        HandleLeavingStore(*entity,ai,pf ,dayCycleSystem,transform,velocity);
                         break;
                 }
             }
@@ -56,13 +57,10 @@ void setDoor(SDL_Point door) {
     }
 
 private:
-    void HandleBrowsing(CustomerAI &ai, Transform &t, Velocity &v,float deltaTime);
-
-    // Removed EntityAdmin, added Velocity
-    void HandleHeadingToRegister(CustomerAI &ai, Transform &t, Velocity &v);
-    void HandleLeavingStore(Entity& entity, CustomerAI &ai,DayCycleSystem& dayCycleSystem, Transform &t, Velocity &v);
-
-    void MoveAlongPath(CustomerAI &ai, Transform &t, Velocity &v);
+    void HandleHeadingToRegister(CustomerAI& ai, PathFinding& pf, Transform& t, Velocity& v);
+    void HandleBrowsing(CustomerAI& ai, PathFinding& pf, Transform& t, Velocity& v, float deltaTime);
+    void HandleLeavingStore(Entity& entity, CustomerAI& ai, PathFinding& pf, DayCycleSystem& dcs, Transform& t, Velocity& v);
+    void MoveAlongPath(PathFinding& pf, Transform& t, Velocity& v);
 
     SDL_Point Register{-1,-1};
     SDL_Point Door{-1,-1};

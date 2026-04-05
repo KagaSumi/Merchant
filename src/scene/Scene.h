@@ -129,6 +129,7 @@ class Scene {
         Entity* nameLabel = nullptr;
         Entity* priceLabel = nullptr;
         Entity* buyBtn = nullptr;
+        Entity* buyLabel = nullptr;
         Entity* buyBtnCollider = nullptr; // for enable/disable
     };
 
@@ -142,6 +143,7 @@ class Scene {
         Entity* shelfBuyBtn = nullptr;
         Entity* shelfPriceLabel = nullptr;
         int currentShelfPrice = 500;
+        std::function<void()> onBuyShelf;
     };
 
 
@@ -203,10 +205,10 @@ private:
 
     //Summary UI
     Entity* UIDaySummary = nullptr;
-    Entity& createDaySummaryUI(int windowWidth, int windowHeight);
+    Entity& createDaySummaryUI(int windowWidth, int windowHeight, DayCycle& dayCycle);
     Entity& updateDaySummaryUI(const DaySummaryData& data);
     void createDaySummaryContent(Entity& parent, const DaySummaryData& data);
-    void createDaySummaryFooter(Entity& parent, const DaySummaryData& data);
+    void createDaySummaryFooter(Entity& parent, const DaySummaryData& data,DayCycle& dayCycle);
 
     //Select UI (Display Case)
     Entity* UIQuantityScreen = nullptr;
@@ -218,8 +220,10 @@ private:
     //Order Screen
     Entity* UIOrderScreen = nullptr;
     Entity& createOrderUI(int windowWidth, int windowHeight);
-    Entity& updateOrderUI(std::vector<ItemDef> availableItems, Wallet& wallet, Inventory& inv,
-                          std::function<void()> onContinue);
+    Entity& updateOrderUI(std::vector<ItemDef> availableItems,
+                              Wallet& wallet, Inventory& inv,
+                              std::function<void()> onContinue,
+                              std::function<void()> onBuyShelf);
     void refreshOrderSlot(int slotIdx, const ItemDef& item, int walletAmount);
 
     //Dialogue Screen

@@ -5,15 +5,15 @@
 #ifndef PROJECT_DEBTSYSTEM_H
 #define PROJECT_DEBTSYSTEM_H
 #include "Components.h"
-#include "Game.h"
 
 class DebtSystem {
 public:
-    DebtSystem(int basePayment, int increment): basePayment(basePayment), weeklyIncrement(increment), weeksPassed(0) {}
+    DebtSystem() : basePayment(500), weeklyIncrement(100), weeksPassed(0) {}
+    DebtSystem(int basePayment, int increment) : basePayment(basePayment), weeklyIncrement(increment), weeksPassed(0) {}
 
     void payDebt(Wallet& wallet, Debt& debt);
     int calculatePayment(const Debt& debt) const;
-
+    int getNextPayment(const Debt& debt) const;
 private:
     int basePayment;       // starting weekly payment
     int weeklyIncrement;   // how much payment grows per week

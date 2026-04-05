@@ -153,21 +153,6 @@ void EventResponseSystem::onCollision(const CollisionEvent &e, const char *other
 
         auto &t = player->getComponent<Transform>();
         t.position = t.oldPosition;
-    } else if (std::string(otherTag) == "projectile") {
-        if (e.state != CollisionState::Enter) return;
-
-        //Simple and Direct
-        //But Ideally we would only operate on data in an update function (hinting at transient entities)
-        auto &health = player->getComponent<Health>();
-        health.currentHealth--;
-
-        Game::gameState.playerHealth = health.currentHealth;
-
-        if (health.currentHealth <= 0) {
-            player->destroy();
-            //change scenes defer
-            Game::onSceneChangeRequest("gameover");
-        }
     }
 }
 

@@ -13,6 +13,7 @@
 #include "CustomerAISystem.h"
 #include "CustomerSpawnerSystem.h"
 #include "DayCycleSystem.h"
+#include "DebtSystem.h"
 #include "DestructionSystem.h"
 #include "Entity.h"
 #include "EventResponseSystem.h"
@@ -55,6 +56,7 @@ class World {
     HUDSystem hudSystem;
     CustomerSpawnerSystem customerSpawnerSystem;
     PreRenderSystem preRenderSystem;
+    DebtSystem debtSystem;
 
     public:
     World() = default;
@@ -139,6 +141,7 @@ class World {
     Items& getItems(){return items;}
     CustomerAISystem& getCustomerAISystem() {return customerAISystem;}
     DayCycleSystem& getDayCycleSystem() {return dayCycleSystem;}
+    DebtSystem& getDebtSystem() {return debtSystem;}
 };
 
 #endif //PROJECT_WORLD_H

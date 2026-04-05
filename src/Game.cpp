@@ -69,12 +69,6 @@ void Game::init(const char *title, int width, int height, bool fullscreen) {
     sceneManager.loadScene(SceneType::Gameplay,"level1","../asset/Shop.tmx",width,height);
     //sceneManager.loadScene(SceneType::Gameplay,"level1","../asset/map.tmx",width,height);
 
-    //init game data/state
-    // gameState.playerHealth = 5;
-    gameState.shopReputation = 1; //1 = Normal Repuation
-    gameState.DayCycle = 1; //Day 1
-    gameState.Wallet = 500; //Starting Cash
-    gameState.Debt = 5000; //Total until Game Clear
 
     //start level 1
     sceneManager.changeSceneDeferred("mainmenu");

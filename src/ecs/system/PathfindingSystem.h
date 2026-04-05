@@ -33,6 +33,9 @@ public:
     static int GetTile(int x, int y);
     static bool IsValid(int x, int y);
 
+    static void AddBrowsePoint(SDL_Point tilePos);
+    static void ClearBrowsePoints();
+
 private:
     static int mapWidth;
     static int mapHeight;
