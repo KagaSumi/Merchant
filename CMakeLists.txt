@@ -49,6 +49,7 @@ add_executable(Project src/main.cpp
         src/Items.cpp
         src/scene/SceneUI.cpp
         src/scene/SceneDisplayCase.cpp
+        src/ecs/system/HaggleSystem.cpp
 )
 
 target_link_libraries(Project

@@ -17,6 +17,7 @@
 #include "DestructionSystem.h"
 #include "Entity.h"
 #include "EventResponseSystem.h"
+#include "HaggleSystem.h"
 #include "HUDSystem.h"
 #include "Items.h"
 #include "event/EventManager.h"
@@ -57,6 +58,7 @@ class World {
     CustomerSpawnerSystem customerSpawnerSystem;
     PreRenderSystem preRenderSystem;
     DebtSystem debtSystem;
+    HaggleSystem haggleSystem;
 
     public:
     World() = default;
@@ -66,11 +68,12 @@ class World {
             mainMenuSystem.update(event);
         }else {
             keyboardInputSystem.update(entities, event,eventManager);
-            customerAISystem.update(entities, dt,dayCycleSystem);
+            customerAISystem.update(entities, dt,dayCycleSystem,&haggleSystem);
             movementSystem.update(entities, dt);
             collisionSystem.update(*this);
             animationSystem.update(entities, dt);
-            dayCycleSystem.update(entities);
+            dayCycleSystem.update(entities,dt);
+            haggleSystem.update();
             cameraSystem.update(entities);
             customerSpawnerSystem.update(entities, dt);
             hudSystem.update(entities);
@@ -142,6 +145,7 @@ class World {
     CustomerAISystem& getCustomerAISystem() {return customerAISystem;}
     DayCycleSystem& getDayCycleSystem() {return dayCycleSystem;}
     DebtSystem& getDebtSystem() {return debtSystem;}
+    HaggleSystem& getHaggleSystem() {return haggleSystem;}
 };
 
 #endif //PROJECT_WORLD_H

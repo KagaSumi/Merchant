@@ -163,7 +163,7 @@ struct DisplayStand {
 };
 
 struct Customer {
-    DisplayStand *DisplayStand{};
+    DisplayStand *displayStand;
     int budget{}; // Maybe simplify and remove budget rng, and just deal with basevalue manip
     float mood{}; // Maybe simplify and remove budget rng, and just deal with basevalue manip
     int patience = 3;

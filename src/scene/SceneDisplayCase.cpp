@@ -25,7 +25,7 @@ Entity &Scene::createDisplaycase(Vector2D location, SDL_Texture *texture, SDL_FR
     PathfindingSystem::AddBrowsePoint({
         static_cast<int>(location.x / 32),
         static_cast<int>(location.y / 32)
-    });
+    }, &displayCase);
 
     // 1. CAPTURE THE EMPTY SPRITE SOURCE
     SDL_FRect emptySrc = src;

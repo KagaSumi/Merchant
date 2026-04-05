@@ -41,13 +41,14 @@ class Scene {
     //Data Packages
     struct DaySummaryData {
         int grossSales = 0;
-        int customerPurchases = 0;
+        int orderExpenses = 0;
         int currentBalance = 0;
+        int weeklyPayment = 0;
         int weeklyPaymentAmount = 0;
         int daysUntilPayment = 0;
 
         int getGrossProfit() const {
-            return grossSales - customerPurchases;
+            return grossSales - orderExpenses - weeklyPayment;
         }
     };
 
@@ -146,6 +147,13 @@ class Scene {
         std::function<void()> onBuyShelf;
     };
 
+    struct DialogueSession {
+        std::string currentMessage;
+        std::function<void()> onConfirm;
+        Entity* messageLabelRef = nullptr;
+        Entity* confirmBtnRef = nullptr;
+    };
+
 
 public:
     Scene(SceneType sceneType, const char* sceneName, const char* mapPath, int windowWidth, int windowHeight);
@@ -228,7 +236,9 @@ private:
 
     //Dialogue Screen
     Entity* UIDialogue = nullptr;
-    Entity& createDialogueOverlay(int windowWidth, int windowHeight);
+
+    Entity& createDialogueUI(int windowWidth, int windowHeight);
+    Entity& updateDialogueUI(const std::string& message, std::function<void()> onConfirm);
 
     void createSettingsUIComponents(Entity& overlay);
 

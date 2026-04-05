@@ -51,6 +51,7 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
         toggleSettingsOverlayVisibility(*invSession.quantityPanelRef, &hide);
     }
     createOrderUI(windowWidth, windowHeight);
+    createDialogueUI(windowWidth, windowHeight);
 
     for (auto &collider: world.getMap().colliders) {
         auto &e = world.createEntity();
@@ -96,8 +97,9 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
 
     //Create Player
     auto &player(world.createEntity());
-    auto &playerTransform = player.addComponent<Transform>(Vector2D(door.x * 32, door.y * 32), 1.0f);
-    player.addComponent<Velocity>(Vector2D(0, 0), 120.0f);
+    // player.addComponent<Transform>(Vector2D(door.x * 32, door.y * 32), 1.0f);
+    player.addComponent<Transform>(Vector2D(196,481), 1.0f); // Dev Spot
+    player.addComponent<Velocity>(Vector2D(0, 0), 150.0f);
 
     Animation anim = AssetManager::getAnimation("customer");
     player.addComponent<Animation>(anim);
@@ -139,6 +141,25 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
 
     //Setup DayCycle System callback:
     auto& dayCycleSystem = world.getDayCycleSystem(); // however you access it
+
+    // Setup HaggleSystem callbacks
+    auto& haggleSystem = world.getHaggleSystem();
+    haggleSystem.onSaleComplete = [&store](int salePrice, int profitMargin) {
+        auto& wallet = store.getComponent<Wallet>();
+        wallet.balance += salePrice;
+        wallet.dailyIncome += salePrice;
+        std::cout << "Sale! +" << salePrice << "G (Profit: " << profitMargin << "G)\n";
+    };
+
+    haggleSystem.onBeginHaggle = [this](const ItemDef& item) {
+        updateHaggleUI(const_cast<ItemDef&>(item));
+    };
+
+    haggleSystem.onShowFeedback = [this](const std::string &msg) {
+        updateDialogueUI(msg, [this]() {
+            world.getHaggleSystem().dismissFeedback();
+        });
+    };
 
     // Wire up the phase callbacks
     dayCycleSystem.onMorningStart = [this,&store]() {
@@ -184,13 +205,14 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
     auto& inv = player.getComponent<Inventory>();
 
     updateOrderUI(available, wallet, inv,
-        [this, &store, &dayCycle, snapshotIncome, snapshotDebt, isPaymentDay]() {
+        [this, &store, snapshotIncome,snapshotDebt ,isPaymentDay, &debt]() {
             auto& wallet = store.getComponent<Wallet>();
 
             DaySummaryData summary;
             summary.grossSales = snapshotIncome;
-            summary.customerPurchases = wallet.dailyExpenses; // live - includes orders bought
+            summary.orderExpenses = wallet.dailyExpenses; // live - includes orders bought
             summary.currentBalance = wallet.balance;
+            summary.weeklyPayment = isPaymentDay ? snapshotDebt : 0;
             summary.weeklyPaymentAmount = snapshotDebt;
             summary.daysUntilPayment = isPaymentDay ? 7 : (7 - (store.getComponent<DayCycle>().date % 7));
 

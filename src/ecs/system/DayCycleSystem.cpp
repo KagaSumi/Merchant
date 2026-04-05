@@ -4,7 +4,7 @@
 
 #include "DayCycleSystem.h"
 #include "scene/Scene.h"
-void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities) {
+void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities, float deltaTime) {
 
     // 1. Safely find the Spawner component
     Spawner* spawnerRef = nullptr;
@@ -20,7 +20,6 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
 
     switch (cycle->currentPhase) {
         case DayPhase::Morning:
-            applyTint(entities, morning_target);
             if (cycle->phaseSwapReady == true) {
                 cycle->phaseSwapReady = false;
                 openStore();
@@ -69,31 +68,58 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
             // todayData.daysUntilPayment = Game::gameState.Debt.daysRemaining;
             if (cycle->phaseSwapReady == true) {
                 cycle->phaseSwapReady = false;
-                finishEvening();
+                cycle->currentPhase = DayPhase::FadeToBlack;
+                fadeTimer = 0.0f;
+                holdTimer = 0.0f;
+                fadedToBlack = false;
             }
-
             break;
+
+        case DayPhase::FadeToBlack: {
+            if (!fadedToBlack) {
+                // Phase 1: evening tint → black
+                fadeTimer += deltaTime;
+                float t = fadeTimer / fadeDuration;
+                if (t >= 1.0f) {
+                    t = 1.0f;
+                    fadedToBlack = true;
+                    holdTimer = 0.0f;
+                }
+                rgba current = lerpRGBA(evening_target, black_target, t);
+                applyTint(entities, current);
+
+            } else if (!fadingIn) {
+                // Phase 2: hold at black
+                holdTimer += deltaTime;
+                applyTint(entities, black_target);
+
+                if (holdTimer >= holdDuration) {
+                    fadingIn = true;
+                    fadeInTimer = 0.0f;
+                    finishEvening(); // date++, phase = Morning, onMorningStart fires
+                }
+
+            } else {
+                // Phase 3: black → morning tint (fade in)
+                fadeInTimer += deltaTime;
+                float t = fadeInTimer / fadeInDuration;
+                if (t >= 1.0f) {
+                    t = 1.0f;
+                    // Fully back to morning, reset all fade state
+                    cycle->currentPhase = DayPhase::Morning;
+                    fadedToBlack = false;
+                    fadingIn = false;
+                    fadeTimer = 0.0f;
+                    fadeInTimer = 0.0f;
+                    holdTimer = 0.0f;
+                }
+                rgba current = lerpRGBA(black_target, morning_target, t);
+                applyTint(entities, current);
+            }
+            break;
+        }
 
         case DayPhase::GameOver:
             break;
     }
 }
-//TODO For On Evening Start
-// void (Wallet& wallet, Inventory& inv) {
-//     // Filter items by rep level
-//     std::vector<ItemDef> available;
-//     for (auto& [id, item] : world.getItems().items) {
-//         if (item.requiredReputation <= Game::gameState.shopReputation) {
-//             available.push_back(item);
-//         }
-//     }
-//
-//     updateOrderUI(available, wallet, inv, [this, &wallet, &inv]() {
-//         // Build day summary and open it
-//         DaySummaryData summary;
-//         summary.currentBalance = wallet.amount;
-//         summary.weeklyPaymentAmount = Game::gameState.Debt / 10; // example
-//         summary.daysUntilPayment = 7; // track this properly later
-//         updateDaySummaryUI(summary);
-//     });
-// }

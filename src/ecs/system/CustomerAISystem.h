@@ -13,25 +13,29 @@
 
 #include "Components.h"
 #include "DayCycleSystem.h"
+#include "HaggleSystem.h"
 #include "PathfindingSystem.h"
+
 
 class CustomerAISystem {
 public:
-    void update(std::vector<std::unique_ptr<Entity>>& entities,float deltaTime, DayCycleSystem& dayCycleSystem) {
+    void update(std::vector<std::unique_ptr<Entity>>& entities,float deltaTime, DayCycleSystem& dayCycleSystem, HaggleSystem* haggleSystem) {
         for (auto &entity: entities) {
             if (entity->hasComponent<CustomerAI>() && entity->hasComponent<Transform>() && entity->hasComponent<Velocity>()) {
                 auto &ai = entity->getComponent<CustomerAI>();
                 auto &pf = entity->getComponent<PathFinding>();
                 auto &transform = entity->getComponent<Transform>();
                 auto &velocity = entity->getComponent<Velocity>();
+                auto &anim = entity->getComponent<Animation>();
+
 
                 switch (ai.currentState) {
                     case CustomerAIState::Browsing:
-                        HandleBrowsing(ai,pf, transform, velocity, deltaTime);
+                        HandleBrowsing(ai,pf, transform, velocity,anim, deltaTime);
                         break;
                     case CustomerAIState::HeadingToRegister:
                         // If path is empty, request new A* path to register coords
-                        HandleHeadingToRegister(ai,pf, transform, velocity);
+                        HandleHeadingToRegister(*entity, ai,pf, transform, anim, velocity,haggleSystem);
                         break;
                     case CustomerAIState::LeavingStore:
                         // Set velocity toward the shop exit
@@ -57,8 +61,9 @@ void setDoor(SDL_Point door) {
     }
 
 private:
-    void HandleHeadingToRegister(CustomerAI& ai, PathFinding& pf, Transform& t, Velocity& v);
-    void HandleBrowsing(CustomerAI& ai, PathFinding& pf, Transform& t, Velocity& v, float deltaTime);
+    void HandleHeadingToRegister(Entity& entity, CustomerAI &ai, PathFinding &pf, Transform &t, Animation &anim, Velocity &v,
+                                 HaggleSystem *haggleSystem);
+    void HandleBrowsing(CustomerAI& ai, PathFinding& pf, Transform& t, Velocity& v, Animation& anim, float deltaTime);
     void HandleLeavingStore(Entity& entity, CustomerAI& ai, PathFinding& pf, DayCycleSystem& dcs, Transform& t, Velocity& v);
     void MoveAlongPath(PathFinding& pf, Transform& t, Velocity& v);
 

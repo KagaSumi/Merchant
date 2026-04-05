@@ -12,9 +12,8 @@ int PathfindingSystem::mapWidth = 0;
 int PathfindingSystem::mapHeight = 0;
 int PathfindingSystem::tileSize = 32;
 std::vector<int> PathfindingSystem::grid;
-static std::vector<SDL_Point> browsePoints;
 std::vector<SDL_Point> PathfindingSystem::walkableNodes;
-std::vector<SDL_Point> PathfindingSystem::browseNodes;
+std::vector<BrowsePoint> PathfindingSystem::browseNodes;
 std::mt19937 PathfindingSystem::rng(static_cast<unsigned int>(std::time(nullptr)));
 
 // --- Initialization ---
@@ -42,8 +41,6 @@ void PathfindingSystem::InitMap(int width, int height, int tSize, const std::vec
         }
     }
 
-    // Automatically pick 5 random spots around the store for customers to browse
-    GenerateBrowsePoints(5);
 }
 
 // --- Helper Functions ---
@@ -75,26 +72,10 @@ int GetKey(int x, int y, int width) {
 }
 
 // --- Random Point Generation ---
-void PathfindingSystem::GenerateBrowsePoints(int numberOfPoints) {
-    browseNodes.clear();
-    if (walkableNodes.empty()) return;
-
-    std::uniform_int_distribution<> dist(0, walkableNodes.size() - 1);
-
-    for (int i = 0; i < numberOfPoints; i++) {
-        // Use the shared rng!
-        browseNodes.push_back(walkableNodes[dist(rng)]);
-    }
-}
-
 SDL_Point PathfindingSystem::GetRandomBrowsePoint() {
-    if (browsePoints.empty()) {
-        // Fallback so nothing crashes if called before any cases are spawned
-        return {5, 5};
-    }
-    static std::mt19937 rng(std::random_device{}());
-    std::uniform_int_distribution<int> dist(0, browsePoints.size() - 1);
-    return browsePoints[dist(rng)];
+    if (browseNodes.empty()) return {5, 5};
+    std::uniform_int_distribution<int> dist(0, browseNodes.size() - 1);
+    return browseNodes[dist(rng)].gridPos;
 }
 
 // --- Core A* Pathfinder ---
@@ -156,13 +137,17 @@ std::vector<SDL_Point> PathfindingSystem::FindPath(SDL_Point start, SDL_Point ta
     return path;
 }
 
-void PathfindingSystem::AddBrowsePoint(SDL_Point tilePos) {
-    // +1 Y = the tile directly below the display case, guaranteed walkable
-    browsePoints.push_back({tilePos.x, tilePos.y + 1});
+void PathfindingSystem::AddBrowsePoint(SDL_Point tilePos, Entity* standEntity) {
+    SDL_Point point = {tilePos.x, tilePos.y + 1};
+    browseNodes.push_back({point, standEntity});
+}
+
+const std::vector<BrowsePoint>& PathfindingSystem::GetBrowsePoints() {
+    return browseNodes;
 }
 
 void PathfindingSystem::ClearBrowsePoints() {
-    browsePoints.clear();
+    browseNodes.clear();
 }
 
 std::vector<SDL_Point> PathfindingSystem::RetracePath(const std::unordered_map<int, PathNode>& allNodes, SDL_Point start, SDL_Point target) {

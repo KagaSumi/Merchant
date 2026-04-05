@@ -25,23 +25,10 @@ SDL_Point GetGridPos(const Transform& t) {
     };
 }
 
-void CustomerAISystem::HandleHeadingToRegister(CustomerAI& ai,PathFinding& pf, Transform& t, Velocity& v) {
+void CustomerAISystem::HandleHeadingToRegister(Entity& entity, CustomerAI& ai,PathFinding& pf, Transform& t,Animation& anim, Velocity& v,HaggleSystem* haggleSystem) {
     // 1. ARE WE CURRENTLY IN THE MINI-GAME?
     if (ai.isWaiting) {
-
-        // ==========================================
-        // WAIT FOR MINI-GAME TO FINISH
-        // ==========================================
-        // Instead of a timer, check a boolean from your HaggleSystem.
-        // e.g., if (HaggleSystem::IsComplete(ai.customerID)) {
-        //     ai.isWaiting = false;
-        //     ai.currentState = CustomerAIState::LeavingStore;
-        // }
-        // ==========================================
-
-        ai.isWaiting = false;
-        ai.currentState = CustomerAIState::LeavingStore;
-
+        // The HaggleSystem will set ai.isWaiting = false and change state when done
         return; // Lock the AI in place while the player plays the mini-game
     }
 
@@ -58,21 +45,54 @@ void CustomerAISystem::HandleHeadingToRegister(CustomerAI& ai,PathFinding& pf, T
     // 4. DID WE JUST ARRIVE AT THE REGISTER?
     if (!pf.path.empty() && pf.pathIndex >= pf.path.size()) {
         pf.path.clear();
-        v.direction.x = 0.0f;
-        v.direction.y = 0.0f;
+        v.direction = {0, 0};
+        anim.direction = 2;
+        ai.isWaiting = true;
 
-        ai.isWaiting = true; // Freeze the customer
+        if (haggleSystem) {
+            auto& customer = entity.getComponent<Customer>();
 
-        // ==========================================
-        // TRIGGER HAGGLE MINI-GAME HERE
-        // ==========================================
-        std::cout << "Customer reached register! Press 'E' to Haggle!" << std::endl;
-        // e.g., HaggleSystem::QueueCustomer(entity);
-        // ==========================================
+            // Build list of stands that have stock AND aren't fully reserved
+            auto& browsePoints = PathfindingSystem::GetBrowsePoints();
+            std::vector<DisplayStand*> available;
+
+            for (auto& bp : browsePoints) {
+                if (!bp.standEntity) continue;
+                if (!bp.standEntity->hasComponent<DisplayStand>()) continue;
+
+                auto& stand = bp.standEntity->getComponent<DisplayStand>();
+
+                // Stand must have actual items placed on it
+                if (stand.quantity <= 0) continue;
+
+                // Stand must have an actual item assigned (not default empty ItemDef)
+                if (stand.item.name.empty()) continue;
+
+                // Must have unreserved stock remaining
+                if (stand.reserved_quantity >= stand.quantity) continue;
+
+                available.push_back(&stand);
+            }
+
+            if (available.empty()) {
+                // Nothing to buy at all, just leave politely
+                ai.isWaiting = false;
+                ai.currentState = CustomerAIState::LeavingStore;
+                return;
+            }
+
+            // Pick a random available stand
+            std::mt19937 rng(std::random_device{}());
+            int idx = std::uniform_int_distribution<int>(0, (int)available.size() - 1)(rng);
+            customer.displayStand = available[idx];
+            customer.displayStand->reserved_quantity++;
+
+            haggleSystem->enqueue(&entity);
+        }
     }
 }
 
-void CustomerAISystem::HandleBrowsing(CustomerAI &ai, PathFinding& pf,Transform &t, Velocity &v,float deltaTime) {
+void CustomerAISystem::HandleBrowsing(CustomerAI &ai, PathFinding& pf,Transform &t, Velocity &v,Animation& anim, float deltaTime){
     // 1. ARE WE CURRENTLY WAITING?
     if (ai.isWaiting) {
         ai.stateTimer -= deltaTime;
@@ -91,6 +111,7 @@ void CustomerAISystem::HandleBrowsing(CustomerAI &ai, PathFinding& pf,Transform 
         v.direction.y = 0.0f;
         ai.isWaiting = true;
         ai.stateTimer = 3.0f;
+        anim.direction = 1; //Face up while at shelf
         return;
     }
 

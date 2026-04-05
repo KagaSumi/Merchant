@@ -438,17 +438,10 @@ Entity &Scene::createHaggleButton(int windowWidth, int windowHeight, Entity &ove
     clickable.onCancel = [&haggleTransform] { haggleTransform.scale = 1.0f; };
     clickable.onReleased = [this, &overlay, &haggleTransform]() {
         haggleTransform.scale = 1.0f;
-
-        // Read the final state from our shared component
-        auto &session = overlay.getComponent<HaggleSession>();
+        auto& session = overlay.getComponent<HaggleSession>();
         int finalPrice = session.getProposedPrice();
-
-        std::cout << "Transaction Confirmed! Sold " << session.currentItem.name
-                << " for: " << finalPrice << "G" << std::endl;
-
-        // TODO: Fire off transaction event to the wallet/reputation system here.
-
         toggleSettingsOverlayVisibility(overlay, nullptr);
+        world.getHaggleSystem().submitOffer(finalPrice);
     };
 
     haggleButton.addComponent<Parent>(&overlay);
@@ -608,8 +601,8 @@ void Scene::createDaySummaryContent(Entity &overlay, const DaySummaryData &data)
     // --- 3. GENERATE ROWS ---
     session.grossSalesValRef = createRow("Gross Sales", data.grossSales, startY,
                                          data.grossSales > 0 ? colorPositive : colorNeutral).second;
-    session.customerPurchasesValRef = createRow("Customer Purchase", data.customerPurchases, startY + rowSpacing,
-                                                data.customerPurchases < 0 ? colorNegative : colorNeutral).second;
+    session.customerPurchasesValRef = createRow("Stock Orders", data.orderExpenses, startY + rowSpacing,
+                                                data.orderExpenses < 0 ? colorNegative : colorNeutral).second;
     auto wpRow = createRow("Weekly Payment", data.weeklyPaymentAmount, startY + rowSpacing * 2, colorNegative);
     session.weeklyPaymentLabelRef = wpRow.first;
     session.weeklyPaymentValRef = wpRow.second;
@@ -758,8 +751,8 @@ Entity &Scene::updateDaySummaryUI(const DaySummaryData &data) {
 
     // 1. Update Ledger Rows
     updateLedgerValue(session.grossSalesValRef, data.grossSales, data.grossSales > 0 ? colorPositive : colorNeutral);
-    updateLedgerValue(session.customerPurchasesValRef, data.customerPurchases,
-                      data.customerPurchases < 0 ? colorNegative : colorNeutral);
+    updateLedgerValue(session.customerPurchasesValRef, -data.orderExpenses,
+                      data.orderExpenses < 0 ? colorNegative : colorNeutral);
 
     int profit = data.getGrossProfit();
     updateLedgerValue(session.grossProfitValRef, profit,
@@ -774,7 +767,7 @@ Entity &Scene::updateDaySummaryUI(const DaySummaryData &data) {
 
         // If it is visible, update the number and right-align it
         if (isPaymentDay) {
-            updateLedgerValue(session.weeklyPaymentValRef, data.weeklyPaymentAmount, colorNegative);
+            updateLedgerValue(session.weeklyPaymentValRef, -data.weeklyPayment, colorNegative);
         }
     }
 
@@ -798,6 +791,15 @@ Entity &Scene::updateDaySummaryUI(const DaySummaryData &data) {
     // 4. Open the menu
     bool forceOpen = true;
     toggleSettingsOverlayVisibility(*UIDaySummary, &forceOpen);
+
+
+    //Hide Weekly Payment if none was made
+    if (session.weeklyPaymentLabelRef && session.weeklyPaymentValRef) {
+        bool isPaymentDay = (data.daysUntilPayment == 0);
+        session.weeklyPaymentLabelRef->getComponent<Label>().visible = isPaymentDay;
+        session.weeklyPaymentValRef->getComponent<Label>().visible = isPaymentDay;
+    }
+
 
     return *UIDaySummary;
 }
@@ -1335,7 +1337,7 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
     auto& wComp = walletEnt.addComponent<Label>(wData);
     wComp.dirty = true; wComp.visible = false;
     TextureManager::updateLabel(wComp);
-    walletEnt.addComponent<Transform>(Vector2D(baseX + 30.0f, baseY + 20.0f), 0.0f, 1.0f);
+    walletEnt.addComponent<Transform>(Vector2D(baseX + 30.0f, baseY + 40.0f), 0.0f, 1.0f);
     walletEnt.addComponent<Parent>(&mainOverlay);
     mainOverlay.getComponent<Children>().children.push_back(&walletEnt);
     session.walletLabelRef = &walletEnt;
@@ -1352,6 +1354,7 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
     float colW = menuWidth / cols;
     float rowH = gridH / rows;
 
+    SDL_Texture* tilemapTex = TextureManager::load("../asset/SpriteSheet.png");
     SDL_Texture* itemsTex = TextureManager::load("../asset/items.png");
     SDL_Texture* btnTex = TextureManager::load("../asset/ui/Buttons.png");
 
@@ -1456,8 +1459,7 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
     // Shelf Icon
     auto& shelfIcon = world.createEntity();
     shelfIcon.addComponent<Transform>(Vector2D(shelfX, shelfY), 0.0f, 1.0f);
-    // Assuming you have a shelf graphic in itemsTex, or just reuse an icon for now
-    shelfIcon.addComponent<Sprite>(itemsTex, SDL_FRect{0, 0, 32, 32}, SDL_FRect{shelfX, shelfY, 36.0f, 36.0f}, RenderLayer::UI, false);
+    shelfIcon.addComponent<Sprite>(tilemapTex, SDL_FRect{16* 32.0f, 8*32.0f, 96, 128}, SDL_FRect{-32.0f, -32.0, 36.0f, 48.0f}, RenderLayer::UI, false);
     shelfIcon.addComponent<Parent>(&mainOverlay);
     mainOverlay.getComponent<Children>().children.push_back(&shelfIcon);
 
@@ -1467,7 +1469,7 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
     auto& sNameComp = shelfName.addComponent<Label>(sNameData);
     sNameComp.dirty = true; sNameComp.visible = false;
     TextureManager::updateLabel(sNameComp);
-    shelfName.addComponent<Transform>(Vector2D(shelfX + 45.0f, shelfY), 0.0f, 1.0f);
+    shelfName.addComponent<Transform>(Vector2D(shelfX + 45.0f, shelfY + 8.0f), 0.0f, 1.0f);
     shelfName.addComponent<Parent>(&mainOverlay);
     mainOverlay.getComponent<Children>().children.push_back(&shelfName);
 
@@ -1477,7 +1479,7 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
     auto& sPriceComp = shelfPrice.addComponent<Label>(sPriceData);
     sPriceComp.dirty = true; sPriceComp.visible = false;
     TextureManager::updateLabel(sPriceComp);
-    shelfPrice.addComponent<Transform>(Vector2D(shelfX + 45.0f, shelfY + 20.0f), 0.0f, 1.0f);
+    shelfPrice.addComponent<Transform>(Vector2D(shelfX + 45.0f, shelfY + 28.0f), 0.0f, 1.0f);
     shelfPrice.addComponent<Parent>(&mainOverlay);
     mainOverlay.getComponent<Children>().children.push_back(&shelfPrice);
     session.shelfPriceLabel = &shelfPrice;
@@ -1718,6 +1720,113 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
     return *UIOrderScreen;
 }
 
+//Dialogue UI
+Entity& Scene::createDialogueUI(int windowWidth, int windowHeight) {
+    auto& overlay = world.createEntity();
+
+    // Bottom third of screen, like your mockup
+    float boxH = windowHeight * 0.30f;
+    float boxW = windowWidth * 0.85f;
+    float boxX = (windowWidth - boxW) / 2.0f;
+    float boxY = windowHeight - boxH - 20.0f;
+
+    SDL_Texture* bgTex = TextureManager::load("../asset/ui/settings.jpg");
+    SDL_FRect src{0, 0, boxW, boxH};
+    SDL_FRect dst{boxX, boxY, boxW, boxH};
+
+    overlay.addComponent<Transform>(Vector2D(boxX, boxY), 0.0f, 1.0f);
+    overlay.addComponent<Sprite>(bgTex, src, dst, RenderLayer::UI, false);
+    overlay.addComponent<Children>();
+
+    auto& session = overlay.addComponent<DialogueSession>();
+
+    // --- MESSAGE LABEL ---
+    auto& msgEnt = world.createEntity();
+    Label msgData = {
+        "...", AssetManager::getFont("arial"),
+        {0, 0, 0, 255}, LabelType::Static, "dialogueMsg"
+    };
+    auto& msgComp = msgEnt.addComponent<Label>(msgData);
+    msgComp.dirty = true;
+    msgComp.visible = false;
+    TextureManager::updateLabel(msgComp);
+
+    msgEnt.addComponent<Transform>(Vector2D(boxX + 20.0f, boxY + 20.0f), 0.0f, 1.0f);
+    msgEnt.addComponent<Parent>(&overlay);
+    overlay.getComponent<Children>().children.push_back(&msgEnt);
+    session.messageLabelRef = &msgEnt;
+
+    // --- CONFIRM BUTTON ---
+    auto& btnEnt = world.createEntity();
+    float btnW = 120.0f, btnH = 36.0f;
+    float btnX = boxX + boxW - btnW - 20.0f;
+    float btnY = boxY + boxH - btnH - 20.0f;
+
+    auto& btnTransform = btnEnt.addComponent<Transform>(Vector2D(btnX, btnY), 0.0f, 1.0f);
+    SDL_Texture* btnTex = TextureManager::load("../asset/ui/Buttons.png");
+    SDL_FRect btnSrc{0, 33, 64, 16};
+    SDL_FRect btnDst{btnX, btnY, btnW, btnH};
+
+    btnEnt.addComponent<Sprite>(btnTex, btnSrc, btnDst, RenderLayer::UI, false);
+    btnEnt.addComponent<Collider>("ui", btnDst).enabled = false;
+
+    auto& clickable = btnEnt.addComponent<Clickable>();
+    clickable.onPressed = [&btnTransform] { btnTransform.scale = 0.9f; };
+    clickable.onCancel = [&btnTransform] { btnTransform.scale = 1.0f; };
+    clickable.onReleased = [this, &btnTransform]() {
+        btnTransform.scale = 1.0f;
+        bool close = false;
+        toggleSettingsOverlayVisibility(*UIDialogue, &close);
+
+        auto& s = UIDialogue->getComponent<DialogueSession>();
+        if (s.onConfirm) s.onConfirm();
+        s.onConfirm = nullptr; // clear so it doesn't fire twice
+    };
+
+    btnEnt.addComponent<Parent>(&overlay);
+    overlay.getComponent<Children>().children.push_back(&btnEnt);
+    session.confirmBtnRef = &btnEnt;
+
+    // --- CONFIRM LABEL ---
+    auto& confirmLbl = world.createEntity();
+    Label clData = {
+        "OK", AssetManager::getFont("arial"),
+        {0, 0, 0, 255}, LabelType::Static, "dialogueConfirmLbl"
+    };
+    auto& clComp = confirmLbl.addComponent<Label>(clData);
+    clComp.dirty = true;
+    clComp.visible = false;
+    TextureManager::updateLabel(clComp);
+
+    confirmLbl.addComponent<Transform>(
+        Vector2D(btnX + (btnW / 2) - (clComp.dst.w / 2),
+                 btnY + (btnH / 2) - (clComp.dst.h / 2)), 0.0f, 1.0f);
+    confirmLbl.addComponent<Parent>(&overlay);
+    overlay.getComponent<Children>().children.push_back(&confirmLbl);
+
+    UIDialogue = &overlay;
+    return overlay;
+}
+
+Entity& Scene::updateDialogueUI(const std::string& message, std::function<void()> onConfirm) {
+    if (!UIDialogue) return *UIDialogue;
+
+    auto& session = UIDialogue->getComponent<DialogueSession>();
+    session.onConfirm = onConfirm;
+
+    // Update message text
+    if (session.messageLabelRef) {
+        auto& lbl = session.messageLabelRef->getComponent<Label>();
+        lbl.text = message;
+        lbl.dirty = true;
+        TextureManager::updateLabel(lbl);
+    }
+
+    bool forceOpen = true;
+    toggleSettingsOverlayVisibility(*UIDialogue, &forceOpen);
+
+    return *UIDialogue;
+}
 
 
 //UI Utils
