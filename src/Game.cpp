@@ -67,7 +67,6 @@ void Game::init(const char *title, int width, int height, bool fullscreen) {
     //load scenes
     sceneManager.loadScene(SceneType::MainMenu,"mainmenu",nullptr,width,height);
     sceneManager.loadScene(SceneType::Gameplay,"level1","../asset/Shop.tmx",width,height);
-    //sceneManager.loadScene(SceneType::Gameplay,"level1","../asset/map.tmx",width,height);
 
 
     //start level 1

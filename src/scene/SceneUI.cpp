@@ -679,6 +679,21 @@ void Scene::createDaySummaryFooter(Entity &overlay, const DaySummaryData &data,D
     balEnt.addComponent<Parent>(&overlay);
     overlay.getComponent<Children>().children.push_back(&balEnt);
 
+    // --- 3.5. TOTAL DEBT TEXT (NEW) ---
+    auto &totalDebtEnt = world.createEntity();
+    session.totalDebtTextRef = &totalDebtEnt;
+    std::string tdText = "Total Debt: " + std::to_string(data.totalDebt) + "g";
+    // Using your UI's red color {211, 47, 47, 255} so it looks like a debt
+    Label tdData = {tdText, AssetManager::getFont("arial"), {211, 47, 47, 255}, LabelType::Static, "totalDebtText"};
+    tdData.dirty = true;
+    tdData.visible = false;
+    TextureManager::updateLabel(totalDebtEnt.addComponent<Label>(tdData));
+
+    // Place it exactly below the Current Balance text
+    totalDebtEnt.addComponent<Transform>(Vector2D(baseX + (overlaySprite.dst.w * 0.45f), footerY + 50.0f), 0.0f, 1.0f);
+    totalDebtEnt.addComponent<Parent>(&overlay);
+    overlay.getComponent<Children>().children.push_back(&totalDebtEnt);
+
     // --- 4. CONFIRM BUTTON ---
     auto &btnEnt = world.createEntity();
     float btnWidth = 160.0f;
@@ -702,14 +717,24 @@ void Scene::createDaySummaryFooter(Entity &overlay, const DaySummaryData &data,D
     clickable.onCancel = [&btnTransform] { btnTransform.scale = 1.0f; };
     clickable.onReleased = [&overlay, &btnTransform, this, &dayCycle]() {
         btnTransform.scale = 1.0f;
-        std::cout << "Starting next day cycle..." << std::endl;
-
-        // Hide UI
         toggleSettingsOverlayVisibility(overlay, nullptr);
 
-        // TODO: Fire event to DayCycleSystem to swap to Morning phase
-        dayCycle.phaseSwapReady = true;
+        // 1. Grab the session data to see if we won or lost
+        auto &session = overlay.getComponent<DaySummarySession>();
 
+        if (session.currentData.isBankrupt) {
+            // ❌ LOSE CONDITION
+            initLose();
+        }
+        else if (session.currentData.isGameWon) {
+            // ✅ WIN CONDITION
+            initWin();
+        }
+        else {
+            // ⏩ NORMAL PLAY (Next Day)
+            std::cout << "Starting next day cycle..." << std::endl;
+            dayCycle.phaseSwapReady = true;
+        }
     };
 
     btnEnt.addComponent<Parent>(&overlay);
@@ -787,6 +812,7 @@ Entity &Scene::updateDaySummaryUI(const DaySummaryData &data) {
         balLabel.dirty = true;
         TextureManager::updateLabel(balLabel);
     }
+
 
     // 4. Open the menu
     bool forceOpen = true;
@@ -1973,7 +1999,7 @@ void Scene::updateHUD(const Wallet& wallet, const DayCycle& dayCycle) {
     // Update day label
     if (session.dayLabelRef) {
         auto& lbl = session.dayLabelRef->getComponent<Label>();
-        lbl.text = "Day " + std::to_string(dayCycle.date + 1);
+        lbl.text = "Day " + std::to_string(dayCycle.date);
         lbl.dirty = true;
         TextureManager::updateLabel(lbl);
     }

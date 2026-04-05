@@ -32,12 +32,33 @@ void Scene::initMainMenu(int windowWidth, int windowHeight) {
     auto &settingsOverlay = createSettingsOverlay(windowWidth, windowHeight);
     createCogButton(windowWidth, windowHeight, settingsOverlay);
 }
+void Scene::initLose(int windowWidth, int windowHeight) {
+    auto &cam = world.createEntity();
+    cam.addComponent<Camera>();
+    auto &screen(world.createEntity());
+    screen.addComponent<Transform>(Vector2D(0, 0), 0.0f, 1.0f);
+    SDL_Texture *texture = TextureManager::load("../asset/Lose.png");
+    SDL_FRect menuSrc{0, 0, (float) 1200, (float) 896};
+    SDL_FRect menuDst{0, 0, (float) windowWidth, (float) windowHeight};
+    screen.addComponent<Sprite>(texture, menuSrc, menuDst);
+}
+
+void Scene::initWin(int windowWidth, int windowHeight) {
+    auto &cam = world.createEntity();
+    cam.addComponent<Camera>();
+    auto &screen(world.createEntity());
+    screen.addComponent<Transform>(Vector2D(0, 0), 0.0f, 1.0f);
+    SDL_Texture *texture = TextureManager::load("../asset/Win.png");
+    SDL_FRect menuSrc{0, 0, (float) 1200, (float) 896};
+    SDL_FRect menuDst{0, 0, (float) windowWidth, (float) windowHeight};
+    screen.addComponent<Sprite>(texture, menuSrc, menuDst);
+}
 void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight) {
     initAssets(mapPath);
     initUI(windowWidth, windowHeight);
     initWorld(windowWidth, windowHeight);
     initPlayer(windowWidth, windowHeight);
-    initSystems(windowWidth, windowHeight);
+    initSystems();
     initEntities(windowWidth, windowHeight);
 }
 
@@ -162,7 +183,7 @@ void Scene::initPlayer(int windowWidth, int windowHeight) {
     inv.addItem(itemDB.items[2], 1);   // Phoenix Feather
     inv.addItem(itemDB.items[14], 3);
 }
-void Scene::initSystems(int windowWidth, int windowHeight) {
+void Scene::initSystems() {
     initHaggleSystem();
     initDayCycleCallbacks();
 }
@@ -247,6 +268,16 @@ void Scene::initHaggleSystem() {
             updateHaggleUI(itemCopy);
         }
     };
+    haggleSystem.onRetryHaggle = [this](const ItemDef& item) {
+        // 1. GUARD
+        if (UIMenu && UIMenu->getComponent<Sprite>().visible) return;
+
+        // 2. Pause queue and reopen the haggle menu instantly (no dialogue!)
+        world.getHaggleSystem().pauseQueue();
+
+        ItemDef itemCopy = item;
+        updateHaggleUI(itemCopy);
+    };
 
     haggleSystem.onShowFeedback = [this](const std::string& msg) {
         // msg tells us if it's a walkaway or rejection — use dialogue system instead
@@ -307,7 +338,15 @@ void Scene::initDayCycleCallbacks() {
 
         if (isPaymentDay) world.getDebtSystem().payDebt(wallet, debt);
 
+        bool bankrupt = false;
+        if (isPaymentDay) {
+            bankrupt = !world.getDebtSystem().payDebt(wallet, debt);
+        }
+        bool gameWon = (debt.amount <= 0);
+
         int snapshotIncome = wallet.dailyIncome;
+
+
 
         Game::gameState.walletBalance = wallet.balance;
         Game::gameState.debtTotal = debt.amount;
@@ -323,7 +362,7 @@ void Scene::initDayCycleCallbacks() {
 
         updateOrderUI(available, wallet, inv,
             // onContinue
-            [this, snapshotIncome, snapshotDebt, isPaymentDay]() {
+            [this, snapshotIncome, snapshotDebt, isPaymentDay, debt]() {
                 auto& wallet = storeEntity->getComponent<Wallet>();
                 auto& dayCycle = storeEntity->getComponent<DayCycle>();
 
@@ -333,6 +372,7 @@ void Scene::initDayCycleCallbacks() {
                 summary.currentBalance = wallet.balance;
                 summary.weeklyPayment = isPaymentDay ? snapshotDebt : 0;
                 summary.weeklyPaymentAmount = snapshotDebt;
+                summary.totalDebt = debt.amount;
                 summary.daysUntilPayment = isPaymentDay ? 7 : (7 - (dayCycle.date % 7));
                 updateDaySummaryUI(summary);
             },
@@ -369,6 +409,12 @@ void Scene::initDayCycleCallbacks() {
         if (!UIHud) return;
         bool v = visible;
         toggleSettingsOverlayVisibility(*UIHud, &v);
+
+        if (visible) {
+            auto& wallet = storeEntity->getComponent<Wallet>();
+            auto& dayCycle = storeEntity->getComponent<DayCycle>();
+            updateHUD(wallet, dayCycle);
+        }
     };
 }
 void Scene::initEntities(int windowWidth, int windowHeight) {

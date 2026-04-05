@@ -43,7 +43,11 @@ void HaggleSystem::submitOffer(int offeredPrice) {
         ai.currentState = CustomerAIState::LeavingStore;
         activeCustomer = nullptr;
 
-        update(); // pull next from queue
+        if (onSaleComplete) {
+            int profitMargin = offeredPrice - item.basePrice;
+            onSaleComplete(offeredPrice, profitMargin);
+        };
+
     } else {
         // --- FAIL ---
         customer.patience--;
@@ -70,9 +74,16 @@ void HaggleSystem::dismissFeedback() {
     feedbackMessage = "";
 
     if (activeCustomer) {
-        beginHaggle(); // still has patience, reopen haggle
+        // Customer is staying! Fire the retry event instead of the begin event
+        auto& customer = activeCustomer->getComponent<Customer>();
+        if (onRetryHaggle) {
+            onRetryHaggle(customer.displayStand->item);
+        } else {
+            beginHaggle(); // Fallback just in case
+        }
     } else {
-        update(); // next in queue
+        // Customer walked away, pull next from queue
+        update();
     }
 }
 

@@ -46,6 +46,10 @@ class Scene {
         int weeklyPayment = 0;
         int weeklyPaymentAmount = 0;
         int daysUntilPayment = 0;
+        int totalDebt = 0;
+
+        bool isBankrupt = false;
+        bool isGameWon = false;
 
         int getGrossProfit() const {
             return grossSales - orderExpenses - weeklyPayment;
@@ -65,6 +69,7 @@ class Scene {
 
         Entity* debtSubTextRef = nullptr;
         Entity* balanceTextRef = nullptr;
+        Entity* totalDebtTextRef = nullptr;
     };
 
     struct InventorySlotRefs {
@@ -189,6 +194,8 @@ private:
     //void createProjectile(Vector2D pos, Vector2D dir, int speed);
 
     void initMainMenu(int windowWidth, int windowHeight);
+    void initLose(int windowWidth, int windowHeight);
+    void initWin(int windowWidth, int windowHeight);
     //Init Gameplay
     void initGameplay(const char* mapPath, int windowWidth, int windowHeight);
 
@@ -197,7 +204,7 @@ private:
     void initUI(int windowWidth, int windowHeight);
     void initWorld(int windowWidth, int windowHeight);
     void initPlayer(int windowWidth, int windowHeight);
-    void initSystems(int windowWidth, int windowHeight);
+    void initSystems();
     void initHaggleSystem();
     void initDayCycleCallbacks();
     void initEntities(int windowWidth, int windowHeight);

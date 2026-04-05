@@ -30,6 +30,7 @@ public:
     std::function<void(int salePrice, int profitMargin)> onSaleComplete;
     std::function<void(const ItemDef&)> onBeginHaggle;   // opens haggle UI
     std::function<void(const std::string&)> onShowFeedback; // opens dialogue UI
+    std::function<void(const ItemDef&)> onRetryHaggle;   // skips dialogue, re-opens haggle UI
     std::function<float(const ItemDef&)> getPriceModifier;  // market trend hook
 
     bool showingFeedback = false;
@@ -38,6 +39,7 @@ public:
 
 private:
     std::queue<Entity*> waitingCustomers;
+
 
     void beginHaggle();
     void showFeedback(const std::string& msg);

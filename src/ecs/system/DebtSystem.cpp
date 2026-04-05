@@ -5,7 +5,7 @@
 // Created by Curry on 2026-03-25.
 //
 
-void DebtSystem::payDebt(Wallet &wallet, Debt &debt) {
+bool DebtSystem::payDebt(Wallet &wallet, Debt &debt) {
     weeksPassed++;
 
     // Payment grows each week
@@ -18,14 +18,17 @@ void DebtSystem::payDebt(Wallet &wallet, Debt &debt) {
         std::cout << "Week " << weeksPassed
                 << ": Paid " << weeklyPayment
                 << ". Remaining debt: " << debt.amount << "\n";
+        return true;
     } else {
         std::cout << "Game Over! Cannot pay debt.\n";
         // trigger game over
+        return false;
     }
 }
 int DebtSystem::getNextPayment(const Debt& debt) const {
     // Preview what NEXT week's payment will be
-    int nextPayment = basePayment + (weeklyIncrement * (weeksPassed + 1));
+    int nextPayment = basePayment + (weeklyIncrement * weeksPassed);
+
     return std::min(nextPayment, debt.amount);
 }
 
