@@ -51,6 +51,9 @@ add_executable(Project src/main.cpp
         src/scene/SceneDisplayCase.cpp
         src/ecs/system/HaggleSystem.cpp
         src/ecs/system/MarketTrendSystem.cpp
+        src/ecs/system/CustomerDialogueSystem.h
+        src/ecs/system/CustomerDialogueSystem.cpp
+        src/ecs/system/ResultMenuSystem.h.cpp
 )
 
 target_link_libraries(Project

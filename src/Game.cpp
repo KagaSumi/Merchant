@@ -16,6 +16,7 @@
 //GameObject *player = nullptr;
 
 GameState Game::gameState{};
+bool Game::isRunning = true;
 std::function<void(std::string)> Game::onSceneChangeRequest;
 
 Game::Game() {}
@@ -23,7 +24,6 @@ Game::Game() {}
 Game::~Game() {
     destroy();
 }
-
 void Game::init(const char *title, int width, int height, bool fullscreen) {
 
     int flags = 0;
@@ -66,8 +66,9 @@ void Game::init(const char *title, int width, int height, bool fullscreen) {
 
     //load scenes
     sceneManager.loadScene(SceneType::MainMenu,"mainmenu",nullptr,width,height);
-    sceneManager.loadScene(SceneType::Gameplay,"level1","../asset/Shop.tmx",width,height);
-    //sceneManager.loadScene(SceneType::Gameplay,"level1","../asset/map.tmx",width,height);
+    sceneManager.loadScene(SceneType::Gameplay,"shop","../asset/Shop.tmx",width,height);
+    sceneManager.loadScene(SceneType::Victory,"victory",nullptr,width,height);
+    sceneManager.loadScene(SceneType::GameOver,"gameover",nullptr,width,height);
 
 
     //start level 1
@@ -78,9 +79,7 @@ void Game::init(const char *title, int width, int height, bool fullscreen) {
 
         //some game state happening here
         if (sceneName == "gameover") {
-            std::cout <<"You lose!" << std::endl;
-            isRunning = false;
-            return;
+            //Audio?
         }
 
         sceneManager.changeSceneDeferred(sceneName);

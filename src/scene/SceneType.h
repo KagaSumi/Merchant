@@ -7,6 +7,9 @@
 
 enum class SceneType {
     Gameplay,
-    MainMenu
+    MainMenu,
+    Victory,
+    GameOver
+
 };
 #endif //PROJECT_SCENETYPE_H

@@ -46,6 +46,10 @@ class Scene {
         int weeklyPayment = 0;
         int weeklyPaymentAmount = 0;
         int daysUntilPayment = 0;
+        int totalDebt = 0;
+
+        bool isBankrupt = false;
+        bool isGameWon = false;
 
         int getGrossProfit() const {
             return grossSales - orderExpenses - weeklyPayment;
@@ -65,6 +69,7 @@ class Scene {
 
         Entity* debtSubTextRef = nullptr;
         Entity* balanceTextRef = nullptr;
+        Entity* totalDebtTextRef = nullptr;
     };
 
     struct InventorySlotRefs {
@@ -150,7 +155,6 @@ class Scene {
 
     struct DialogueSession {
         std::string currentMessage;
-        std::function<void()> onConfirm;
         Entity* messageLabelRef = nullptr;
         Entity* confirmBtnRef = nullptr;
     };
@@ -189,7 +193,27 @@ private:
     //void createProjectile(Vector2D pos, Vector2D dir, int speed);
 
     void initMainMenu(int windowWidth, int windowHeight);
+    void initLose(int windowWidth, int windowHeight);
+    void initWin(int windowWidth, int windowHeight);
+    //Init Gameplay
     void initGameplay(const char* mapPath, int windowWidth, int windowHeight);
+
+    //Gameplay Helpers
+    void initAssets(const char* mapPath);
+    void initUI(int windowWidth, int windowHeight);
+    void initWorld(int windowWidth, int windowHeight);
+    void initPlayer(int windowWidth, int windowHeight);
+    void initSystems();
+    void initHaggleSystem();
+    void initDayCycleCallbacks();
+    void initEntities(int windowWidth, int windowHeight);
+    //Cached pointers
+    Entity* storeEntity = nullptr;
+    Entity* playerEntity = nullptr;
+    Entity* spawnerEntity = nullptr;
+    SDL_Texture* tilemapTex = nullptr;
+
+
 
     //Helper Function
     Entity& createDisplaycase(Vector2D location, SDL_Texture* texture,SDL_FRect src, SDL_FRect dst, DayCycle& dayCycle,Entity* playerRef);
@@ -242,7 +266,9 @@ private:
     //Dialogue Screen
     Entity* UIDialogue = nullptr;
     Entity& createDialogueUI(int windowWidth, int windowHeight);
-    Entity& updateDialogueUI(const std::string& message, std::function<void()> onConfirm);
+    Entity& updateDialogueUI(const std::string &message);
+    std::function<void()> simpleDialogueConfirm;
+    void showSimpleDialogue(const std::string& message); // One off UI
 
     //HUD
     Entity* UIHud = nullptr;

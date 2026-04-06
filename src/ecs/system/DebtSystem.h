@@ -11,7 +11,7 @@ public:
     DebtSystem() : basePayment(500), weeklyIncrement(100), weeksPassed(0) {}
     DebtSystem(int basePayment, int increment) : basePayment(basePayment), weeklyIncrement(increment), weeksPassed(0) {}
 
-    void payDebt(Wallet& wallet, Debt& debt);
+    bool payDebt(Wallet &wallet, Debt &debt);
     int calculatePayment(const Debt& debt) const;
     int getNextPayment(const Debt& debt) const;
 private:

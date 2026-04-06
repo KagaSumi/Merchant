@@ -11,6 +11,7 @@
 #include "CameraSystem.h"
 #include "CollisionSystem.h"
 #include "CustomerAISystem.h"
+#include "CustomerDialogueSystem.h"
 #include "CustomerSpawnerSystem.h"
 #include "DayCycleSystem.h"
 #include "DebtSystem.h"
@@ -32,6 +33,7 @@
 #include  "UIRenderSystem.h"
 #include  "MouseInputSystem.h"
 #include "PreRenderSystem.h"
+#include "ResultMenuSystem.h"
 
 void printCollision(const CollisionEvent& collision);
 
@@ -61,6 +63,8 @@ class World {
     DebtSystem debtSystem;
     HaggleSystem haggleSystem;
     MarketTrendSystem marketTrendSystem;
+    CustomerDialogueSystem customerDialogueSystem;
+    ResultMenuSystem resultMenuSystem;
 
     public:
     World() = default;
@@ -68,7 +72,11 @@ class World {
         if (sceneType == SceneType::MainMenu) {
             //Main Menu Scene Update
             mainMenuSystem.update(event);
-        }else {
+        }
+        else if (sceneType == SceneType::Victory || sceneType == SceneType::GameOver) {
+            resultMenuSystem.update(event);
+        }
+        else {
             keyboardInputSystem.update(entities, event,eventManager);
             customerAISystem.update(entities, dt,dayCycleSystem,&haggleSystem);
             movementSystem.update(entities, dt);
@@ -149,6 +157,8 @@ class World {
     DebtSystem& getDebtSystem() {return debtSystem;}
     HaggleSystem& getHaggleSystem() {return haggleSystem;}
     MarketTrendSystem& getMarketTrendSystem() { return marketTrendSystem; }
+    CustomerDialogueSystem& getCustomerDialogueSystem() { return customerDialogueSystem; }
+    CustomerSpawnerSystem& getCustomerSpawnerSystem() { return customerSpawnerSystem; }
 };
 
 #endif //PROJECT_WORLD_H

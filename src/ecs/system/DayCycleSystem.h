@@ -98,10 +98,10 @@ public:
 }
 
 
-private:
     rgba evening_target = {255,180,120,220};
     rgba morning_target = {255,255,255,255};
     rgba black_target = {0, 0, 0, 255};
+private:
 
     float fadeTimer = 0.0f;
     float fadeDuration = 1.5f; // seconds for full fade to black

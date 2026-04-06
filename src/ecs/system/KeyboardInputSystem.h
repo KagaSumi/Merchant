@@ -20,6 +20,10 @@ public:
             if (e->hasComponent<Velocity>() && e->hasComponent<PlayerTag>()) {
                 auto &v = e->getComponent<Velocity>();
                 auto &p = e->getComponent<PlayerTag>();
+                if (p.movementLocked) {
+                    v.direction = {0,0};
+                    return;
+                }
                 if (event.type == SDL_EVENT_KEY_DOWN) {
                     switch (event.key.key) {
                         case SDLK_W:
@@ -46,6 +50,10 @@ public:
                             std::cout << "[EventResponseSystem] Inventory Update Triggered\n";
                             break;
                         }
+                        case SDLK_LSHIFT: {
+                            //Sprint
+                            v.speed = 200.0f;
+                        }
                     }
                 }
 
@@ -63,6 +71,9 @@ public:
                         case SDLK_D:
                             v.direction.x = 0;
                             break;
+                        case SDLK_LSHIFT: {
+                            v.speed = 150.0f;
+                        }
                         default:
                             break;
                     }

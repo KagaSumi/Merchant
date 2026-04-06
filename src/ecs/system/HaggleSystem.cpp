@@ -13,7 +13,7 @@ void HaggleSystem::enqueue(Entity* customerEntity) {
 
 void HaggleSystem::update() {
     if (activeCustomer != nullptr) return;
-    if (showingFeedback) return;
+    if (dialogueBusy) return;
 
     if (!waitingCustomers.empty()) {
         activeCustomer = waitingCustomers.front();
@@ -21,6 +21,7 @@ void HaggleSystem::update() {
         beginHaggle();
     }
 }
+
 
 void HaggleSystem::submitOffer(int offeredPrice) {
     if (!activeCustomer) return;
@@ -31,19 +32,24 @@ void HaggleSystem::submitOffer(int offeredPrice) {
 
     if (willAccept(customer, item, offeredPrice)) {
         // --- SUCCESS ---
+        // 1. Update stand inventory
         customer.displayStand->quantity--;
         customer.displayStand->reserved_quantity--;
 
+        // 2. Clean up AI state
+        ai.isWaiting = false;
+        ai.currentState = CustomerAIState::LeavingStore;
+
+        // 3. Clear active customer BEFORE firing callback
+        //    so pauseQueue inside onSaleComplete works cleanly
+        activeCustomer = nullptr;
+
+        // 4. Fire sale callback once — this pauses queue and shows dialogue
         if (onSaleComplete) {
             int profitMargin = offeredPrice - item.basePrice;
             onSaleComplete(offeredPrice, profitMargin);
         }
 
-        ai.isWaiting = false;
-        ai.currentState = CustomerAIState::LeavingStore;
-        activeCustomer = nullptr;
-
-        update(); // pull next from queue
     } else {
         // --- FAIL ---
         customer.patience--;
@@ -55,38 +61,85 @@ void HaggleSystem::submitOffer(int offeredPrice) {
             ai.isWaiting = false;
             ai.currentState = CustomerAIState::LeavingStore;
             activeCustomer = nullptr;
-
-            showFeedback("Customer left without buying!");
+            showFeedback("walkaway"); // triggers onShowFeedback
         } else {
-            showFeedback("Too expensive! (" +
-                         std::to_string(customer.patience) +
-                         " patience left)");
+            showFeedback("rejection");
         }
     }
 }
 
 void HaggleSystem::dismissFeedback() {
-    showingFeedback = false;
     feedbackMessage = "";
 
     if (activeCustomer) {
-        beginHaggle(); // still has patience, reopen haggle
+        // Customer still has patience — reopen haggle UI directly, no opening dialogue
+        auto& customer = activeCustomer->getComponent<Customer>();
+        if (onShowHaggleUI) onShowHaggleUI(customer.displayStand->item);
     } else {
-        update(); // next in queue
+        // Customer walked away — pull next from queue
+        update();
     }
+}
+
+void HaggleSystem::pushDialogue(const std::string& msg, std::function<void()> onConfirm) {
+    if (!dialogueBusy) {
+        dialogueBusy = true;
+        pendingConfirm = onConfirm; //Don't get overwritten by
+        if (onShowDialogue) {
+            onShowDialogue(msg);
+        }
+    } else {
+        dialogueQueue.push({msg, onConfirm});
+    }
+}
+
+void HaggleSystem::onDialogueConfirmed() {
+    auto confirm = pendingConfirm;  // grab it
+    pendingConfirm = nullptr;       // clear it
+    dialogueBusy = false;           // unblock
+
+    if (confirm) confirm();         // fire — may set pendingConfirm again via pushDialogue
+
+    // Only drain queue if confirm didn't push a new dialogue
+    if (!dialogueBusy) processDialogueQueue();
+}
+
+void HaggleSystem::processDialogueQueue() {
+    if (dialogueQueue.empty()) return;
+    auto [msg, cb] = dialogueQueue.front();
+    dialogueQueue.pop();
+    pushDialogue(msg, cb);
 }
 
 void HaggleSystem::beginHaggle() {
     if (!activeCustomer) return;
     auto& customer = activeCustomer->getComponent<Customer>();
-    if (onBeginHaggle) onBeginHaggle(customer.displayStand->item);
+    ItemDef item = customer.displayStand->item;
+
+    if (onGetOpeningLine) {
+        std::string opening = onGetOpeningLine(customer.mood);
+        pushDialogue(opening, [this, item]() mutable {
+            if (onShowHaggleUI) onShowHaggleUI(item);
+        });
+    } else {
+        if (onShowHaggleUI) onShowHaggleUI(item);
+    }
 }
 
-void HaggleSystem::showFeedback(const std::string& msg) {
-    showingFeedback = true;
-    feedbackMessage = msg;
-    if (onShowFeedback) onShowFeedback(msg);
-    else std::cout << msg << "\n"; // fallback until dialogue UI exists
+void HaggleSystem::showFeedback(const std::string&) {
+    std::string line;
+    if (activeCustomer) {
+        auto& c = activeCustomer->getComponent<Customer>();
+        line = c.patience <= 0
+            ? (onGetWalkawayLine ? onGetWalkawayLine() : "Fine, I'm leaving.")
+            : (onGetRejectionLine ? onGetRejectionLine(c.patience) : "Too expensive!");
+    } else {
+        line = onGetWalkawayLine ? onGetWalkawayLine() : "Fine, I'm leaving.";
+    }
+
+    pushDialogue(line, [this]() {
+        dismissFeedback();
+    });
 }
 
 bool HaggleSystem::willAccept(const Customer& customer, const ItemDef& item, int offeredPrice) {

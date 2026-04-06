@@ -60,18 +60,16 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
 
         case DayPhase::Evening:
             applyTint(entities, evening_target);
-            // DaySummaryData todayData;
-            // todayData.grossSales = Game::gameState.Wallet.dailyIncome;
-            // todayData.customerPurchases = Game::gameState.Wallet.dailyExpenses;
-            // todayData.currentBalance = Game::gameState.Wallet.totalGold;
-            // todayData.weeklyPaymentAmount = Game::gameState.Debt.nextPayment;
-            // todayData.daysUntilPayment = Game::gameState.Debt.daysRemaining;
             if (cycle->phaseSwapReady == true) {
                 cycle->phaseSwapReady = false;
                 cycle->currentPhase = DayPhase::FadeToBlack;
                 fadeTimer = 0.0f;
                 holdTimer = 0.0f;
+                fadeInTimer = 0.0f; // Good practice to ensure these are reset
                 fadedToBlack = false;
+                fadingIn = false;
+
+                if (onHudVisibilityChange) onHudVisibilityChange(false);
             }
             break;
 
@@ -86,8 +84,6 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
                     holdTimer = 0.0f;
                 }
                 rgba current = lerpRGBA(evening_target, black_target, t);
-                if (fadeTimer == 0.0f && onHudVisibilityChange)  // first frame of fade
-                    onHudVisibilityChange(false);
                 applyTint(entities, current);
 
             } else if (!fadingIn) {
@@ -98,7 +94,7 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
                 if (holdTimer >= holdDuration) {
                     fadingIn = true;
                     fadeInTimer = 0.0f;
-                    finishEvening(); // date++, phase = Morning, onMorningStart fires
+                    finishEvening(); // date++, phase = Morning, onMorningStart fires (Updates HUD text)
                 }
 
             } else {
@@ -114,9 +110,11 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
                     fadeTimer = 0.0f;
                     fadeInTimer = 0.0f;
                     holdTimer = 0.0f;
+
+                    //Show the HUD exactly once when the fade-in is complete
+                    if (onHudVisibilityChange) onHudVisibilityChange(true);
                 }
                 rgba current = lerpRGBA(black_target, morning_target, t);
-                if (onHudVisibilityChange) onHudVisibilityChange(true);
                 applyTint(entities, current);
             }
             break;

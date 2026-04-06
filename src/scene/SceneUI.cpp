@@ -144,8 +144,9 @@ Entity &Scene::createItemHaggleDisplay(Entity &parent) {
     TextureManager::updateLabel(nameLabelComp);
 
     // Your nameLabel math was already perfectly centered!
-    nameLabel.addComponent<Transform>(Vector2D(parentT.position.x + parentCenterX - (nameLabelComp.dst.w / 2.0f),
-                                               parentT.position.y + 40), 0.0f, 1.0f);
+    nameLabel.addComponent<Transform>(
+        Vector2D(absoluteX + (subWidth / 2.0f) - (nameLabelComp.dst.w / 2.0f),
+                 absoluteY + 10.0f), 0.0f, 1.0f);
     nameLabel.addComponent<Parent>(&subOverlay);
     subOverlay.getComponent<Children>().children.push_back(&nameLabel);
 
@@ -679,6 +680,21 @@ void Scene::createDaySummaryFooter(Entity &overlay, const DaySummaryData &data,D
     balEnt.addComponent<Parent>(&overlay);
     overlay.getComponent<Children>().children.push_back(&balEnt);
 
+    // --- 3.5. TOTAL DEBT TEXT (NEW) ---
+    auto &totalDebtEnt = world.createEntity();
+    session.totalDebtTextRef = &totalDebtEnt;
+    std::string tdText = "Total Debt: " + std::to_string(data.totalDebt) + "g";
+    // Using your UI's red color {211, 47, 47, 255} so it looks like a debt
+    Label tdData = {tdText, AssetManager::getFont("arial"), {211, 47, 47, 255}, LabelType::Static, "totalDebtText"};
+    tdData.dirty = true;
+    tdData.visible = false;
+    TextureManager::updateLabel(totalDebtEnt.addComponent<Label>(tdData));
+
+    // Place it exactly below the Current Balance text
+    totalDebtEnt.addComponent<Transform>(Vector2D(baseX + (overlaySprite.dst.w * 0.45f), footerY + 50.0f), 0.0f, 1.0f);
+    totalDebtEnt.addComponent<Parent>(&overlay);
+    overlay.getComponent<Children>().children.push_back(&totalDebtEnt);
+
     // --- 4. CONFIRM BUTTON ---
     auto &btnEnt = world.createEntity();
     float btnWidth = 160.0f;
@@ -702,14 +718,24 @@ void Scene::createDaySummaryFooter(Entity &overlay, const DaySummaryData &data,D
     clickable.onCancel = [&btnTransform] { btnTransform.scale = 1.0f; };
     clickable.onReleased = [&overlay, &btnTransform, this, &dayCycle]() {
         btnTransform.scale = 1.0f;
-        std::cout << "Starting next day cycle..." << std::endl;
-
-        // Hide UI
         toggleSettingsOverlayVisibility(overlay, nullptr);
 
-        // TODO: Fire event to DayCycleSystem to swap to Morning phase
-        dayCycle.phaseSwapReady = true;
+        // 1. Grab the session data to see if we won or lost
+        auto &session = overlay.getComponent<DaySummarySession>();
 
+        if (session.currentData.isBankrupt) {
+            // ❌ LOSE CONDITION
+            Game::onSceneChangeRequest("gameover");
+        }
+        else if (session.currentData.isGameWon) {
+            // ✅ WIN CONDITION
+            Game::onSceneChangeRequest("victory");
+        }
+        else {
+            // ⏩ NORMAL PLAY (Next Day)
+            std::cout << "Starting next day cycle..." << std::endl;
+            dayCycle.phaseSwapReady = true;
+        }
     };
 
     btnEnt.addComponent<Parent>(&overlay);
@@ -787,6 +813,7 @@ Entity &Scene::updateDaySummaryUI(const DaySummaryData &data) {
         balLabel.dirty = true;
         TextureManager::updateLabel(balLabel);
     }
+
 
     // 4. Open the menu
     bool forceOpen = true;
@@ -1519,6 +1546,12 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
         cTransform.scale = 1.0f;
         bool close = false;
         toggleSettingsOverlayVisibility(*UIOrderScreen, &close);
+
+        if (UIHud) {
+            bool showHud = true;
+            toggleSettingsOverlayVisibility(*UIHud, &showHud);
+        }
+
         auto& s = UIOrderScreen->getComponent<OrderSession>();
         if (s.onContinue) s.onContinue();
     };
@@ -1612,7 +1645,9 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
         if (hasItem) {
             ItemDef item = availableItems[i];
             auto& bClick = slot.buyBtn->getComponent<Clickable>();
-            bClick.onReleased = [this, item, &wallet, &inv]() {
+            auto &bTransform = slot.buyBtn->getComponent<Transform>();
+            bClick.onReleased = [this, item, &bTransform, &wallet, &inv]() {
+                bTransform.scale = 1.0f;
                 float trendMod = world.getMarketTrendSystem().getModifier(item);
                 int trendPrice = static_cast<int>(item.basePrice * trendMod);
 
@@ -1706,11 +1741,17 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
 
         auto &sClick = session.shelfBuyBtn->getComponent<Clickable>();
         auto &sBtnTransform = session.shelfBuyBtn->getComponent<Transform>();
-        sClick.onReleased = [this, &sBtnTransform]() {
+        sClick.onReleased = [this]() {
             auto& s = UIOrderScreen->getComponent<OrderSession>();
+            auto& sBtnTransform = s.shelfBuyBtn->getComponent<Transform>();
             sBtnTransform.scale = 1.0f;
 
-            if (s.onBuyShelf) s.onBuyShelf(); // deducts wallet internally
+            if (s.onBuyShelf) s.onBuyShelf();
+
+            // Recalculate price for NEXT shelf after purchase
+            if (s.getShelfPrice) {
+                s.currentShelfPrice = s.getShelfPrice(Game::gameState.displayCasesUnlocked);
+            }
 
             // Refresh wallet label
             if (s.walletLabelRef && s.walletRef) {
@@ -1720,9 +1761,9 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
                 TextureManager::updateLabel(lbl);
             }
 
-            // Re-evaluate shelf button for NEXT purchase
             bool nowMaxed = Game::gameState.displayCasesUnlocked >= 15;
-            bool canStillAfford = !nowMaxed && s.walletRef && (*s.walletRef >= s.currentShelfPrice);
+            bool canStillAfford = !nowMaxed && s.walletRef &&
+                                  (*s.walletRef >= s.currentShelfPrice);
 
             s.shelfBuyBtn->getComponent<Collider>().enabled = canStillAfford;
 
@@ -1736,6 +1777,11 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
 
     bool forceOpen = true;
     toggleSettingsOverlayVisibility(*UIOrderScreen, &forceOpen);
+
+    if (UIHud) {
+        bool hideHud = false;
+        toggleSettingsOverlayVisibility(*UIHud, &hideHud);
+    }
 
     //apply hidden on items you can't buy yet
     for (int i = 0; i < (int)session.slots.size(); ++i) {
@@ -1815,9 +1861,21 @@ Entity& Scene::createDialogueUI(int windowWidth, int windowHeight) {
         bool close = false;
         toggleSettingsOverlayVisibility(*UIDialogue, &close);
 
-        auto& s = UIDialogue->getComponent<DialogueSession>();
-        if (s.onConfirm) s.onConfirm();
-        s.onConfirm = nullptr; // clear so it doesn't fire twice
+        //Turn back on HUD
+        if (UIHud) {
+            bool show = true;
+            toggleSettingsOverlayVisibility(*UIHud, &show);
+        }
+
+        // Check if haggle system has a pending confirm first
+        auto& haggle = world.getHaggleSystem();
+        if (haggle.pendingConfirm) {
+            haggle.onDialogueConfirmed();
+        } else if (simpleDialogueConfirm) {
+            auto cb = simpleDialogueConfirm;
+            simpleDialogueConfirm = nullptr;
+            if (cb) cb();
+        }
     };
 
     btnEnt.addComponent<Parent>(&overlay);
@@ -1828,13 +1886,11 @@ Entity& Scene::createDialogueUI(int windowWidth, int windowHeight) {
     return overlay;
 }
 
-Entity& Scene::updateDialogueUI(const std::string& message, std::function<void()> onConfirm) {
+Entity& Scene::updateDialogueUI(const std::string& message) {
     if (!UIDialogue) return *UIDialogue;
 
     auto& session = UIDialogue->getComponent<DialogueSession>();
-    session.onConfirm = onConfirm;
 
-    // Update message text
     if (session.messageLabelRef) {
         auto& lbl = session.messageLabelRef->getComponent<Label>();
         lbl.text = message;
@@ -1846,6 +1902,38 @@ Entity& Scene::updateDialogueUI(const std::string& message, std::function<void()
     toggleSettingsOverlayVisibility(*UIDialogue, &forceOpen);
 
     return *UIDialogue;
+}
+
+void Scene::showSimpleDialogue(const std::string& message) {
+    if (!UIDialogue) return;
+
+    if (UIHud) { //Hide Hud
+        bool hide = false;
+        toggleSettingsOverlayVisibility(*UIHud, &hide);
+    }
+
+    auto& session = UIDialogue->getComponent<DialogueSession>();
+
+    // Update message
+    if (session.messageLabelRef) {
+        auto& lbl = session.messageLabelRef->getComponent<Label>();
+        lbl.text = message;
+        lbl.dirty = true;
+        TextureManager::updateLabel(lbl);
+    }
+
+    //Lock the player movement
+    playerEntity->getComponent<PlayerTag>().movementLocked = true;
+
+    // Store a simple close callback
+    simpleDialogueConfirm = [this]() {
+        // Nothing to chain, just closed
+        simpleDialogueConfirm = nullptr;
+        playerEntity->getComponent<PlayerTag>().movementLocked = false;
+    };
+
+    bool forceOpen = true;
+    toggleSettingsOverlayVisibility(*UIDialogue, &forceOpen);
 }
 
 //HUD
@@ -1952,7 +2040,7 @@ void Scene::updateHUD(const Wallet& wallet, const DayCycle& dayCycle) {
     // Update day label
     if (session.dayLabelRef) {
         auto& lbl = session.dayLabelRef->getComponent<Label>();
-        lbl.text = "Day " + std::to_string(dayCycle.date + 1);
+        lbl.text = "Day " + std::to_string(dayCycle.date);
         lbl.dirty = true;
         TextureManager::updateLabel(lbl);
     }
