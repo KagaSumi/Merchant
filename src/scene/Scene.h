@@ -206,7 +206,7 @@ private:
     void initSystems();
     void initHaggleSystem();
     void initDayCycleCallbacks();
-    void initEntities(int windowWidth, int windowHeight);
+    void initEntities();
     //Cached pointers
     Entity* storeEntity = nullptr;
     Entity* playerEntity = nullptr;
@@ -235,8 +235,8 @@ private:
     Entity& updateHaggleUI(ItemDef &item);
     Entity& createHaggleUI(int windowWidth, int windowHeight);
     Entity& createItemHaggleDisplay(Entity& parent); // Item Overlay
-    Entity& createPriceSelection(int windowWidth, int windowHeight, Entity& overlay); //Price Selection
-    Entity& createHaggleButton(int windowWidth, int windowHeight, Entity& overlay); // Confirm Button
+    Entity& createPriceSelection(Entity &overlay); //Price Selection
+    Entity& createHaggleButton(Entity &overlay); // Confirm Button
 
     //Inventory UI
     Entity& createInventoryUI(int windowWidth, int windowHeight);
@@ -280,7 +280,6 @@ private:
 
     void toggleSettingsOverlayVisibility(Entity& overlay, bool* forceState);
 
-    Entity& createPlayerPosLabel();
 };
 
 #endif //PROJECT_SCENE_H

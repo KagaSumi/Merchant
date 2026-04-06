@@ -206,14 +206,14 @@ Entity &Scene::createHaggleUI(int windowWidth, int windowHeight) {
 
     // Build the modular parts
     createItemHaggleDisplay(mainOverlay);
-    createPriceSelection(windowWidth, windowHeight, mainOverlay);
-    createHaggleButton(windowWidth, windowHeight, mainOverlay);
+    createPriceSelection(mainOverlay);
+    createHaggleButton(mainOverlay);
 
     UIMenu = &mainOverlay;
     return mainOverlay;
 }
 
-Entity &Scene::createPriceSelection(int windowWidth, int windowHeight, Entity &overlay) {
+Entity &Scene::createPriceSelection(Entity &overlay) {
     auto &session = overlay.getComponent<HaggleSession>();
     auto &overlayTransform = overlay.getComponent<Transform>();
     auto &overlaySprite = overlay.getComponent<Sprite>();
@@ -411,7 +411,7 @@ Entity &Scene::createPriceSelection(int windowWidth, int windowHeight, Entity &o
     return overlay;
 }
 
-Entity &Scene::createHaggleButton(int windowWidth, int windowHeight, Entity &overlay) {
+Entity &Scene::createHaggleButton(Entity &overlay) {
     auto &overlayTransform = overlay.getComponent<Transform>();
     auto &overlaySprite = overlay.getComponent<Sprite>();
 
@@ -441,7 +441,7 @@ Entity &Scene::createHaggleButton(int windowWidth, int windowHeight, Entity &ove
         haggleTransform.scale = 1.0f;
         auto& session = overlay.getComponent<HaggleSession>();
         int finalPrice = session.getProposedPrice();
-        toggleSettingsOverlayVisibility(overlay, nullptr);
+        world.getUIVisibilityManager().hide("haggle");
         world.getHaggleSystem().submitOffer(finalPrice);
     };
 
@@ -506,8 +506,7 @@ Entity &Scene::updateHaggleUI(ItemDef &item) {
     }
 
     // 5. Open the menu
-    bool forceOpen = true;
-    toggleSettingsOverlayVisibility(*UIMenu, &forceOpen);
+    world.getUIVisibilityManager().show("haggle");
 
     return *UIMenu;
 }
@@ -719,32 +718,11 @@ void Scene::createDaySummaryFooter(Entity &overlay, const DaySummaryData &data,D
     clickable.onReleased = [&overlay, &btnTransform, this, &dayCycle]() {
         btnTransform.scale = 1.0f;
         toggleSettingsOverlayVisibility(overlay, nullptr);
-
-        // 1. Grab the session data to see if we won or lost
-        auto &session = overlay.getComponent<DaySummarySession>();
-
-        if (session.currentData.isBankrupt) {
-            // ❌ LOSE CONDITION
-            Game::onSceneChangeRequest("gameover");
-        }
-        else if (session.currentData.isGameWon) {
-            // ✅ WIN CONDITION
-            Game::onSceneChangeRequest("victory");
-        }
-        else {
-            // ⏩ NORMAL PLAY (Next Day)
-            std::cout << "Starting next day cycle..." << std::endl;
-
-            if (UIHud) {
-                bool show = true;
-                toggleSettingsOverlayVisibility(*UIHud, &show);
-                auto& wallet = storeEntity->getComponent<Wallet>();
-                auto& dc = storeEntity->getComponent<DayCycle>();
-                updateHUD(wallet, dc);
-            }
-            dayCycle.phaseSwapReady = true;
-        }
+        world.getUIVisibilityManager().show("hud");
+        updateHUD(storeEntity->getComponent<Wallet>(), dayCycle);
+        dayCycle.phaseSwapReady = true;
     };
+
 
     btnEnt.addComponent<Parent>(&overlay);
     overlay.getComponent<Children>().children.push_back(&btnEnt);
@@ -824,14 +802,10 @@ Entity &Scene::updateDaySummaryUI(const DaySummaryData &data) {
 
 
     // 4. Open the menu (Show everything)
-    bool forceOpen = true;
-    toggleSettingsOverlayVisibility(*UIDaySummary, &forceOpen);
+    world.getUIVisibilityManager().show("summary");
 
     //Hide Hud
-    if (UIHud) {
-        bool hide = false;
-        toggleSettingsOverlayVisibility(*UIHud, &hide);
-    }
+    world.getUIVisibilityManager().hide("hud");
 
     //Hide Weekly Payment if none was made
     if (session.weeklyPaymentLabelRef && session.weeklyPaymentValRef) {
@@ -1480,10 +1454,6 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
                 auto& s = UIOrderScreen->getComponent<OrderSession>();
                 if (!s.inventoryRef || !s.walletRef) return;
                 if (slotIdx >= s.slots.size()) return;
-
-                // Find the item for this slot from the label text
-                // (we store item data in the slot directly via updateOrderUI)
-                // Deduct wallet and add to inventory handled in updateOrderUI's click capture
             };
 
             btnEnt.addComponent<Parent>(&mainOverlay);
@@ -1557,13 +1527,8 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
     cClick.onCancel = [&cTransform]{ cTransform.scale = 1.0f; };
     cClick.onReleased = [this, &cTransform]() {
         cTransform.scale = 1.0f;
-        bool close = false;
-        toggleSettingsOverlayVisibility(*UIOrderScreen, &close);
-
-        if (UIHud) {
-            bool showHud = true;
-            toggleSettingsOverlayVisibility(*UIHud, &showHud);
-        }
+        world.getUIVisibilityManager().hide("order");
+        world.getUIVisibilityManager().show("hud");
 
         auto& s = UIOrderScreen->getComponent<OrderSession>();
         if (s.onContinue) s.onContinue();
@@ -1645,8 +1610,6 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
             }
 
             // Also use trendPrice for affordability check, not basePrice
-            bool canAffordTrend = wallet.balance >= trendPrice;
-            slot.buyBtn->getComponent<Collider>().enabled = canAffordTrend;
             priceLbl.dirty = true;
             TextureManager::updateLabel(priceLbl);
         }
@@ -1788,13 +1751,9 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
         };
     }
 
-    bool forceOpen = true;
-    toggleSettingsOverlayVisibility(*UIOrderScreen, &forceOpen);
 
-    if (UIHud) {
-        bool hideHud = false;
-        toggleSettingsOverlayVisibility(*UIHud, &hideHud);
-    }
+    world.getUIVisibilityManager().show("order");
+    world.getUIVisibilityManager().hide("hud");
 
     //apply hidden on items you can't buy yet
     for (int i = 0; i < (int)session.slots.size(); ++i) {
@@ -1874,13 +1833,16 @@ Entity& Scene::createDialogueUI(int windowWidth, int windowHeight) {
         bool close = false;
         toggleSettingsOverlayVisibility(*UIDialogue, &close);
 
-        //Turn back on HUD
-        if (UIHud) {
-            bool show = true;
-            toggleSettingsOverlayVisibility(*UIHud, &show);
+        // Only restore HUD if no other full-screen UI is open
+        auto& ui = world.getUIVisibilityManager();
+        bool orderOpen   = ui.isVisible("order");
+        bool summaryOpen = ui.isVisible("summary");
+        bool haggleOpen  = ui.isVisible("haggle");
+
+        if (!orderOpen && !summaryOpen && !haggleOpen) {;
+            ui.show("hud");
         }
 
-        // Check if haggle system has a pending confirm first
         auto& haggle = world.getHaggleSystem();
         if (haggle.pendingConfirm) {
             haggle.onDialogueConfirmed();
@@ -1890,6 +1852,7 @@ Entity& Scene::createDialogueUI(int windowWidth, int windowHeight) {
             if (cb) cb();
         }
     };
+
 
     btnEnt.addComponent<Parent>(&overlay);
     overlay.getComponent<Children>().children.push_back(&btnEnt);
@@ -1911,8 +1874,8 @@ Entity& Scene::updateDialogueUI(const std::string& message) {
         TextureManager::updateLabel(lbl);
     }
 
-    bool forceOpen = true;
-    toggleSettingsOverlayVisibility(*UIDialogue, &forceOpen);
+    world.getUIVisibilityManager().hide("hud");
+    world.getUIVisibilityManager().show("dialogue");
 
     return *UIDialogue;
 }
@@ -1920,10 +1883,7 @@ Entity& Scene::updateDialogueUI(const std::string& message) {
 void Scene::showSimpleDialogue(const std::string& message) {
     if (!UIDialogue) return;
 
-    if (UIHud) { //Hide Hud
-        bool hide = false;
-        toggleSettingsOverlayVisibility(*UIHud, &hide);
-    }
+    world.getUIVisibilityManager().hide("hud");
 
     auto& session = UIDialogue->getComponent<DialogueSession>();
 
@@ -1945,8 +1905,7 @@ void Scene::showSimpleDialogue(const std::string& message) {
         playerEntity->getComponent<PlayerTag>().movementLocked = false;
     };
 
-    bool forceOpen = true;
-    toggleSettingsOverlayVisibility(*UIDialogue, &forceOpen);
+    world.getUIVisibilityManager().show("dialogue");
 }
 
 //HUD
@@ -2120,19 +2079,4 @@ void Scene::toggleSettingsOverlayVisibility(Entity &overlay, bool *forceState) {
             }
         }
     }
-}
-
-Entity &Scene::createPlayerPosLabel() {
-    auto &playerPosLabel(world.createEntity());
-    Label label = {
-        "Text String",
-        AssetManager::getFont("arial"),
-        {255, 255, 255, 255},
-        LabelType::PlayerPosition,
-        "playerPos"
-    };
-    TextureManager::loadLabel(label);
-    playerPosLabel.addComponent<Label>(label);
-    playerPosLabel.addComponent<Transform>(Vector2D(10, 10), 0.0f, 1.0f);
-    return playerPosLabel;
 }

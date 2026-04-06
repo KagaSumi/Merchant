@@ -34,6 +34,7 @@
 #include  "MouseInputSystem.h"
 #include "PreRenderSystem.h"
 #include "ResultMenuSystem.h"
+#include "manager/UIVisibilityManager.h"
 
 void printCollision(const CollisionEvent& collision);
 
@@ -65,6 +66,7 @@ class World {
     MarketTrendSystem marketTrendSystem;
     CustomerDialogueSystem customerDialogueSystem;
     ResultMenuSystem resultMenuSystem;
+    UIVisibilityManager uiVisibilityManager;
 
     public:
     World() = default;
@@ -159,6 +161,7 @@ class World {
     MarketTrendSystem& getMarketTrendSystem() { return marketTrendSystem; }
     CustomerDialogueSystem& getCustomerDialogueSystem() { return customerDialogueSystem; }
     CustomerSpawnerSystem& getCustomerSpawnerSystem() { return customerSpawnerSystem; }
+    UIVisibilityManager& getUIVisibilityManager() { return uiVisibilityManager; }
 };
 
 #endif //PROJECT_WORLD_H

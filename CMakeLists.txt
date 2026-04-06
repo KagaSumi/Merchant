@@ -54,6 +54,7 @@ add_executable(Project src/main.cpp
         src/ecs/system/CustomerDialogueSystem.h
         src/ecs/system/CustomerDialogueSystem.cpp
         src/ecs/system/ResultMenuSystem.h.cpp
+        src/manager/UIVisibilityManager.cpp
 )
 
 target_link_libraries(Project

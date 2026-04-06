@@ -71,7 +71,7 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
     initWorld(windowWidth, windowHeight);
     initPlayer(windowWidth, windowHeight);
     initSystems();
-    initEntities(windowWidth, windowHeight);
+    initEntities();
 }
 
 void Scene::initAssets(const char *mapPath) {
@@ -118,6 +118,16 @@ void Scene::initUI(int windowWidth, int windowHeight) {
 
     createDialogueUI(windowWidth, windowHeight);
     createHUD(windowWidth, windowHeight);
+
+    //Register All UI
+    auto& ui = world.getUIVisibilityManager();
+    ui.registerPanel("hud",       UIHud);
+    ui.registerPanel("haggle",    UIMenu);
+    ui.registerPanel("inventory", UIInventory);
+    ui.registerPanel("quantity",  UIQuantityScreen);
+    ui.registerPanel("order",     UIOrderScreen);
+    ui.registerPanel("summary",   UIDaySummary);
+    ui.registerPanel("dialogue",  UIDialogue);
 }
 
 void Scene::initWorld(int windowWidth, int windowHeight) {
@@ -222,10 +232,10 @@ void Scene::initHaggleSystem() {
     };
 
     // CustomerDialogueSystem provides the lines
-    haggleSystem.onGetOpeningLine = [&dialogue](float mood) { return dialogue.getOpeningLine(mood); };
-    haggleSystem.onGetRejectionLine = [&dialogue](int patience) { return dialogue.getRejectionLine(patience); };
-    haggleSystem.onGetWalkawayLine = [&dialogue]() { return dialogue.getWalkawayLine(); };
-    haggleSystem.onGetSuccessLine = [&dialogue](int sale, int base) { return dialogue.getSuccessLine(sale, base); };
+    haggleSystem.onGetOpeningLine = [this](float mood) { return world.getCustomerDialogueSystem().getOpeningLine(mood); };
+    haggleSystem.onGetRejectionLine = [this](int patience) { return world.getCustomerDialogueSystem().getRejectionLine(patience); };
+    haggleSystem.onGetWalkawayLine = [this]() { return world.getCustomerDialogueSystem().getWalkawayLine(); };
+    haggleSystem.onGetSuccessLine = [this](int sale, int base) { return world.getCustomerDialogueSystem().getSuccessLine(sale, base); };
 
     haggleSystem.onSaleComplete = [this, &dialogue](int salePrice, int profitMargin) {
         auto &wallet = storeEntity->getComponent<Wallet>();
@@ -322,7 +332,6 @@ void Scene::initDayCycleCallbacks() {
         if (isPaymentDay) {
             bankrupt = !world.getDebtSystem().payDebt(wallet, debt);
         }
-        bool gameWon = (debt.amount <= 0);
 
         int snapshotIncome = wallet.dailyIncome;
 
@@ -341,7 +350,7 @@ void Scene::initDayCycleCallbacks() {
 
         updateOrderUI(available, wallet, inv,
                       // onContinue
-                      [this, snapshotIncome, snapshotDebt, isPaymentDay, debt, bankrupt, gameWon]() {
+                      [this, snapshotIncome, snapshotDebt, isPaymentDay, debt, bankrupt]() {
                           auto &wallet = storeEntity->getComponent<Wallet>();
                           auto &dayCycle = storeEntity->getComponent<DayCycle>();
 
@@ -354,7 +363,7 @@ void Scene::initDayCycleCallbacks() {
                           summary.totalDebt = debt.amount;
                           summary.daysUntilPayment = isPaymentDay ? 0 : (7 - (dayCycle.date % 7));
                           summary.isBankrupt = bankrupt;
-                          summary.isGameWon = gameWon;
+                          summary.isGameWon = (debt.amount <= 0);
                           updateDaySummaryUI(summary);
                       },
                       // onBuyShelf
@@ -387,19 +396,17 @@ void Scene::initDayCycleCallbacks() {
     };
 
     dayCycleSystem.onHudVisibilityChange = [this](bool visible) {
-        if (!UIHud) return;
-        bool v = visible;
-        toggleSettingsOverlayVisibility(*UIHud, &v);
-
         if (visible) {
-            auto &wallet = storeEntity->getComponent<Wallet>();
-            auto &dayCycle = storeEntity->getComponent<DayCycle>();
-            updateHUD(wallet, dayCycle);
+            world.getUIVisibilityManager().show("hud");
+            updateHUD(storeEntity->getComponent<Wallet>(),
+                      storeEntity->getComponent<DayCycle>());
+        } else {
+            world.getUIVisibilityManager().hide("hud");
         }
     };
 }
 
-void Scene::initEntities(int windowWidth, int windowHeight) {
+void Scene::initEntities() {
     SDL_Point door = world.getMap().Door;
     SDL_Point regi = world.getMap().Register;
     auto &dayCycle = storeEntity->getComponent<DayCycle>();
