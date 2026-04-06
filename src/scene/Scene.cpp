@@ -126,7 +126,6 @@ void Scene::initUI(int windowWidth, int windowHeight) {
     ui.registerPanel("inventory", UIInventory);
     ui.registerPanel("quantity",  UIQuantityScreen);
     ui.registerPanel("order",     UIOrderScreen);
-    ui.registerPanel("summary",   UIDaySummary);
     ui.registerPanel("dialogue",  UIDialogue);
 }
 
@@ -163,6 +162,7 @@ void Scene::initWorld(int windowWidth, int windowHeight) {
 
     // Day summary needs dayCycle ref at create time
     createDaySummaryUI(windowWidth, windowHeight, dayCycle);
+    world.getUIVisibilityManager().registerPanel("summary",   UIDaySummary);
 
     updateHUD(wallet, dayCycle);
 }
