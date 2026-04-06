@@ -136,7 +136,7 @@ Entity &Scene::createItemHaggleDisplay(Entity &parent) {
     // --- ITEM NAME ---
     auto &nameLabel = world.createEntity();
     Label nameData = {
-        session.currentItem.name, AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "itemName"
+        session.currentItem.name, AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static,  "itemName", subWidth - 20.0f
     };
     auto &nameLabelComp = nameLabel.addComponent<Label>(nameData);
     nameLabelComp.visible = false;
@@ -1799,7 +1799,7 @@ Entity& Scene::createDialogueUI(int windowWidth, int windowHeight) {
     auto& msgEnt = world.createEntity();
     Label msgData = {
         "...", AssetManager::getFont("arial"),
-        {0, 0, 0, 255}, LabelType::Static, "dialogueMsg"
+        {0, 0, 0, 255}, LabelType::Static,  "dialogueMsg",boxW - 40.0f
     };
     auto& msgComp = msgEnt.addComponent<Label>(msgData);
     msgComp.dirty = true;

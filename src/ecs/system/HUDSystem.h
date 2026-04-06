@@ -33,12 +33,12 @@ class HUDSystem {
 
 
                 //update player position label
-                if (label.type == LabelType::PlayerPosition) {
-                    std::stringstream ss;
-                    ss << "Player position: " << playerTransform.position;
-                    label.text = ss.str();
-                    label.dirty = true;
-                }
+                // if (label.type == LabelType::PlayerPosition) {
+                //     std::stringstream ss;
+                //     ss << "Player position: " << playerTransform.position;
+                //     label.text = ss.str();
+                //     label.dirty = true;
+                // }
             }
         }
 

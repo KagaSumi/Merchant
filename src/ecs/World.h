@@ -88,7 +88,7 @@ class World {
             haggleSystem.update();
             cameraSystem.update(entities);
             customerSpawnerSystem.update(entities, dt);
-            hudSystem.update(entities);
+            // hudSystem.update(entities);
         }
 
 

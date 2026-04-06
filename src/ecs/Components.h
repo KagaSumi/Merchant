@@ -106,7 +106,6 @@ struct Children {
 };
 
 enum class LabelType {
-    PlayerPosition,
     Static
 };
 
@@ -114,8 +113,10 @@ struct Label {
     std::string text;
     TTF_Font *font = nullptr;
     SDL_Color color{};
-    LabelType type = LabelType::PlayerPosition;
+    LabelType type = LabelType::Static;
     std::string textureCacheKey{};
+    float wrapLength = 0;
+
     SDL_Texture *texture = nullptr;
     SDL_FRect dst{};
     bool visible = true;

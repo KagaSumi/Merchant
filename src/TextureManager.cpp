@@ -69,12 +69,25 @@ void TextureManager::updateLabel(Label& label) {
         label.texture = nullptr;
     }
 
-    SDL_Surface* tempSurface = TTF_RenderText_Blended(
-        label.font,
-        label.text.c_str(),
-        label.text.size(),
-        label.color);
+    SDL_Surface* tempSurface = nullptr;
 
+    if (label.wrapLength > 0) {
+        tempSurface = TTF_RenderText_Blended_Wrapped(
+            label.font,
+            label.text.c_str(),
+            label.text.size(),
+            label.color,
+            label.wrapLength
+        );
+    } else {
+        // Fall back to standard single-line rendering
+        tempSurface = TTF_RenderText_Blended(
+            label.font,
+            label.text.c_str(),
+            label.text.size(),
+            label.color
+        );
+    }
         if (!tempSurface) {
             std::cerr << "Failed to load surface: " << label.textureCacheKey << std::endl;
         }
