@@ -155,7 +155,6 @@ class Scene {
 
     struct DialogueSession {
         std::string currentMessage;
-        std::function<void()> onConfirm;
         Entity* messageLabelRef = nullptr;
         Entity* confirmBtnRef = nullptr;
     };
@@ -267,7 +266,9 @@ private:
     //Dialogue Screen
     Entity* UIDialogue = nullptr;
     Entity& createDialogueUI(int windowWidth, int windowHeight);
-    Entity& updateDialogueUI(const std::string& message, std::function<void()> onConfirm);
+    Entity& updateDialogueUI(const std::string &message);
+    std::function<void()> simpleDialogueConfirm;
+    void showSimpleDialogue(const std::string& message); // One off UI
 
     //HUD
     Entity* UIHud = nullptr;

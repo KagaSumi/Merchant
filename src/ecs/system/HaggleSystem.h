@@ -18,27 +18,34 @@ public:
 
     void enqueue(Entity* customerEntity);
     void update();
+    void onDialogueConfirmed();
+    void resumeQueue() {update();}
     void submitOffer(int offeredPrice);
     void dismissFeedback();
-    void pauseQueue() { showingFeedback = true; }
-    void resumeQueue() {
-        showingFeedback = false;
-        update();
-    }
 
-    // --- WIRED FROM initGameplay ---
-    std::function<void(int salePrice, int profitMargin)> onSaleComplete;
-    std::function<void(const ItemDef&)> onBeginHaggle;   // opens haggle UI
-    std::function<void(const std::string&)> onShowFeedback; // opens dialogue UI
-    std::function<void(const ItemDef&)> onRetryHaggle;   // skips dialogue, re-opens haggle UI
-    std::function<float(const ItemDef&)> getPriceModifier;  // market trend hook
+    // --- WIRED FROM Scene ---
+    std::function<void(const std::string&)> onShowDialogue;
+    std::function<void(const ItemDef&)> onShowHaggleUI;
+    std::function<void(int, int)> onSaleComplete;
+    std::function<float(const ItemDef&)> getPriceModifier;
 
-    bool showingFeedback = false;
+    // CustomerDialogueSystem wires these
+    std::function<std::string(float mood)> onGetOpeningLine;
+    std::function<std::string(int patience)> onGetRejectionLine;
+    std::function<std::string()> onGetWalkawayLine;
+    std::function<std::string(int salePrice, int basePrice)> onGetSuccessLine;
+
     std::string feedbackMessage;
     Entity* activeCustomer = nullptr;
+    std::function<void()> pendingConfirm;
+    void pushDialogue(const std::string& msg, std::function<void()> onConfirm);
 
 private:
     std::queue<Entity*> waitingCustomers;
+    std::queue<std::pair<std::string, std::function<void()>>> dialogueQueue;
+    bool dialogueBusy = false;
+
+    void processDialogueQueue();
 
 
     void beginHaggle();
