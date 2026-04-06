@@ -123,6 +123,7 @@ struct Label {
 };
 
 struct PlayerTag {
+    bool movementLocked = false;
 };
 
 enum class DayPhase {
