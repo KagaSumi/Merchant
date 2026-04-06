@@ -35,7 +35,7 @@ void Scene::initMainMenu(int windowWidth, int windowHeight) {
     menu.addComponent<Transform>(Vector2D(0, 0), 0.0f, 1.0f);
 
     SDL_Texture *texture = TextureManager::load("../asset/menu.png");
-    SDL_FRect menuSrc{0, 0, (float) 2400, (float) 1792};
+    SDL_FRect menuSrc{0, 0, (float) 800, (float) 597};
     SDL_FRect menuDst{0, 0, (float) windowWidth, (float) windowHeight};
     menu.addComponent<Sprite>(texture, menuSrc, menuDst);
 
@@ -49,7 +49,7 @@ void Scene::initLose(int windowWidth, int windowHeight) {
     auto &screen(world.createEntity());
     screen.addComponent<Transform>(Vector2D(0, 0), 0.0f, 1.0f);
     SDL_Texture *texture = TextureManager::load("../asset/Lose.png");
-    SDL_FRect menuSrc{0, 0, (float) 4800, (float) 3584};
+    SDL_FRect menuSrc{0, 0, (float) 800, (float) 597};
     SDL_FRect menuDst{0, 0, (float) windowWidth, (float) windowHeight};
     screen.addComponent<Sprite>(texture, menuSrc, menuDst);
 }
@@ -60,7 +60,7 @@ void Scene::initWin(int windowWidth, int windowHeight) {
     auto &screen(world.createEntity());
     screen.addComponent<Transform>(Vector2D(0, 0), 0.0f, 1.0f);
     SDL_Texture *texture = TextureManager::load("../asset/Win.png");
-    SDL_FRect menuSrc{0, 0, (float) 2400, (float) 1792};
+    SDL_FRect menuSrc{0, 0, (float) 800, (float) 597};
     SDL_FRect menuDst{0, 0, (float) windowWidth, (float) windowHeight};
     screen.addComponent<Sprite>(texture, menuSrc, menuDst);
 }
@@ -175,7 +175,7 @@ void Scene::initPlayer(int windowWidth, int windowHeight) {
     playerEntity = &player;
 
     player.addComponent<Transform>(Vector2D(door.x * 32, door.y * 32), 1.0f);
-    player.addComponent<Velocity>(Vector2D(0, 0), 150.0f);
+    player.addComponent<Velocity>(Vector2D(0, 0), 200.0f);
     player.addComponent<PlayerTag>();
 
     Animation anim = AssetManager::getAnimation("customer");
@@ -424,7 +424,7 @@ void Scene::initEntities() {
     spawner.addComponent<Spawner>([this, door, customerTextures, customerIndexCount]() mutable {
         auto &e = world.createDeferredEntity();
         e.addComponent<Transform>(Vector2D(door.x * 32, door.y * 32), 1.0f);
-        e.addComponent<Velocity>(Vector2D(0, 0), 100.0f);
+        e.addComponent<Velocity>(Vector2D(0, 0), 200.0f);
         e.addComponent<CustomerAI>();
         e.addComponent<Customer>();
         e.addComponent<PathFinding>();
