@@ -36,6 +36,14 @@ void HaggleSystem::submitOffer(int offeredPrice) {
         customer.displayStand->quantity--;
         customer.displayStand->reserved_quantity--;
 
+        //Update Sprite if stand is now empty
+        if (customer.displayStand->quantity <= 0 && customer.displayStandEntity) {
+            if (customer.displayStandEntity->hasComponent<Sprite>()) {
+                customer.displayStandEntity->getComponent<Sprite>().src =
+                    customer.displayStand->emptySrc;
+            }
+        }
+
         // 2. Clean up AI state
         ai.isWaiting = false;
         ai.currentState = CustomerAIState::LeavingStore;

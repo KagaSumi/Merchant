@@ -734,6 +734,14 @@ void Scene::createDaySummaryFooter(Entity &overlay, const DaySummaryData &data,D
         else {
             // ⏩ NORMAL PLAY (Next Day)
             std::cout << "Starting next day cycle..." << std::endl;
+
+            if (UIHud) {
+                bool show = true;
+                toggleSettingsOverlayVisibility(*UIHud, &show);
+                auto& wallet = storeEntity->getComponent<Wallet>();
+                auto& dc = storeEntity->getComponent<DayCycle>();
+                updateHUD(wallet, dc);
+            }
             dayCycle.phaseSwapReady = true;
         }
     };
@@ -815,10 +823,15 @@ Entity &Scene::updateDaySummaryUI(const DaySummaryData &data) {
     }
 
 
-    // 4. Open the menu
+    // 4. Open the menu (Show everything)
     bool forceOpen = true;
     toggleSettingsOverlayVisibility(*UIDaySummary, &forceOpen);
 
+    //Hide Hud
+    if (UIHud) {
+        bool hide = false;
+        toggleSettingsOverlayVisibility(*UIHud, &hide);
+    }
 
     //Hide Weekly Payment if none was made
     if (session.weeklyPaymentLabelRef && session.weeklyPaymentValRef) {

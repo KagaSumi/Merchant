@@ -157,10 +157,12 @@ struct DisplayStand {
     ItemDef item = {};
     int quantity = 0;
     int reserved_quantity = 0; //incremented to prevent more than 1 customer buying the same item.
+    SDL_FRect emptySrc = {};
 };
 
 struct Customer {
-    DisplayStand *displayStand;
+    Entity* displayStandEntity = nullptr;
+    DisplayStand *displayStand = nullptr;
     int budget{}; // Maybe simplify and remove budget rng, and just deal with basevalue manip
     float mood{}; // Maybe simplify and remove budget rng, and just deal with basevalue manip
     int patience = 3;

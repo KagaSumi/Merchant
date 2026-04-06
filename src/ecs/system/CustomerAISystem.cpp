@@ -54,7 +54,7 @@ void CustomerAISystem::HandleHeadingToRegister(Entity& entity, CustomerAI& ai,Pa
 
             // Build list of stands that have stock AND aren't fully reserved
             auto& browsePoints = PathfindingSystem::GetBrowsePoints();
-            std::vector<DisplayStand*> available;
+            std::vector<const BrowsePoint*> available;
 
             for (auto& bp : browsePoints) {
                 if (!bp.standEntity) continue;
@@ -62,29 +62,26 @@ void CustomerAISystem::HandleHeadingToRegister(Entity& entity, CustomerAI& ai,Pa
 
                 auto& stand = bp.standEntity->getComponent<DisplayStand>();
 
-                // Stand must have actual items placed on it
                 if (stand.quantity <= 0) continue;
-
-                // Stand must have an actual item assigned (not default empty ItemDef)
                 if (stand.item.name.empty()) continue;
-
-                // Must have unreserved stock remaining
                 if (stand.reserved_quantity >= stand.quantity) continue;
 
-                available.push_back(&stand);
+                available.push_back(&bp);  // store the BrowsePoint, not just the stand
             }
 
             if (available.empty()) {
-                // Nothing to buy at all, just leave politely
                 ai.isWaiting = false;
                 ai.currentState = CustomerAIState::LeavingStore;
                 return;
             }
 
-            // Pick a random available stand
+            // Pick random
             std::mt19937 rng(std::random_device{}());
             int idx = std::uniform_int_distribution<int>(0, (int)available.size() - 1)(rng);
-            customer.displayStand = available[idx];
+
+            const BrowsePoint* chosen = available[idx];
+            customer.displayStandEntity = chosen->standEntity;
+            customer.displayStand = &chosen->standEntity->getComponent<DisplayStand>();
             customer.displayStand->reserved_quantity++;
 
             haggleSystem->enqueue(&entity);

@@ -31,8 +31,9 @@ Entity &Scene::createDisplaycase(Vector2D location, SDL_Texture *texture, SDL_FR
     SDL_FRect emptySrc = src;
 
     // 2. PASS `emptySrc` INTO THIS LAMBDA
-    displayCase.addComponent<Interaction>([casePtr, cyclePtr, playerRef, emptySrc, this]() {
+    displayCase.addComponent<Interaction>([casePtr, cyclePtr, playerRef, emptySrc, this, src]() {
         auto &dc = casePtr->getComponent<DisplayStand>();
+        dc.emptySrc = src;
 
         if (cyclePtr->currentPhase != DayPhase::Morning) return;
         if (!playerRef || !playerRef->hasComponent<Inventory>()) return;
