@@ -33,6 +33,7 @@
 #include  "UIRenderSystem.h"
 #include  "MouseInputSystem.h"
 #include "PreRenderSystem.h"
+#include "ResultMenuSystem.h"
 
 void printCollision(const CollisionEvent& collision);
 
@@ -63,6 +64,7 @@ class World {
     HaggleSystem haggleSystem;
     MarketTrendSystem marketTrendSystem;
     CustomerDialogueSystem customerDialogueSystem;
+    ResultMenuSystem resultMenuSystem;
 
     public:
     World() = default;
@@ -70,7 +72,11 @@ class World {
         if (sceneType == SceneType::MainMenu) {
             //Main Menu Scene Update
             mainMenuSystem.update(event);
-        }else {
+        }
+        else if (sceneType == SceneType::Victory || sceneType == SceneType::GameOver) {
+            resultMenuSystem.update(event);
+        }
+        else {
             keyboardInputSystem.update(entities, event,eventManager);
             customerAISystem.update(entities, dt,dayCycleSystem,&haggleSystem);
             movementSystem.update(entities, dt);
