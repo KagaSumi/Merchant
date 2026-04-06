@@ -17,7 +17,7 @@ struct GameState {
     int currentRepXP = 0;
     int xpToNextLevel = 100;
     int displayCasesUnlocked = 3;
-    int walletBalance = 5000;
+    int walletBalance = 1000;
     int debtTotal = 5000;
     int dayCount = 1;
 };
@@ -42,6 +42,9 @@ public:
     bool running() {
         return isRunning;
     }
+    static void setRunning(bool state) {
+        isRunning = state;
+    }
     SDL_Renderer* renderer = nullptr;
 
     SceneManager sceneManager;
@@ -51,7 +54,7 @@ public:
 
 private:
     int frameCount = 0;
-    bool isRunning = false;
+    static bool isRunning;
 
     SDL_Window* window = nullptr;
     SDL_Event event;
