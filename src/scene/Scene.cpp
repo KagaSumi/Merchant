@@ -236,33 +236,18 @@ void Scene::initHaggleSystem() {
     haggleSystem.onGetRejectionLine = [this](int patience) { return world.getCustomerDialogueSystem().getRejectionLine(patience); };
     haggleSystem.onGetWalkawayLine = [this]() { return world.getCustomerDialogueSystem().getWalkawayLine(); };
     haggleSystem.onGetSuccessLine = [this](int sale, int base) { return world.getCustomerDialogueSystem().getSuccessLine(sale, base); };
-
     haggleSystem.onSaleComplete = [this, &dialogue](int salePrice, int profitMargin) {
-        auto &wallet = storeEntity->getComponent<Wallet>();
-        auto &rep = storeEntity->getComponent<ShopReputation>();
-        auto &dc = storeEntity->getComponent<DayCycle>();
+        auto& wallet = storeEntity->getComponent<Wallet>();
+        auto& rep = storeEntity->getComponent<ShopReputation>();
+        auto& dc = storeEntity->getComponent<DayCycle>();
 
         wallet.balance += salePrice;
         wallet.dailyIncome += salePrice;
 
-        int xpGained = 10;
-        if (profitMargin > 0) {
-            float pct = static_cast<float>(profitMargin) / salePrice;
-            xpGained += static_cast<int>(pct * 50.0f);
-        }
-        Game::gameState.currentRepXP += xpGained;
+        bool leveledUp = world.getReputationSystem().onSale(salePrice, profitMargin, rep);
 
-        bool leveledUp = false;
-        while (Game::gameState.currentRepXP >= Game::gameState.xpToNextLevel) {
-            Game::gameState.currentRepXP -= Game::gameState.xpToNextLevel;
-            Game::gameState.xpToNextLevel = static_cast<int>(Game::gameState.xpToNextLevel * 1.5f);
-            Game::gameState.shopReputation++;
-            rep.reputation = Game::gameState.shopReputation;
-            leveledUp = true;
-        }
         updateHUD(wallet, dc);
 
-        // Use pushDialogue so it queues behind any pending dialogue
         int basePrice = salePrice - profitMargin;
         std::string successLine = dialogue.getSuccessLine(salePrice, basePrice);
 
@@ -309,11 +294,6 @@ void Scene::initDayCycleCallbacks() {
             playerEntity->getComponent<PlayerTag>().movementLocked = true;
         }
         updateHUD(wallet, dayCycle);
-
-        // Reset spawner for new day
-        auto &spawner = spawnerEntity->getComponent<Spawner>();
-        spawner.isFinished = false;
-        spawner.spawnCount = 0;
 
         world.getCustomerSpawnerSystem().resetForNewDay();
     };
@@ -424,7 +404,7 @@ void Scene::initEntities() {
     spawner.addComponent<Spawner>([this, door, customerTextures, customerIndexCount]() mutable {
         auto &e = world.createDeferredEntity();
         e.addComponent<Transform>(Vector2D(door.x * 32, door.y * 32), 1.0f);
-        e.addComponent<Velocity>(Vector2D(0, 0), 200.0f);
+        e.addComponent<Velocity>(Vector2D(0, 0), 180.0f);
         e.addComponent<CustomerAI>();
         e.addComponent<Customer>();
         e.addComponent<PathFinding>();
@@ -435,6 +415,8 @@ void Scene::initEntities() {
         SDL_Texture *tex = customerTextures[customerIndexCount++ % customerTextures.size()];
         e.addComponent<Sprite>(tex, anim.clips[anim.currentClip].frameIndicies[0],
                                SDL_FRect{-16.0f, -16.0f, 64, 64});
+
+        world.getDayCycleSystem().customerSpawned();
     });
 
     // Display cases

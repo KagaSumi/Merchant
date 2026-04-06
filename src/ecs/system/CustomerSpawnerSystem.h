@@ -12,13 +12,13 @@
 
 class CustomerSpawnerSystem {
 public:
-    void update(std::vector<std::unique_ptr<Entity> > &entities, float dt) {
-        // 1. Find the entities we care about
-        Entity *spawnerEntity = nullptr;
-        Entity *shopEntity = nullptr;
-        Entity *dayEntity = nullptr;
+    void update(std::vector<std::unique_ptr<Entity>>& entities, float dt)
+    {
+        spawnerEntity = nullptr;
+        shopEntity = nullptr;
+        dayEntity = nullptr;
 
-        for (auto &e: entities) {
+        for (auto& e : entities) {
             if (e->hasComponent<Spawner>()) spawnerEntity = e.get();
             if (e->hasComponent<ShopReputation>()) shopEntity = e.get();
             if (e->hasComponent<DayCycle>()) dayEntity = e.get();
@@ -26,36 +26,27 @@ public:
 
         if (!spawnerEntity || !shopEntity || !dayEntity) return;
 
-        // 2. grab references
         Spawner& spawner = spawnerEntity->getComponent<Spawner>();
-        ShopReputation &store = shopEntity->getComponent<ShopReputation>();
         DayPhase currentPhase = dayEntity->getComponent<DayCycle>().currentPhase;
-        if (currentPhase != DayPhase::ShopOpen) {
-            return;
-        }
 
-        // 3. Initialize Daily Customer
-        if (spawner.spawnCount == 0 && index == 0) {
-            spawner.spawnCount = calculateCustomer(store.reputation);
-            customerCount = spawner.spawnCount;
-        }
+        if (currentPhase != DayPhase::ShopOpen) return;
 
-        if (shouldSpawn(spawner,dt)) {
+        if (shouldSpawn(spawner, dt)) {
             spawner.spawnCallback();
             index++;
         }
     }
 
-    void resetForNewDay() {
-        index=0;
-        spawnTimer = 0.0f;
-    }
+    void resetForNewDay();
 
     bool shouldSpawn(Spawner& spawner,float dt);
 
-    int calculateCustomer(float reputation);
+    int calculateCustomer(float reputation,int day);
 
 private:
+    Entity *spawnerEntity = nullptr;
+    Entity *shopEntity = nullptr;
+    Entity *dayEntity = nullptr;
     int index = 0;
     int customerCount = 0;
     float spawnTimer = 0.0f;

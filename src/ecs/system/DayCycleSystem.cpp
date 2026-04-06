@@ -33,6 +33,7 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
             if (totalCustomersForDay == 0 && spawnerRef->spawnCount > 0) {
                 totalCustomersForDay = spawnerRef->spawnCount;
                 customersServed = 0; // Reset just to be safe
+                activeCustomers = 0;
             }
 
             // 3. Calculate Lerp progress (0.0f to 1.0f)
@@ -46,12 +47,13 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
             applyTint(entities, current_tint);
 
             // 5. Check if the day is completely over!
-            // If the spawner is done, AND everyone who entered has now left...
-            if (spawnerRef->isFinished && customersServed >= totalCustomersForDay) {
+            // If everyone who entered has now left...
+            if (spawnerRef->isFinished && activeCustomers == 0) {
 
                 // Reset our tracking variables for tomorrow
                 totalCustomersForDay = 0;
                 customersServed = 0;
+                activeCustomers = 0;
 
                 finishShop(); // Transition to evening
             }

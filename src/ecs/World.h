@@ -33,6 +33,7 @@
 #include  "UIRenderSystem.h"
 #include  "MouseInputSystem.h"
 #include "PreRenderSystem.h"
+#include "ReputationSystem.h"
 #include "ResultMenuSystem.h"
 #include "manager/UIVisibilityManager.h"
 
@@ -67,6 +68,7 @@ class World {
     CustomerDialogueSystem customerDialogueSystem;
     ResultMenuSystem resultMenuSystem;
     UIVisibilityManager uiVisibilityManager;
+    ReputationSystem reputationSystem;
 
     public:
     World() = default;
@@ -162,6 +164,7 @@ class World {
     CustomerDialogueSystem& getCustomerDialogueSystem() { return customerDialogueSystem; }
     CustomerSpawnerSystem& getCustomerSpawnerSystem() { return customerSpawnerSystem; }
     UIVisibilityManager& getUIVisibilityManager() { return uiVisibilityManager; }
+    ReputationSystem& getReputationSystem() { return reputationSystem; }
 };
 
 #endif //PROJECT_WORLD_H

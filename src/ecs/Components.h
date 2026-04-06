@@ -80,8 +80,10 @@ struct TimedSpawner {
 
 struct Spawner {
     std::function<void()> spawnCallback{};
-    bool isFinished = (bool) spawnCount;
     int spawnCount = 0;
+    int maxSpawns = 0;
+    float spawnInterval = 2.0f;
+    bool isFinished = false;
 };
 
 //Game State, scene because might have multiple scenes

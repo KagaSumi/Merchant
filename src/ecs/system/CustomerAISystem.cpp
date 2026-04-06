@@ -154,8 +154,8 @@ void CustomerAISystem::HandleLeavingStore(Entity& entity,CustomerAI &ai,PathFind
     if (!pf.path.empty() && pf.pathIndex >= pf.path.size()) {
         std::cout << "Customer left the store!" << std::endl;
         // DO NOT FORGET TO DESTROY THE ENTITY HERE!
-        dayCycleSystem.customerDeparted();
         entity.destroy();
+        dayCycleSystem.customerDeparted();
     }
 }
 
