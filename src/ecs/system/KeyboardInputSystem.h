@@ -52,7 +52,7 @@ public:
                         }
                         case SDLK_LSHIFT: {
                             //Sprint
-                            v.speed = 200.0f;
+                            v.speed = 300.0f;
                         }
                     }
                 }

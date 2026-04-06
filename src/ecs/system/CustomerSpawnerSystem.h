@@ -59,7 +59,7 @@ private:
     int index = 0;
     int customerCount = 0;
     float spawnTimer = 0.0f;
-    std::vector<float> spawnTime = {6.0f, 7.0f, 8.0f, 9.0f, 10.0f};
+    std::vector<float> spawnTime = {3.0f, 5.0f, 4.0f, 6.0f};
 };
 
 #endif //PROJECT_CUSTOMERSPAWNERSYSTEM_H
