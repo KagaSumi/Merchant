@@ -144,8 +144,9 @@ Entity &Scene::createItemHaggleDisplay(Entity &parent) {
     TextureManager::updateLabel(nameLabelComp);
 
     // Your nameLabel math was already perfectly centered!
-    nameLabel.addComponent<Transform>(Vector2D(parentT.position.x + parentCenterX - (nameLabelComp.dst.w / 2.0f),
-                                               parentT.position.y + 40), 0.0f, 1.0f);
+    nameLabel.addComponent<Transform>(
+        Vector2D(absoluteX + (subWidth / 2.0f) - (nameLabelComp.dst.w / 2.0f),
+                 absoluteY + 10.0f), 0.0f, 1.0f);
     nameLabel.addComponent<Parent>(&subOverlay);
     subOverlay.getComponent<Children>().children.push_back(&nameLabel);
 
@@ -724,11 +725,11 @@ void Scene::createDaySummaryFooter(Entity &overlay, const DaySummaryData &data,D
 
         if (session.currentData.isBankrupt) {
             // ❌ LOSE CONDITION
-            initLose();
+            Game::onSceneChangeRequest("gameover");
         }
         else if (session.currentData.isGameWon) {
             // ✅ WIN CONDITION
-            initWin();
+            Game::onSceneChangeRequest("victory");
         }
         else {
             // ⏩ NORMAL PLAY (Next Day)
@@ -1644,7 +1645,9 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
         if (hasItem) {
             ItemDef item = availableItems[i];
             auto& bClick = slot.buyBtn->getComponent<Clickable>();
-            bClick.onReleased = [this, item, &wallet, &inv]() {
+            auto &bTransform = slot.buyBtn->getComponent<Transform>();
+            bClick.onReleased = [this, item, &bTransform, &wallet, &inv]() {
+                bTransform.scale = 1.0f;
                 float trendMod = world.getMarketTrendSystem().getModifier(item);
                 int trendPrice = static_cast<int>(item.basePrice * trendMod);
 
@@ -1738,11 +1741,17 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
 
         auto &sClick = session.shelfBuyBtn->getComponent<Clickable>();
         auto &sBtnTransform = session.shelfBuyBtn->getComponent<Transform>();
-        sClick.onReleased = [this, &sBtnTransform]() {
+        sClick.onReleased = [this]() {
             auto& s = UIOrderScreen->getComponent<OrderSession>();
+            auto& sBtnTransform = s.shelfBuyBtn->getComponent<Transform>();
             sBtnTransform.scale = 1.0f;
 
-            if (s.onBuyShelf) s.onBuyShelf(); // deducts wallet internally
+            if (s.onBuyShelf) s.onBuyShelf();
+
+            // Recalculate price for NEXT shelf after purchase
+            if (s.getShelfPrice) {
+                s.currentShelfPrice = s.getShelfPrice(Game::gameState.displayCasesUnlocked);
+            }
 
             // Refresh wallet label
             if (s.walletLabelRef && s.walletRef) {
@@ -1752,9 +1761,9 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
                 TextureManager::updateLabel(lbl);
             }
 
-            // Re-evaluate shelf button for NEXT purchase
             bool nowMaxed = Game::gameState.displayCasesUnlocked >= 15;
-            bool canStillAfford = !nowMaxed && s.walletRef && (*s.walletRef >= s.currentShelfPrice);
+            bool canStillAfford = !nowMaxed && s.walletRef &&
+                                  (*s.walletRef >= s.currentShelfPrice);
 
             s.shelfBuyBtn->getComponent<Collider>().enabled = canStillAfford;
 
@@ -1852,14 +1861,21 @@ Entity& Scene::createDialogueUI(int windowWidth, int windowHeight) {
         bool close = false;
         toggleSettingsOverlayVisibility(*UIDialogue, &close);
 
+        //Turn back on HUD
         if (UIHud) {
-            bool showHud = true;
-            toggleSettingsOverlayVisibility(*UIHud, &showHud);
+            bool show = true;
+            toggleSettingsOverlayVisibility(*UIHud, &show);
         }
 
-        auto& s = UIDialogue->getComponent<DialogueSession>();
-        if (s.onConfirm) s.onConfirm();
-        s.onConfirm = nullptr; // clear so it doesn't fire twice
+        // Check if haggle system has a pending confirm first
+        auto& haggle = world.getHaggleSystem();
+        if (haggle.pendingConfirm) {
+            haggle.onDialogueConfirmed();
+        } else if (simpleDialogueConfirm) {
+            auto cb = simpleDialogueConfirm;
+            simpleDialogueConfirm = nullptr;
+            if (cb) cb();
+        }
     };
 
     btnEnt.addComponent<Parent>(&overlay);
@@ -1870,13 +1886,11 @@ Entity& Scene::createDialogueUI(int windowWidth, int windowHeight) {
     return overlay;
 }
 
-Entity& Scene::updateDialogueUI(const std::string& message, std::function<void()> onConfirm) {
+Entity& Scene::updateDialogueUI(const std::string& message) {
     if (!UIDialogue) return *UIDialogue;
 
     auto& session = UIDialogue->getComponent<DialogueSession>();
-    session.onConfirm = onConfirm;
 
-    // Update message text
     if (session.messageLabelRef) {
         auto& lbl = session.messageLabelRef->getComponent<Label>();
         lbl.text = message;
@@ -1887,12 +1901,39 @@ Entity& Scene::updateDialogueUI(const std::string& message, std::function<void()
     bool forceOpen = true;
     toggleSettingsOverlayVisibility(*UIDialogue, &forceOpen);
 
-    if (UIHud) {
-        bool hideHud = false;
-        toggleSettingsOverlayVisibility(*UIHud, &hideHud);
+    return *UIDialogue;
+}
+
+void Scene::showSimpleDialogue(const std::string& message) {
+    if (!UIDialogue) return;
+
+    if (UIHud) { //Hide Hud
+        bool hide = false;
+        toggleSettingsOverlayVisibility(*UIHud, &hide);
     }
 
-    return *UIDialogue;
+    auto& session = UIDialogue->getComponent<DialogueSession>();
+
+    // Update message
+    if (session.messageLabelRef) {
+        auto& lbl = session.messageLabelRef->getComponent<Label>();
+        lbl.text = message;
+        lbl.dirty = true;
+        TextureManager::updateLabel(lbl);
+    }
+
+    //Lock the player movement
+    playerEntity->getComponent<PlayerTag>().movementLocked = true;
+
+    // Store a simple close callback
+    simpleDialogueConfirm = [this]() {
+        // Nothing to chain, just closed
+        simpleDialogueConfirm = nullptr;
+        playerEntity->getComponent<PlayerTag>().movementLocked = false;
+    };
+
+    bool forceOpen = true;
+    toggleSettingsOverlayVisibility(*UIDialogue, &forceOpen);
 }
 
 //HUD
