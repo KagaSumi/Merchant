@@ -59,7 +59,6 @@ class World {
     DayCycleSystem  dayCycleSystem;
     CustomerAISystem customerAISystem;
     PathfindingSystem pathfindingSystem;
-    HUDSystem hudSystem;
     CustomerSpawnerSystem customerSpawnerSystem;
     PreRenderSystem preRenderSystem;
     DebtSystem debtSystem;
@@ -90,7 +89,6 @@ class World {
             haggleSystem.update();
             cameraSystem.update(entities);
             customerSpawnerSystem.update(entities, dt);
-            // hudSystem.update(entities);
         }
 
 

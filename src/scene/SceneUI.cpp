@@ -1437,20 +1437,6 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
             btnCol.enabled = false;
             slot.buyBtn = &btnEnt;
 
-            // Buy label "Buy"
-            auto& buyLblEnt = world.createEntity();
-            Label buyLblData = {"Buy", AssetManager::getFont("arial-small"), {0,0,0,255},
-                                LabelType::Static, "ord_buy_lbl_" + std::to_string(row*cols+col)};
-            auto& buyLblComp = buyLblEnt.addComponent<Label>(buyLblData);
-            buyLblComp.dirty = true; buyLblComp.visible = false;
-            TextureManager::updateLabel(buyLblComp);
-            buyLblEnt.addComponent<Transform>(
-                Vector2D(btnX + (btnW/2) - (buyLblComp.dst.w/2),
-                         btnY + (btnH/2) - (buyLblComp.dst.h/2)), 0.0f, 1.0f);
-            buyLblEnt.addComponent<Parent>(&mainOverlay);
-            mainOverlay.getComponent<Children>().children.push_back(&buyLblEnt);
-            slot.buyLabel = &buyLblEnt;
-
             int slotIdx = row * cols + col;
             auto& bClick = btnEnt.addComponent<Clickable>();
             bClick.onPressed = [&btnTransform]{ btnTransform.scale = 0.9f; };
@@ -1793,7 +1779,7 @@ Entity& Scene::createDialogueUI(int windowWidth, int windowHeight) {
     float boxX = (windowWidth - boxW) / 2.0f;
     float boxY = windowHeight - boxH - 20.0f;
 
-    SDL_Texture* bgTex = TextureManager::load("../asset/ui/settings.jpg");
+    SDL_Texture* bgTex = TextureManager::load("../asset/ui/UI-Base.png");
     SDL_FRect src{0, 0, boxW, boxH};
     SDL_FRect dst{boxX, boxY, boxW, boxH};
 
@@ -1926,7 +1912,7 @@ Entity& Scene::createHUD(int windowWidth, int windowHeight) {
     float barX = windowWidth - barW - 10.0f;
     float barY = 10.0f;
 
-    SDL_Texture* bgTex = TextureManager::load("../asset/ui/settings.jpg");
+    SDL_Texture* bgTex = TextureManager::load("../asset/ui/UI-Base.png");
     SDL_FRect src{0, 0, barW, barH};
     SDL_FRect dst{barX, barY, barW, barH};
 
