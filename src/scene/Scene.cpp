@@ -35,7 +35,7 @@ void Scene::initMainMenu(int windowWidth, int windowHeight) {
     menu.addComponent<Transform>(Vector2D(0, 0), 0.0f, 1.0f);
 
     SDL_Texture *texture = TextureManager::load("../asset/menu.png");
-    SDL_FRect menuSrc{0, 0, (float) 1200, (float) 896};
+    SDL_FRect menuSrc{0, 0, (float) 2400, (float) 1792};
     SDL_FRect menuDst{0, 0, (float) windowWidth, (float) windowHeight};
     menu.addComponent<Sprite>(texture, menuSrc, menuDst);
 
@@ -49,7 +49,7 @@ void Scene::initLose(int windowWidth, int windowHeight) {
     auto &screen(world.createEntity());
     screen.addComponent<Transform>(Vector2D(0, 0), 0.0f, 1.0f);
     SDL_Texture *texture = TextureManager::load("../asset/Lose.png");
-    SDL_FRect menuSrc{0, 0, (float) 2400, (float) 1792};
+    SDL_FRect menuSrc{0, 0, (float) 4800, (float) 3584};
     SDL_FRect menuDst{0, 0, (float) windowWidth, (float) windowHeight};
     screen.addComponent<Sprite>(texture, menuSrc, menuDst);
 }
@@ -60,7 +60,7 @@ void Scene::initWin(int windowWidth, int windowHeight) {
     auto &screen(world.createEntity());
     screen.addComponent<Transform>(Vector2D(0, 0), 0.0f, 1.0f);
     SDL_Texture *texture = TextureManager::load("../asset/Win.png");
-    SDL_FRect menuSrc{0, 0, (float) 1200, (float) 896};
+    SDL_FRect menuSrc{0, 0, (float) 2400, (float) 1792};
     SDL_FRect menuDst{0, 0, (float) windowWidth, (float) windowHeight};
     screen.addComponent<Sprite>(texture, menuSrc, menuDst);
 }
