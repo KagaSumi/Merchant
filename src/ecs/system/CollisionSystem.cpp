@@ -39,7 +39,6 @@ void CollisionSystem::update(World &world) {
             auto& colliderB = entityB->getComponent<Collider>();
 
             if (Collision::AABB(colliderA.rect, colliderB.rect)) {
-                //std::cout << colliderA.tag << " Hit " << colliderB.tag << std::endl;
                 CollisionKey key = makeKey(entityA,entityB);
                 currentCollisions.insert(key);
                 if (!activeCollisions.contains(key)) {
