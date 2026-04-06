@@ -330,6 +330,7 @@ Entity &Scene::createPriceSelection(Entity &overlay) {
 
         Entity *digitPtr = &digitEntity;
         session.digitRefs[i] = digitPtr;
+        session.columnCenters[i] = columnCenter;
 
         // --- UP BUTTON (+) ---
         auto &btnUp = world.createEntity();
@@ -345,25 +346,16 @@ Entity &Scene::createPriceSelection(Entity &overlay) {
         auto &clickUp = btnUp.addComponent<Clickable>();
         clickUp.onPressed = [&btnUpTransform] { btnUpTransform.scale = 0.8f; };
         clickUp.onCancel = [&btnUpTransform] { btnUpTransform.scale = 1.0f; };
-        clickUp.onReleased = [&overlay, i, digitPtr, columnCenter, &btnUpTransform]() {
+        clickUp.onReleased = [&overlay, i, &btnUpTransform]() {
             btnUpTransform.scale = 1.0f;
-            auto &currentSession = overlay.getComponent<HaggleSession>();
-
-            currentSession.digits[i] = (currentSession.digits[i] + 1) % 10;
-
-            auto &dLabelComp = digitPtr->getComponent<Label>();
-            dLabelComp.text = std::to_string(currentSession.digits[i]);
-            dLabelComp.dirty = true;
-            TextureManager::updateLabel(dLabelComp);
-
-            auto &dTransform = digitPtr->getComponent<Transform>();
-            dTransform.position.x = columnCenter - (dLabelComp.dst.w / 2.0f);
-
-            if (currentSession.percentLabelRef) {
-                auto &pLabelComp = currentSession.percentLabelRef->getComponent<Label>();
-                pLabelComp.text = std::to_string(currentSession.getPercentage()) + "%";
-                pLabelComp.dirty = true;
-                TextureManager::updateLabel(pLabelComp);
+            auto& s = overlay.getComponent<HaggleSession>();
+            s.digits[i]++;
+            propagateCarry(s);
+            if (s.percentLabelRef) {
+                auto& pLbl = s.percentLabelRef->getComponent<Label>();
+                pLbl.text = std::to_string(s.getPercentage()) + "%";
+                pLbl.dirty = true;
+                TextureManager::updateLabel(pLbl);
             }
         };
         btnUp.addComponent<Parent>(&overlay);
@@ -382,26 +374,16 @@ Entity &Scene::createPriceSelection(Entity &overlay) {
         auto &clickDown = btnDown.addComponent<Clickable>();
         clickDown.onPressed = [&btnDownTransform] { btnDownTransform.scale = 0.8f; };
         clickDown.onCancel = [&btnDownTransform] { btnDownTransform.scale = 1.0f; };
-        clickDown.onReleased = [&overlay, i, digitPtr, columnCenter, &btnDownTransform]() {
+        clickDown.onReleased = [&overlay, i, &btnDownTransform]() {
             btnDownTransform.scale = 1.0f;
-            auto &currentSession = overlay.getComponent<HaggleSession>();
-
-            currentSession.digits[i] = currentSession.digits[i] - 1;
-            if (currentSession.digits[i] < 0) currentSession.digits[i] = 9;
-
-            auto &dLabelComp = digitPtr->getComponent<Label>();
-            dLabelComp.text = std::to_string(currentSession.digits[i]);
-            dLabelComp.dirty = true;
-            TextureManager::updateLabel(dLabelComp);
-
-            auto &dTransform = digitPtr->getComponent<Transform>();
-            dTransform.position.x = columnCenter - (dLabelComp.dst.w / 2.0f);
-
-            if (currentSession.percentLabelRef) {
-                auto &pLabelComp = currentSession.percentLabelRef->getComponent<Label>();
-                pLabelComp.text = std::to_string(currentSession.getPercentage()) + "%";
-                pLabelComp.dirty = true;
-                TextureManager::updateLabel(pLabelComp);
+            auto& s = overlay.getComponent<HaggleSession>();
+            s.digits[i]--;
+            propagateCarry(s);
+            if (s.percentLabelRef) {
+                auto& pLbl = s.percentLabelRef->getComponent<Label>();
+                pLbl.text = std::to_string(s.getPercentage()) + "%";
+                pLbl.dirty = true;
+                TextureManager::updateLabel(pLbl);
             }
         };
         btnDown.addComponent<Parent>(&overlay);
@@ -509,6 +491,32 @@ Entity &Scene::updateHaggleUI(ItemDef &item) {
     world.getUIVisibilityManager().show("haggle");
 
     return *UIMenu;
+}
+
+void Scene::propagateCarry(HaggleSession& s)
+{
+    // Resolve carries left
+    for (int i = 4; i >= 0; --i) {
+        if (s.digits[i] > 9) {
+            s.digits[i] = 0;
+            if (i > 0) s.digits[i-1]++;
+        } else if (s.digits[i] < 0) {
+            s.digits[i] = 9;
+            if (i > 0) s.digits[i-1]--;
+        }
+    }
+    s.digits[0] = std::max(0, std::min(9, s.digits[0]));
+
+    // Update ALL digit labels and positions
+    for (int i = 0; i < 5; ++i) {
+        if (!s.digitRefs[i]) continue;
+        auto& lbl = s.digitRefs[i]->getComponent<Label>();
+        lbl.text = std::to_string(s.digits[i]);
+        lbl.dirty = true;
+        TextureManager::updateLabel(lbl);
+        s.digitRefs[i]->getComponent<Transform>().position.x =
+            s.columnCenters[i] - (lbl.dst.w / 2.0f);
+    }
 }
 
 //Summary UI

@@ -21,6 +21,7 @@ class Scene {
         Entity* itemIconRef = nullptr;
         Entity* itemBaseValRef = nullptr;
         Entity* digitRefs[5] = {nullptr, nullptr, nullptr, nullptr, nullptr};
+        float columnCenters[5] = {0, 0, 0, 0, 0};
 
         int getProposedPrice() const {
             int finalPrice = 0;
@@ -237,6 +238,7 @@ private:
     Entity& createItemHaggleDisplay(Entity& parent); // Item Overlay
     Entity& createPriceSelection(Entity &overlay); //Price Selection
     Entity& createHaggleButton(Entity &overlay); // Confirm Button
+    static void propagateCarry(HaggleSession& s); //Helper for roll over
 
     //Inventory UI
     Entity& createInventoryUI(int windowWidth, int windowHeight);
