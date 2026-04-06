@@ -21,7 +21,6 @@ bool DebtSystem::payDebt(Wallet &wallet, Debt &debt) {
         return true;
     } else {
         std::cout << "Game Over! Cannot pay debt.\n";
-        // trigger game over
         return false;
     }
 }

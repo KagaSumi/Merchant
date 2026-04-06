@@ -15,8 +15,8 @@ int main(){
     float deltaTime = 0.0f;
     int actualFrameTime ;
 
-   game = new Game();
-    game->init("Relics & Reciepts", 800,600, false);
+    game = new Game();
+    game->init("Relics & Receipts", 800,600, false);
 
     while (game->running()) {
 
