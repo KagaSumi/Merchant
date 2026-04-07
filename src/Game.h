@@ -17,7 +17,7 @@ struct GameState {
     int currentRepXP = 0;
     int xpToNextLevel = 100;
     int displayCasesUnlocked = 3;
-    int walletBalance = 1000;
+    int walletBalance = 500;
     int debtTotal = 5000;
     int dayCount = 1;
 };

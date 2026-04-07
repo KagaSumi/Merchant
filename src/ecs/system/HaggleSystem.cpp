@@ -155,12 +155,13 @@ bool HaggleSystem::willAccept(const Customer& customer, const ItemDef& item, int
 }
 
 int HaggleSystem::getMaxAcceptablePrice(const Customer& customer, const ItemDef& item) {
-    // Base: customers always accept up to 120% of base price
-    // Mood bonus: up to additional 20% (so 140% at max mood)
+    // Base: customers accept up to 130% of base price (30% base profit)
+    // Mood bonus: up to additional 30% (so 160% at max mood)
     // Trend bonus: market modifier on top of everything
-    float baseLeniency = 1.20f;
-    float moodBonus = customer.mood * 0.20f;  // 0.0 mood = +0%, 1.0 mood = +20%
+    float baseLeniency = 1.30f;
+    float moodBonus = customer.mood * 0.30f;
     float moodMultiplier = baseLeniency + moodBonus;
+
     float trendMultiplier = getPriceModifier ? getPriceModifier(item) : 1.0f;
     return static_cast<int>(item.basePrice * moodMultiplier * trendMultiplier);
 }

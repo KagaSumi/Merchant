@@ -128,6 +128,7 @@ class Scene {
         Entity* gridContainerRef = nullptr;
         // quantity panel root ref
         Entity* quantityPanelRef = nullptr;
+        Entity* retrieveAllBtnRef = nullptr;
     };
 
     // Order UI
@@ -203,7 +204,7 @@ private:
     void initAssets(const char* mapPath);
     void initUI(int windowWidth, int windowHeight);
     void initWorld(int windowWidth, int windowHeight);
-    void initPlayer(int windowWidth, int windowHeight);
+    void initPlayer();
     void initSystems();
     void initHaggleSystem();
     void initDayCycleCallbacks();
@@ -279,9 +280,6 @@ private:
 
 
     void createSettingsUIComponents(Entity& overlay);
-
-    void toggleSettingsOverlayVisibility(Entity& overlay, bool* forceState);
-
 };
 
 #endif //PROJECT_SCENE_H

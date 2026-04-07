@@ -69,7 +69,7 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
     initAssets(mapPath);
     initUI(windowWidth, windowHeight);
     initWorld(windowWidth, windowHeight);
-    initPlayer(windowWidth, windowHeight);
+    initPlayer();
     initSystems();
     initEntities();
 }
@@ -92,25 +92,25 @@ void Scene::initUI(int windowWidth, int windowHeight) {
     auto &invSession = inventoryUIRef.getComponent<InventorySession>();
     if (invSession.quantityPanelRef) {
         bool hide = false;
-        toggleSettingsOverlayVisibility(*invSession.quantityPanelRef, &hide);
+        world.getUIVisibilityManager().hide("quantity");
     }
 
     createOrderUI(windowWidth, windowHeight);
     auto &orderSession = UIOrderScreen->getComponent<OrderSession>();
     orderSession.getShelfPrice = [](int currentCount) -> int {
         switch (currentCount) {
-            case 3: return 500;
-            case 4: return 1000;
-            case 5: return 1750;
-            case 6: return 2750;
-            case 7: return 4000;
-            case 8: return 5500;
-            case 9: return 7500;
-            case 10: return 10000;
-            case 11: return 13000;
-            case 12: return 17000;
-            case 13: return 22000;
-            case 14: return 28000;
+            case 3:  return 150;   // 4th Shelf: Easy Day 1 buy. Leaves 350G for inventory.
+            case 4:  return 250;   // 5th Shelf: Very affordable Day 2/3 upgrade.
+            case 5:  return 400;   // 6th Shelf: Starts to require saving a bit.
+            case 6:  return 600;   // 7th Shelf: Week 2 early upgrade.
+            case 7:  return 850;   // 8th Shelf
+            case 8:  return 1150;  // 9th Shelf
+            case 9:  return 1500;  // 10th Shelf: Mid-Week 2 goal.
+            case 10: return 1900;  // 11th Shelf
+            case 11: return 2400;  // 12th Shelf
+            case 12: return 3000;  // 13th Shelf: Entering Week 3 luxury territory.
+            case 13: return 3700;  // 14th Shelf
+            case 14: return 4500;  // 15th Shelf: The ultimate flex for a perfect run.
             default: return 999999;
         }
     };
@@ -118,15 +118,6 @@ void Scene::initUI(int windowWidth, int windowHeight) {
 
     createDialogueUI(windowWidth, windowHeight);
     createHUD(windowWidth, windowHeight);
-
-    //Register All UI
-    auto& ui = world.getUIVisibilityManager();
-    ui.registerPanel("hud",       UIHud);
-    ui.registerPanel("haggle",    UIMenu);
-    ui.registerPanel("inventory", UIInventory);
-    ui.registerPanel("quantity",  UIQuantityScreen);
-    ui.registerPanel("order",     UIOrderScreen);
-    ui.registerPanel("dialogue",  UIDialogue);
 }
 
 void Scene::initWorld(int windowWidth, int windowHeight) {
@@ -162,12 +153,11 @@ void Scene::initWorld(int windowWidth, int windowHeight) {
 
     // Day summary needs dayCycle ref at create time
     createDaySummaryUI(windowWidth, windowHeight, dayCycle);
-    world.getUIVisibilityManager().registerPanel("summary",   UIDaySummary);
 
     updateHUD(wallet, dayCycle);
 }
 
-void Scene::initPlayer(int windowWidth, int windowHeight) {
+void Scene::initPlayer() {
     SDL_Point door = world.getMap().Door;
     auto &inv_ui = *UIInventory;
 
@@ -192,21 +182,28 @@ void Scene::initPlayer(int windowWidth, int windowHeight) {
     col.offsetY = 20.0f;
 
     auto &inv = player.addComponent<Inventory>();
-    inv.uiRef = &inv_ui;
     inv.onOpenUI = [this](const std::vector<InventoryEntry> &items) {
-        if (!UIInventory) return;
-        bool isOpen = UIInventory->getComponent<Sprite>().visible;
-        if (isOpen) toggleSettingsOverlayVisibility(*UIInventory, nullptr);
-        else updateInventoryUI(items, InventoryMode::Browse);
+        auto& ui = world.getUIVisibilityManager();
+
+        // 1. Ask the manager if the inventory is currently open
+        if (ui.isVisible("inventory")) {
+            // If it is, close it and return to the HUD
+            ui.hide("inventory");
+            ui.show("hud");
+        } else {
+            // 2. If it's closed, update and open it!
+            // Note: Pass nullptr for the targetStand since we are just browsing
+            updateInventoryUI(items, InventoryMode::Browse, nullptr);
+        }
     };
 
     // Seed inventory
     auto &itemDB = world.getItems();
-    for (auto &[id, item]: itemDB.items) inv.addItem(item, 0);
-    inv.addItem(itemDB.items[1], 5); // Minor Health Potion
-    inv.addItem(itemDB.items[7], 2); // Iron Dagger
-    inv.addItem(itemDB.items[2], 1); // Phoenix Feather
-    inv.addItem(itemDB.items[14], 3);
+    inv.addItem(itemDB.items[1], 8); // Minor Health Potion
+    inv.addItem(itemDB.items[7], 4); // Iron Dagger
+    inv.addItem(itemDB.items[2], 3); // Phoenix Feather
+    inv.addItem(itemDB.items[6], 2); // Wooden Shield
+    inv.addItem(itemDB.items[4], 1); //Hunter Bow
 }
 
 void Scene::initSystems() {
@@ -220,10 +217,8 @@ void Scene::initHaggleSystem() {
 
     // Scene provides the actual UI calls
     haggleSystem.onShowDialogue = [this](const std::string &msg) {
-        if (UIHud) { //Hide HUD
-            bool hide = false;
-            toggleSettingsOverlayVisibility(*UIHud, &hide);
-        }
+        //Hide HUD
+        world.getUIVisibilityManager().hide("hud");
         updateDialogueUI(msg);
     };
     haggleSystem.onShowHaggleUI = [this](const ItemDef &item) {
@@ -404,7 +399,7 @@ void Scene::initEntities() {
     spawner.addComponent<Spawner>([this, door, customerTextures, customerIndexCount]() mutable {
         auto &e = world.createDeferredEntity();
         e.addComponent<Transform>(Vector2D(door.x * 32, door.y * 32), 1.0f);
-        e.addComponent<Velocity>(Vector2D(0, 0), 180.0f);
+        e.addComponent<Velocity>(Vector2D(0, 0), 150.0f);
         e.addComponent<CustomerAI>();
         e.addComponent<Customer>();
         e.addComponent<PathFinding>();

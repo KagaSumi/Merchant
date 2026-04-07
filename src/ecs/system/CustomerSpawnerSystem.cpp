@@ -3,8 +3,8 @@
 // Created by Curry on 2026-03-25.
 //
 int CustomerSpawnerSystem::calculateCustomer(float reputation, int day) {
-    int baseCustomers = 3;
-    float repMultiplier = 1.2f;
+    int baseCustomers = 5;
+    float repMultiplier = 1.5f;
     int dayBonus = day / 2;
 
     return baseCustomers +

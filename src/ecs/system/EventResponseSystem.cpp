@@ -97,8 +97,8 @@ void EventResponseSystem::onPlayerAction(Entity* player, PlayerAction action, Wo
         case PlayerAction::Inventory: {
             if (player && player->hasComponent<Inventory>()) {
                 auto& inv = player->getComponent<Inventory>();
-                if (inv.uiRef) {
-                    player->getComponent<Inventory>().openUI();
+                if (inv.onOpenUI) {
+                    inv.openUI();
                 }
             }
             break;

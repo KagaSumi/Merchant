@@ -200,7 +200,6 @@ struct InventoryEntry {
 
 struct Inventory {
     std::vector<InventoryEntry> items;
-    Entity* uiRef = nullptr;
     std::function<void(const std::vector<InventoryEntry>&)> onOpenUI;
 
     void openUI() {

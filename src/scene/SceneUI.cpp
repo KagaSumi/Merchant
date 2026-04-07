@@ -18,6 +18,7 @@ Entity &Scene::createSettingsOverlay(int windowWidth, int windowHeight) {
     overlay.addComponent<Sprite>(overlayTex, overlaySrc, overlayDest, RenderLayer::UI, false);
 
     createSettingsUIComponents(overlay);
+    world.getUIVisibilityManager().registerPanel("settings", &overlay);
     return overlay;
 }
 
@@ -37,9 +38,9 @@ Entity &Scene::createCogButton(int windowWidth, int windowHeight, Entity &overla
         cogTransform.scale = 0.5f;
     };
 
-    clickable.onReleased = [&cogTransform, this ,&overlay] {
+    clickable.onReleased = [&cogTransform, this] {
         cogTransform.scale = 1.0f;
-        toggleSettingsOverlayVisibility(overlay, nullptr);
+        world.getUIVisibilityManager().toggle("settings");
     };
 
     clickable.onCancel = [&cogTransform] {
@@ -76,7 +77,7 @@ void Scene::createSettingsUIComponents(Entity &overlay) {
     };
     clickable.onReleased = [this,&overlay,&closeTransform] {
         closeTransform.scale = 1.0f;
-        toggleSettingsOverlayVisibility(overlay, nullptr);
+        world.getUIVisibilityManager().hide("settings");
     };
     clickable.onCancel = [&closeTransform] {
         closeTransform.scale = 1.0f;
@@ -210,6 +211,7 @@ Entity &Scene::createHaggleUI(int windowWidth, int windowHeight) {
     createHaggleButton(mainOverlay);
 
     UIMenu = &mainOverlay;
+    world.getUIVisibilityManager().registerPanel("haggle", UIMenu);
     return mainOverlay;
 }
 
@@ -489,6 +491,8 @@ Entity &Scene::updateHaggleUI(ItemDef &item) {
 
     // 5. Open the menu
     world.getUIVisibilityManager().show("haggle");
+    world.getUIVisibilityManager().hide("hud");
+
 
     return *UIMenu;
 }
@@ -540,6 +544,7 @@ Entity &Scene::createDaySummaryUI(int windowWidth, int windowHeight, DayCycle& d
     createDaySummaryFooter(mainOverlay, defaultData,dayCycle);
 
     UIDaySummary = &mainOverlay;
+    world.getUIVisibilityManager().registerPanel("summary", UIDaySummary);
     return mainOverlay;
 }
 
@@ -725,7 +730,7 @@ void Scene::createDaySummaryFooter(Entity &overlay, const DaySummaryData &data,D
     clickable.onCancel = [&btnTransform] { btnTransform.scale = 1.0f; };
     clickable.onReleased = [&overlay, &btnTransform, this, &dayCycle]() {
         btnTransform.scale = 1.0f;
-        toggleSettingsOverlayVisibility(overlay, nullptr);
+        world.getUIVisibilityManager().hide("summary");
         world.getUIVisibilityManager().show("hud");
         updateHUD(storeEntity->getComponent<Wallet>(), dayCycle);
         dayCycle.phaseSwapReady = true;
@@ -831,11 +836,9 @@ Entity &Scene::createInventoryUI(int windowWidth, int windowHeight) {
     auto &mainOverlay = createBaseMenuOverlay(windowWidth, windowHeight);
     mainOverlay.getComponent<Sprite>().visible = false;
 
-
     auto &session = mainOverlay.addComponent<InventorySession>();
     auto &overlayTransform = mainOverlay.getComponent<Transform>();
     auto &overlaySprite = mainOverlay.getComponent<Sprite>();
-
 
     float baseX = overlayTransform.position.x;
     float baseY = overlayTransform.position.y;
@@ -861,8 +864,44 @@ Entity &Scene::createInventoryUI(int windowWidth, int windowHeight) {
     titleLabel.addComponent<Parent>(&mainOverlay);
     mainOverlay.getComponent<Children>().children.push_back(&titleLabel);
 
-    //Stock Indicator
-    float stockX = baseX + menuWidth - 160.0f; // Anchor to the right side
+    // --- 1.5 NEW: RETURN BUTTON (Top Left) ---
+    // 1. Load your specific sprite (or your main sprite sheet if it's packed in there)
+    SDL_Texture* buttonTex = TextureManager::load("../asset/ui/Buttons.png");
+
+    auto &returnBtn = world.createEntity();
+
+    // 2. Adjust these to match the actual pixel dimensions of your sprite
+    float rBtnW = 128.0f; // Width of your button on screen
+    float rBtnH = 32.0f; // Height of your button on screen
+    float rBtnX = baseX + 20.0f;
+    float rBtnY = baseY + 20.0f;
+
+    auto &rBtnTransform = returnBtn.addComponent<Transform>(Vector2D(rBtnX, rBtnY), 0.0f, 1.0f);
+
+    // 3. Set the source rect to match where the graphic is on the texture
+    SDL_FRect returnSrc{0, 48, 64, 16}; // Update to your sprite's source coordinates
+    SDL_FRect returnDst{rBtnX, rBtnY, rBtnW, rBtnH};
+
+    returnBtn.addComponent<Sprite>(buttonTex, returnSrc, returnDst, RenderLayer::UI, false);
+    returnBtn.addComponent<Collider>("ui", returnDst).enabled = false;
+
+    // NOTE: Removed the Label entity entirely!
+
+    auto &rClick = returnBtn.addComponent<Clickable>();
+    Entity *rBtnPtr = &returnBtn;
+    rClick.onPressed = [rBtnPtr] { rBtnPtr->getComponent<Transform>().scale = 0.9f; };
+    rClick.onCancel = [rBtnPtr] { rBtnPtr->getComponent<Transform>().scale = 1.0f; };
+    rClick.onReleased = [this, rBtnPtr]() {
+        rBtnPtr->getComponent<Transform>().scale = 1.0f;
+        world.getUIVisibilityManager().hide("inventory");
+        world.getUIVisibilityManager().show("hud");
+    };
+
+    returnBtn.addComponent<Parent>(&mainOverlay);
+    mainOverlay.getComponent<Children>().children.push_back(&returnBtn);
+
+    // --- Stock Indicator ---
+    float stockX = baseX + menuWidth - 160.0f;
     float stockY = baseY + 24.0f;
 
     auto& stockIcon = world.createEntity();
@@ -873,18 +912,61 @@ Entity &Scene::createInventoryUI(int windowWidth, int windowHeight) {
     mainOverlay.getComponent<Children>().children.push_back(&stockIcon);
     session.targetStockIconRef = &stockIcon;
 
-    // The Text Label (e.g. "x2 / 4")
     auto& stockLabel = world.createEntity();
     Label stkData = {"Empty (0/4)", AssetManager::getFont("arial-small"), {0,0,0,255}, LabelType::Static, "invStockLbl"};
     auto& stkComp = stockLabel.addComponent<Label>(stkData);
     stkComp.visible = false;
     TextureManager::updateLabel(stkComp);
 
-    // Position text next to the icon
     stockLabel.addComponent<Transform>(Vector2D(stockX + 36.0f, stockY + 6.0f), 0.0f, 1.0f);
     stockLabel.addComponent<Parent>(&mainOverlay);
     mainOverlay.getComponent<Children>().children.push_back(&stockLabel);
     session.targetStockLabelRef = &stockLabel;
+
+    // --- 1.6 NEW: RETRIEVE ALL BUTTON (-) ---
+    auto &retrieveBtn = world.createEntity();
+
+    // 2. Adjust dimensions
+    float retBtnW = 64.0f;
+    float retBtnH = 32.0f;
+    float retBtnX = stockX - retBtnW - 15.0f;
+
+    auto &retBtnTransform = retrieveBtn.addComponent<Transform>(Vector2D(retBtnX, stockY), 0.0f, 1.0f);
+
+    // 3. Set the source rect
+    SDL_FRect retrieveSrc{32, 16, 32, 16}; // Update to your sprite's source coordinates
+    SDL_FRect retrieveDst{retBtnX, stockY, retBtnW, retBtnH};
+
+    retrieveBtn.addComponent<Sprite>(buttonTex, retrieveSrc, retrieveDst, RenderLayer::UI, false);
+    retrieveBtn.addComponent<Collider>("ui", retrieveDst).enabled = false;
+
+    auto &retClick = retrieveBtn.addComponent<Clickable>();
+    Entity *retBtnPtr = &retrieveBtn;
+    retClick.onPressed = [retBtnPtr] { retBtnPtr->getComponent<Transform>().scale = 0.9f; };
+    retClick.onCancel = [retBtnPtr] { retBtnPtr->getComponent<Transform>().scale = 1.0f; };
+    retClick.onReleased = [this, retBtnPtr]() {
+        retBtnPtr->getComponent<Transform>().scale = 1.0f;
+        auto &s = UIInventory->getComponent<InventorySession>();
+
+        if (s.mode == InventoryMode::PlaceItem && s.currentStand && s.currentStand->quantity > 0) {
+
+            // 1. Get the player's inventory
+            auto& playerInv = playerEntity->getComponent<Inventory>();
+
+            // 2. Add the items from the display stand back to the player
+            playerInv.addItem(s.currentStand->item, s.currentStand->quantity);
+
+            //3. Clear the stand
+            s.currentStand->quantity = 0;
+
+            world.getUIVisibilityManager().hide("inventory");
+            world.getUIVisibilityManager().show("hud");
+        }
+    };
+
+    retrieveBtn.addComponent<Parent>(&mainOverlay);
+    mainOverlay.getComponent<Children>().children.push_back(&retrieveBtn);
+    session.retrieveAllBtnRef = &retrieveBtn;
 
     // --- 2. 4x4 GRID SETUP ---
     float padding = 40.0f;
@@ -978,8 +1060,7 @@ Entity &Scene::createInventoryUI(int windowWidth, int windowHeight) {
                         iconPtr->getComponent<Transform>().scale = 1.0f;
 
                         // 1. Hide the Inventory Screen
-                        bool close = false;
-                        toggleSettingsOverlayVisibility(*UIInventory, &close);
+                        world.getUIVisibilityManager().hide("inventory");
 
                         int maxToPlace = std::min(entry.quantity, 4);
 
@@ -1013,6 +1094,7 @@ Entity &Scene::createInventoryUI(int windowWidth, int windowHeight) {
     }
 
     UIInventory = &mainOverlay;
+    world.getUIVisibilityManager().registerPanel("inventory", UIInventory);
     return mainOverlay;
 }
 
@@ -1023,35 +1105,11 @@ Entity &Scene::updateInventoryUI(const std::vector<InventoryEntry> &inventoryDat
     session.currentStand = targetStand;
     session.mode = mode;
 
-    //Update Stock If there is something
-    if (session.targetStockIconRef && session.targetStockLabelRef) {
-        auto& iconSprite = session.targetStockIconRef->getComponent<Sprite>();
-        auto& labelComp = session.targetStockLabelRef->getComponent<Label>();
+    // 1. FORCE OPEN FIRST! Let the manager make everything visible.
+    // (Make sure you register this panel as "inventory" in createInventoryUI!)
+    world.getUIVisibilityManager().show("inventory");
 
-        if (mode == InventoryMode::PlaceItem && targetStand != nullptr) {
-            if (targetStand->quantity > 0) {
-                // Shelf has items: Show sprite and count
-                iconSprite.src = targetStand->item.src;
-                iconSprite.visible = true;
-                labelComp.text = "x" + std::to_string(targetStand->quantity) + " / 4";
-                labelComp.visible = true;
-            } else {
-                // Shelf is empty
-                iconSprite.visible = false;
-                labelComp.text = "Empty (0/4)";
-                labelComp.visible = true;
-            }
-            labelComp.dirty = true;
-            TextureManager::updateLabel(labelComp);
-        } else {
-            // Browsing mode: Hide the indicator entirely
-            iconSprite.visible = false;
-            labelComp.visible = false;
-        }
-    }
-
-
-    // 1. Sort the entire 16-item list so it's always in the same order
+    // 2. Sort the entire 16-item list
     auto sortedInv = inventoryData;
     std::sort(sortedInv.begin(), sortedInv.end(), [](const InventoryEntry &a, const InventoryEntry &b) {
         if (a.item.type != b.item.type) return static_cast<int>(a.item.type) < static_cast<int>(b.item.type);
@@ -1059,75 +1117,53 @@ Entity &Scene::updateInventoryUI(const std::vector<InventoryEntry> &inventoryDat
     });
     session.cachedInventory = sortedInv;
 
-    // 2. Map to the 16 slots
+    // 3. Map to the 16 slots (This will now safely hide empty slots)
     for (size_t i = 0; i < session.slots.size(); ++i) {
         auto &slot = session.slots[i];
-
         if (i < sortedInv.size()) {
             const auto &entry = sortedInv[i];
             auto &label = slot.label->getComponent<Label>();
             auto &iconSprite = slot.icon->getComponent<Sprite>();
 
-            // Always show the icon and the name
             iconSprite.src = entry.item.src;
             iconSprite.visible = true;
             label.visible = true;
             label.text = entry.item.name + " x" + std::to_string(entry.quantity);
-
-            // --- THE GRAY OUT LOGIC ---
-            if (entry.quantity <= 0) {
-                // Out of Stock: Light Gray text
-                label.color = {120, 120, 120, 255};
-            } else {
-                // In Stock: Black text
-                label.color = {0, 0, 0, 255};
-            }
-
+            label.color = (entry.quantity <= 0) ? SDL_Color{120, 120, 120, 255} : SDL_Color{0, 0, 0, 255};
             label.dirty = true;
             TextureManager::updateLabel(label);
 
-            // Re-center
             float iconX = slot.icon->getComponent<Transform>().position.x;
             label.dst.x = (iconX + 24.0f) - (label.dst.w / 2.0f);
+
+            // Set Clickables
+            bool isClickable = (entry.quantity > 0 && session.mode == InventoryMode::PlaceItem);
+            if (slot.icon->hasComponent<Collider>()) {
+                slot.icon->getComponent<Collider>().enabled = isClickable;
+            }
         } else {
-            // If the XML has fewer than 16 items, hide the extra slots
-            slot.icon->getComponent<Sprite>().visible = true;
-            slot.label->getComponent<Label>().visible = true;
+            // Hide the extra slots
+            slot.icon->getComponent<Sprite>().visible = false;
+            slot.label->getComponent<Label>().visible = false;
+            if (slot.icon->hasComponent<Collider>()) slot.icon->getComponent<Collider>().enabled = false;
         }
     }
 
-    bool forceOpen = true;
-    toggleSettingsOverlayVisibility(*UIInventory, &forceOpen);
-    for (size_t i = 0; i < session.slots.size(); ++i) {
-        auto& slot = session.slots[i];
-        bool isClickable = false;
-
-        // As long as they have the item in stock, let them click it!
-        // The seamless swap logic handles the rest.
-        if (i < sortedInv.size() && sortedInv[i].quantity > 0 && session.mode == InventoryMode::PlaceItem) {
-            isClickable = true;
-        }
-
-        // Force the icon's collider to obey the rules
-        if (slot.icon->hasComponent<Collider>()) {
-            slot.icon->getComponent<Collider>().enabled = isClickable;
-        }
-    }
-
+    // 4. APPLY VISIBILITY OVERRIDES (This will now safely hide the button!)
     if (session.targetStockIconRef && session.targetStockLabelRef) {
         auto& iconSprite = session.targetStockIconRef->getComponent<Sprite>();
         auto& labelComp = session.targetStockLabelRef->getComponent<Label>();
 
-        if (mode == InventoryMode::PlaceItem && targetStand != nullptr) {
-            labelComp.visible = true; // Label is always visible in Place Mode
+        bool shelfHasItems = (mode == InventoryMode::PlaceItem && targetStand != nullptr && targetStand->quantity > 0);
 
-            if (targetStand->quantity > 0) {
-                // Shelf has items: Show sprite and count
+        if (mode == InventoryMode::PlaceItem && targetStand != nullptr) {
+            labelComp.visible = true;
+
+            if (shelfHasItems) {
                 iconSprite.src = targetStand->item.src;
-                iconSprite.visible = true; // Sledgehammer turned this on, we keep it on
+                iconSprite.visible = true;
                 labelComp.text = "x" + std::to_string(targetStand->quantity) + " / 4";
             } else {
-                // Shelf is empty: Force the sprite back OFF
                 iconSprite.visible = false;
                 labelComp.text = "Empty (0/4)";
             }
@@ -1135,11 +1171,19 @@ Entity &Scene::updateInventoryUI(const std::vector<InventoryEntry> &inventoryDat
             labelComp.dirty = true;
             TextureManager::updateLabel(labelComp);
         } else {
-            // Browsing mode: Force hide the indicator entirely
             iconSprite.visible = false;
             labelComp.visible = false;
         }
+
+        // Apply Retrieve Button State
+        if (session.retrieveAllBtnRef) {
+            session.retrieveAllBtnRef->getComponent<Sprite>().visible = shelfHasItems;
+            if (session.retrieveAllBtnRef->hasComponent<Collider>()) {
+                session.retrieveAllBtnRef->getComponent<Collider>().enabled = shelfHasItems;
+            }
+        }
     }
+
     return *UIInventory;
 }
 
@@ -1216,8 +1260,7 @@ Entity &Scene::createQuantityScreen(int windowWidth, int windowHeight) {
             btnPtr->getComponent<Transform>().scale = 1.0f;
             auto &s = UIQuantityScreen->getComponent<QuantityScreenSession>();
 
-            bool close = false;
-            toggleSettingsOverlayVisibility(*UIQuantityScreen, &close);
+            world.getUIVisibilityManager().hide("quantity");
 
             if (s.onConfirm) {
                 s.onConfirm(s.selectedItem, q);
@@ -1248,8 +1291,7 @@ Entity &Scene::createQuantityScreen(int windowWidth, int windowHeight) {
         rBtnPtr->getComponent<Transform>().scale = 1.0f;
 
         // Hide this screen
-        bool close = false;
-        toggleSettingsOverlayVisibility(*UIQuantityScreen, &close);
+        world.getUIVisibilityManager().hide("quantity");
 
         // Trigger cancel callback (which will reopen the inventory)
         auto &s = UIQuantityScreen->getComponent<QuantityScreenSession>();
@@ -1260,6 +1302,7 @@ Entity &Scene::createQuantityScreen(int windowWidth, int windowHeight) {
     mainOverlay.getComponent<Children>().children.push_back(&returnBtn);
 
     UIQuantityScreen = &mainOverlay;
+    world.getUIVisibilityManager().registerPanel("quantity", UIQuantityScreen);
     return mainOverlay;
 }
 
@@ -1284,8 +1327,7 @@ void Scene::openQuantityScreen(const InventoryEntry &item, int maxQty,
     }
 
     // 1. Force the menu on
-    bool forceOpen = true;
-    toggleSettingsOverlayVisibility(*UIQuantityScreen, &forceOpen);
+    world.getUIVisibilityManager().show("quantity");
 
     // 2. Layout the buttons
     auto &overlaySprite = UIQuantityScreen->getComponent<Sprite>();
@@ -1531,6 +1573,7 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
     mainOverlay.getComponent<Children>().children.push_back(&contBtn);
 
     UIOrderScreen = &mainOverlay;
+    world.getUIVisibilityManager().registerPanel("order", UIOrderScreen);
     return mainOverlay;
 }
 
@@ -1621,7 +1664,7 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
                 float trendMod = world.getMarketTrendSystem().getModifier(item);
                 int trendPrice = static_cast<int>(item.basePrice * trendMod);
 
-                if (wallet.balance < trendPrice) return; // was checking basePrice
+                if (wallet.balance < trendPrice) return;
 
                 // Deduct wallet
                 wallet.balance -= trendPrice;
@@ -1630,9 +1673,9 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
                 // Add to inventory
                 inv.addItem(item, 1);
 
+                auto& s = UIOrderScreen->getComponent<OrderSession>();
 
                 // Refresh wallet label
-                auto& s = UIOrderScreen->getComponent<OrderSession>();
                 if (s.walletLabelRef) {
                     auto& lbl = s.walletLabelRef->getComponent<Label>();
                     lbl.text = "Wallet: " + std::to_string(wallet.balance) + "G";
@@ -1640,7 +1683,7 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
                     TextureManager::updateLabel(lbl);
                 }
 
-                //Update x1 ->x2 item count
+                // Update x1 -> x2 item count
                 for (int j = 0; j < (int)s.slots.size() && j < (int)s.currentItems.size(); ++j) {
                     int heldNow = 0;
                     for (auto& entry : inv.items) {
@@ -1652,34 +1695,44 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
                     TextureManager::updateLabel(nLbl);
                 }
 
-                // Refresh all buy button states (some may now be unaffordable)
+                // --- REFRESH EVERYTHING (Items + Shelf) ---
+                // 1. Refresh Items
                 for (int j = 0; j < (int)s.slots.size() && j < (int)s.currentItems.size(); ++j) {
-                    bool afford = wallet.balance >= s.currentItems[j].basePrice;
+                    float jTrendMod = world.getMarketTrendSystem().getModifier(s.currentItems[j]);
+                    int jTrendPrice = static_cast<int>(s.currentItems[j].basePrice * jTrendMod);
+                    bool afford = wallet.balance >= jTrendPrice;
+
                     s.slots[j].buyBtn->getComponent<Collider>().enabled = afford;
 
                     auto& pLbl = s.slots[j].priceLabel->getComponent<Label>();
-
-                    // Recalculate trend color for each item
-                    float trendMod = world.getMarketTrendSystem().getModifier(s.currentItems[j]);
-                    int trendPrice = static_cast<int>(s.currentItems[j].basePrice * trendMod);
-                    pLbl.text = std::to_string(trendPrice) + "G";
+                    pLbl.text = std::to_string(jTrendPrice) + "G";
 
                     if (!afford) {
-                        pLbl.color = {180, 50, 50, 255};   // can't afford — red override
-                    } else if (trendMod > 1.0f) {
+                        pLbl.color = {180, 50, 50, 255};   // can't afford — red
+                    } else if (jTrendMod > 1.0f) {
                         pLbl.color = {76, 175, 80, 255};   // demand up — green
-                    } else if (trendMod < 1.0f) {
+                    } else if (jTrendMod < 1.0f) {
                         pLbl.color = {211, 47, 47, 255};   // demand down — muted red
                     } else {
                         pLbl.color = {0, 0, 0, 255};       // normal
                     }
-
                     pLbl.dirty = true;
                     TextureManager::updateLabel(pLbl);
                 }
 
-                std::cout << "Bought " << item.name << " for " << item.basePrice
-                          << "G. Wallet: " << wallet.balance << "G\n";
+                // 2. Refresh Shelf Upgrade State
+                if (s.shelfBuyBtn && s.shelfPriceLabel) {
+                    bool nowMaxed = Game::gameState.displayCasesUnlocked >= 15;
+                    bool canStillAfford = !nowMaxed && (wallet.balance >= s.currentShelfPrice);
+
+                    s.shelfBuyBtn->getComponent<Collider>().enabled = canStillAfford;
+
+                    auto& shelfLbl = s.shelfPriceLabel->getComponent<Label>();
+                    shelfLbl.text = nowMaxed ? "Maxed Out" : (std::to_string(s.currentShelfPrice) + "G");
+                    shelfLbl.color = canStillAfford ? SDL_Color{0,0,0,255} : SDL_Color{180,50,50,255};
+                    shelfLbl.dirty = true;
+                    TextureManager::updateLabel(shelfLbl);
+                }
             };
         }
         else {
@@ -1731,17 +1784,46 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
                 TextureManager::updateLabel(lbl);
             }
 
-            bool nowMaxed = Game::gameState.displayCasesUnlocked >= 15;
-            bool canStillAfford = !nowMaxed && s.walletRef &&
-                                  (*s.walletRef >= s.currentShelfPrice);
+            // --- REFRESH EVERYTHING (Items + Shelf) ---
+            int currentWallet = s.walletRef ? *s.walletRef : 0;
 
-            s.shelfBuyBtn->getComponent<Collider>().enabled = canStillAfford;
+            // 1. Refresh Items
+            for (int j = 0; j < (int)s.slots.size() && j < (int)s.currentItems.size(); ++j) {
+                float jTrendMod = world.getMarketTrendSystem().getModifier(s.currentItems[j]);
+                int jTrendPrice = static_cast<int>(s.currentItems[j].basePrice * jTrendMod);
+                bool afford = currentWallet >= jTrendPrice;
 
-            auto& pLbl = s.shelfPriceLabel->getComponent<Label>();
-            pLbl.text = nowMaxed ? "Maxed Out" : (std::to_string(s.currentShelfPrice) + "G");
-            pLbl.color = canStillAfford ? SDL_Color{0,0,0,255} : SDL_Color{180,50,50,255};
-            pLbl.dirty = true;
-            TextureManager::updateLabel(pLbl);
+                s.slots[j].buyBtn->getComponent<Collider>().enabled = afford;
+
+                auto& pLbl = s.slots[j].priceLabel->getComponent<Label>();
+                pLbl.text = std::to_string(jTrendPrice) + "G";
+
+                if (!afford) {
+                    pLbl.color = {180, 50, 50, 255};
+                } else if (jTrendMod > 1.0f) {
+                    pLbl.color = {76, 175, 80, 255};
+                } else if (jTrendMod < 1.0f) {
+                    pLbl.color = {211, 47, 47, 255};
+                } else {
+                    pLbl.color = {0, 0, 0, 255};
+                }
+                pLbl.dirty = true;
+                TextureManager::updateLabel(pLbl);
+            }
+
+            // 2. Refresh Shelf Upgrade State
+            if (s.shelfBuyBtn && s.shelfPriceLabel) {
+                bool nowMaxed = Game::gameState.displayCasesUnlocked >= 15;
+                bool canStillAfford = !nowMaxed && (currentWallet >= s.currentShelfPrice);
+
+                s.shelfBuyBtn->getComponent<Collider>().enabled = canStillAfford;
+
+                auto& pLbl = s.shelfPriceLabel->getComponent<Label>();
+                pLbl.text = nowMaxed ? "Maxed Out" : (std::to_string(s.currentShelfPrice) + "G");
+                pLbl.color = canStillAfford ? SDL_Color{0,0,0,255} : SDL_Color{180,50,50,255};
+                pLbl.dirty = true;
+                TextureManager::updateLabel(pLbl);
+            }
         };
     }
 
@@ -1824,8 +1906,7 @@ Entity& Scene::createDialogueUI(int windowWidth, int windowHeight) {
     clickable.onCancel = [&btnTransform] { btnTransform.scale = 1.0f; };
     clickable.onReleased = [this, &btnTransform]() {
         btnTransform.scale = 1.0f;
-        bool close = false;
-        toggleSettingsOverlayVisibility(*UIDialogue, &close);
+        world.getUIVisibilityManager().hide("dialogue");
 
         // Only restore HUD if no other full-screen UI is open
         auto& ui = world.getUIVisibilityManager();
@@ -1853,6 +1934,7 @@ Entity& Scene::createDialogueUI(int windowWidth, int windowHeight) {
     session.confirmBtnRef = &btnEnt;
 
     UIDialogue = &overlay;
+    world.getUIVisibilityManager().registerPanel("dialogue", UIDialogue);
     return overlay;
 }
 
@@ -1993,6 +2075,7 @@ Entity& Scene::createHUD(int windowWidth, int windowHeight) {
     session.walletLabelRef = &walletEnt;
 
     UIHud = &overlay;
+    world.getUIVisibilityManager().registerPanel("hud", UIHud);
     return overlay;
 }
 
@@ -2042,35 +2125,5 @@ void Scene::updateHUD(const Wallet& wallet, const DayCycle& dayCycle) {
         auto& lblT = session.walletLabelRef->getComponent<Transform>();
         lblT.position.x = iconT.position.x - lbl.dst.w - 8.0f;
         lblT.position.y = iconT.position.y + (40.0f / 2) - (lbl.dst.h / 2);
-    }
-}
-
-//UI Utils
-void Scene::toggleSettingsOverlayVisibility(Entity &overlay, bool *forceState) {
-    // 1. Determine the new state
-    // If forceState is null, we just flip the current visibility.
-    // If we are recursing, we pass the parent's state down.
-    bool newVisibility = forceState ? *forceState : !overlay.getComponent<Sprite>().visible;
-
-    // 2. Toggle the Parent's own components
-    if (overlay.hasComponent<Sprite>()) {
-        overlay.getComponent<Sprite>().visible = newVisibility;
-    }
-    if (overlay.hasComponent<Label>()) {
-        overlay.getComponent<Label>().visible = newVisibility;
-    }
-    if (overlay.hasComponent<Collider>()) {
-        overlay.getComponent<Collider>().enabled = newVisibility;
-    }
-
-    // 3. CASCADE: Recurse through all children
-    if (overlay.hasComponent<Children>()) {
-        auto &c = overlay.getComponent<Children>();
-        for (auto &child: c.children) {
-            if (child) {
-                // We pass the newVisibility down to the child
-                toggleSettingsOverlayVisibility(*child, &newVisibility);
-            }
-        }
     }
 }
