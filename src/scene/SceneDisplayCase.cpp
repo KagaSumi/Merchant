@@ -3,6 +3,7 @@
 //
 #include "Scene.h"
 #include "../manager/AssetManager.h"
+#include "UI/InventoryUI.h"
 
 Entity &Scene::createDisplaycase(Vector2D location, SDL_Texture *texture, SDL_FRect src, SDL_FRect dst,
                                  DayCycle &dayCycle, Entity *playerRef) {

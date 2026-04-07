@@ -7,90 +7,93 @@
 
 namespace DialogueUI {
     Entity& create(Scene& scene, int windowWidth, int windowHeight, Entity*& outUIDialogue, std::function<void()>& outSimpleDialogueConfirm) {
-    auto& overlay = scene.world.createEntity();
+        auto& overlay = scene.world.createEntity();
 
-    // Bottom third of screen, like your mockup
-    float boxH = windowHeight * 0.30f;
-    float boxW = windowWidth * 0.85f;
-    float boxX = (windowWidth - boxW) / 2.0f;
-    float boxY = windowHeight - boxH - 20.0f;
+        // Bottom third of screen, like your mockup
+        float boxH = windowHeight * 0.30f;
+        float boxW = windowWidth * 0.85f;
+        float boxX = (windowWidth - boxW) / 2.0f;
+        float boxY = windowHeight - boxH - 20.0f;
 
-    SDL_Texture* bgTex = TextureManager::load("../asset/ui/UI-Base.png");
-    SDL_FRect src{0, 0, boxW, boxH};
-    SDL_FRect dst{boxX, boxY, boxW, boxH};
+        SDL_Texture* bgTex = TextureManager::load("../asset/ui/UI-Base.png");
+        SDL_FRect src{0, 0, boxW, boxH};
+        SDL_FRect dst{boxX, boxY, boxW, boxH};
 
-    overlay.addComponent<Transform>(Vector2D(boxX, boxY), 0.0f, 1.0f);
-    overlay.addComponent<Sprite>(bgTex, src, dst, RenderLayer::UI, false);
-    overlay.addComponent<Children>();
+        overlay.addComponent<Transform>(Vector2D(boxX, boxY), 0.0f, 1.0f);
+        overlay.addComponent<Sprite>(bgTex, src, dst, RenderLayer::UI, false);
+        overlay.addComponent<Children>();
 
-    auto& session = overlay.addComponent<DialogueSession>();
+        auto& session = overlay.addComponent<DialogueSession>();
 
-    // --- MESSAGE LABEL ---
-    auto& msgEnt = scene.world.createEntity();
-    Label msgData = {
-        "...", AssetManager::getFont("arial"),
-        {0, 0, 0, 255}, LabelType::Static,  "dialogueMsg",boxW - 40.0f
-    };
-    auto& msgComp = msgEnt.addComponent<Label>(msgData);
-    msgComp.dirty = true;
-    msgComp.visible = false;
-    TextureManager::updateLabel(msgComp);
+        // --- MESSAGE LABEL ---
+        auto& msgEnt = scene.world.createEntity();
+        Label msgData = {
+            "...", AssetManager::getFont("arial"),
+            {0, 0, 0, 255}, LabelType::Static,  "dialogueMsg", boxW - 40.0f
+        };
+        auto& msgComp = msgEnt.addComponent<Label>(msgData);
+        msgComp.dirty = true;
+        msgComp.visible = false;
 
-    msgEnt.addComponent<Transform>(Vector2D(boxX + 20.0f, boxY + 20.0f), 0.0f, 1.0f);
-    msgEnt.addComponent<Parent>(&overlay);
-    overlay.getComponent<Children>().children.push_back(&msgEnt);
-    session.messageLabelRef = &msgEnt;
+        // OPTIMIZATION: Removed TextureManager::updateLabel(msgComp); here!
+        // We don't need to render "..." because the X position below doesn't rely on text width.
 
-    // --- CONFIRM BUTTON ---
-    auto& btnEnt = scene.world.createEntity();
-    float btnW = 120.0f, btnH = 36.0f;
-    float btnX = boxX + boxW - btnW - 20.0f;
-    float btnY = boxY + boxH - btnH - 20.0f;
+        msgEnt.addComponent<Transform>(Vector2D(boxX + 20.0f, boxY + 20.0f), 0.0f, 1.0f);
+        msgEnt.addComponent<Parent>(&overlay);
+        overlay.getComponent<Children>().children.push_back(&msgEnt);
+        session.messageLabelRef = &msgEnt;
 
-    auto& btnTransform = btnEnt.addComponent<Transform>(Vector2D(btnX, btnY), 0.0f, 1.0f);
-    SDL_Texture* btnTex = TextureManager::load("../asset/ui/Buttons.png");
-    SDL_FRect btnSrc{0, 33, 64, 16};
-    SDL_FRect btnDst{btnX, btnY, btnW, btnH};
+        // --- CONFIRM BUTTON ---
+        auto& btnEnt = scene.world.createEntity();
+        float btnW = 120.0f, btnH = 36.0f;
+        float btnX = boxX + boxW - btnW - 20.0f;
+        float btnY = boxY + boxH - btnH - 20.0f;
 
-    btnEnt.addComponent<Sprite>(btnTex, btnSrc, btnDst, RenderLayer::UI, false);
-    btnEnt.addComponent<Collider>("ui", btnDst).enabled = false;
+        auto& btnTransform = btnEnt.addComponent<Transform>(Vector2D(btnX, btnY), 0.0f, 1.0f);
+        SDL_Texture* btnTex = TextureManager::load("../asset/ui/Buttons.png");
+        SDL_FRect btnSrc{0, 33, 64, 16};
+        SDL_FRect btnDst{btnX, btnY, btnW, btnH};
 
-    auto& clickable = btnEnt.addComponent<Clickable>();
-    clickable.onPressed = [&btnTransform] { btnTransform.scale = 0.9f; };
-    clickable.onCancel = [&btnTransform] { btnTransform.scale = 1.0f; };
-    clickable.onReleased = [&scene, &btnTransform, &outSimpleDialogueConfirm]() {
-        btnTransform.scale = 1.0f;
-        scene.world.getUIVisibilityManager().hide("dialogue");
-        scene.world.getAudioEventQueue().push(std::make_unique<AudioEvent>("clickSoft"));
+        btnEnt.addComponent<Sprite>(btnTex, btnSrc, btnDst, RenderLayer::UI, false);
+        btnEnt.addComponent<Collider>("ui", btnDst).enabled = false;
 
-        // Only restore HUD if no other full-screen UI is open
-        auto& ui = scene.world.getUIVisibilityManager();
-        bool orderOpen   = ui.isVisible("order");
-        bool summaryOpen = ui.isVisible("summary");
-        bool haggleOpen  = ui.isVisible("haggle");
+        auto& clickable = btnEnt.addComponent<Clickable>();
+        clickable.onPressed = [&btnTransform] { btnTransform.scale = 0.9f; };
+        clickable.onCancel = [&btnTransform] { btnTransform.scale = 1.0f; };
+        clickable.onReleased = [&scene, &btnTransform, &outSimpleDialogueConfirm]() {
+            btnTransform.scale = 1.0f;
+            scene.world.getUIVisibilityManager().hide("dialogue");
+            scene.world.getAudioEventQueue().push(std::make_unique<AudioEvent>("clickSoft"));
 
-        if (!orderOpen && !summaryOpen && !haggleOpen) {;
-            ui.show("hud");
-        }
+            // Only restore HUD if no other full-screen UI is open
+            auto& ui = scene.world.getUIVisibilityManager();
+            bool orderOpen   = ui.isVisible("order");
+            bool summaryOpen = ui.isVisible("summary");
+            bool haggleOpen  = ui.isVisible("haggle");
 
-        auto& haggle = scene.world.getHaggleSystem();
-        if (haggle.pendingConfirm) {
-            haggle.onDialogueConfirmed();
-        } else if (outSimpleDialogueConfirm) {
-            auto cb = outSimpleDialogueConfirm;
-            outSimpleDialogueConfirm = nullptr;
-            if (cb) cb();
-        }
-    };
+            // FIX: Removed the stray semicolon here
+            if (!orderOpen && !summaryOpen && !haggleOpen) {
+                ui.show("hud");
+            }
+
+            auto& haggle = scene.world.getHaggleSystem();
+            if (haggle.pendingConfirm) {
+                haggle.onDialogueConfirmed();
+            } else if (outSimpleDialogueConfirm) {
+                auto cb = outSimpleDialogueConfirm;
+                outSimpleDialogueConfirm = nullptr;
+                if (cb) cb();
+            }
+        };
 
 
-    btnEnt.addComponent<Parent>(&overlay);
-    overlay.getComponent<Children>().children.push_back(&btnEnt);
-    session.confirmBtnRef = &btnEnt;
+        btnEnt.addComponent<Parent>(&overlay);
+        overlay.getComponent<Children>().children.push_back(&btnEnt);
+        session.confirmBtnRef = &btnEnt;
 
-    outUIDialogue = &overlay;
-    scene.world.getUIVisibilityManager().registerPanel("dialogue", outUIDialogue);
-    return overlay;
+        outUIDialogue = &overlay;
+        scene.world.getUIVisibilityManager().registerPanel("dialogue", outUIDialogue);
+        return overlay;
     }
 
     Entity& update(Scene& scene, const std::string& message, Entity* UIDialogue) {

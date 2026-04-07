@@ -5,6 +5,7 @@
 #include "InventoryUI.h"
 #include "BaseUI.h"
 #include "../manager/AssetManager.h"
+#include <algorithm> // For std::min, std::sort
 
 namespace InventoryUI {
     Entity &createGrid(Scene &scene, int windowWidth, int windowHeight, Entity *&outUIInventory) {
@@ -31,37 +32,33 @@ namespace InventoryUI {
         Label tData = {
             "Stockroom Inventory", AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "invTitle"
         };
-        tData.dirty = true;
-        tData.visible = false;
-        TextureManager::updateLabel(titleLabel.addComponent<Label>(tData));
+        auto& tComp = titleLabel.addComponent<Label>(tData);
+        tComp.dirty = true;
+        tComp.visible = false;
+
+        // STATIC TEXT: MUST render on boot to get the width for centering below!
+        TextureManager::updateLabel(tComp);
+
         titleLabel.addComponent<Transform>(
-            Vector2D(baseX + (menuWidth / 2) - (titleLabel.getComponent<Label>().dst.w / 2), baseY + 30.0f), 0.0f,
-            1.0f);
+            Vector2D(baseX + (menuWidth / 2) - (tComp.dst.w / 2), baseY + 30.0f), 0.0f, 1.0f);
         titleLabel.addComponent<Parent>(&mainOverlay);
         mainOverlay.getComponent<Children>().children.push_back(&titleLabel);
 
         // --- 1.5 NEW: RETURN BUTTON (Top Left) ---
-        // 1. Load your specific sprite (or your main sprite sheet if it's packed in there)
         SDL_Texture *buttonTex = TextureManager::load("../asset/ui/Buttons.png");
-
         auto &returnBtn = scene.world.createEntity();
 
-        // 2. Adjust these to match the actual pixel dimensions of your sprite
-        float rBtnW = 128.0f; // Width of your button on screen
-        float rBtnH = 32.0f; // Height of your button on screen
+        float rBtnW = 128.0f;
+        float rBtnH = 32.0f;
         float rBtnX = baseX + 20.0f;
         float rBtnY = baseY + 20.0f;
 
         auto &rBtnTransform = returnBtn.addComponent<Transform>(Vector2D(rBtnX, rBtnY), 0.0f, 1.0f);
-
-        // 3. Set the source rect to match where the graphic is on the texture
-        SDL_FRect returnSrc{0, 48, 64, 16}; // Update to your sprite's source coordinates
+        SDL_FRect returnSrc{0, 48, 64, 16};
         SDL_FRect returnDst{rBtnX, rBtnY, rBtnW, rBtnH};
 
         returnBtn.addComponent<Sprite>(buttonTex, returnSrc, returnDst, RenderLayer::UI, false);
         returnBtn.addComponent<Collider>("ui", returnDst).enabled = false;
-
-        // NOTE: Removed the Label entity entirely!
 
         auto &rClick = returnBtn.addComponent<Clickable>();
         Entity *rBtnPtr = &returnBtn;
@@ -95,7 +92,7 @@ namespace InventoryUI {
         };
         auto &stkComp = stockLabel.addComponent<Label>(stkData);
         stkComp.visible = false;
-        TextureManager::updateLabel(stkComp);
+        TextureManager::updateLabel(stkComp); // Render once to give it a rough width
 
         stockLabel.addComponent<Transform>(Vector2D(stockX + 36.0f, stockY + 6.0f), 0.0f, 1.0f);
         stockLabel.addComponent<Parent>(&mainOverlay);
@@ -104,16 +101,12 @@ namespace InventoryUI {
 
         // --- 1.6 RETRIEVE ALL BUTTON (-) ---
         auto &retrieveBtn = scene.world.createEntity();
-
-        // 2. Adjust dimensions
         float retBtnW = 64.0f;
         float retBtnH = 32.0f;
         float retBtnX = stockX - retBtnW - 15.0f;
 
         auto &retBtnTransform = retrieveBtn.addComponent<Transform>(Vector2D(retBtnX, stockY), 0.0f, 1.0f);
-
-        // 3. Set the source rect
-        SDL_FRect retrieveSrc{32, 16, 32, 16}; // Update to your sprite's source coordinates
+        SDL_FRect retrieveSrc{32, 16, 32, 16};
         SDL_FRect retrieveDst{retBtnX, stockY, retBtnW, retBtnH};
 
         retrieveBtn.addComponent<Sprite>(buttonTex, retrieveSrc, retrieveDst, RenderLayer::UI, false);
@@ -129,21 +122,16 @@ namespace InventoryUI {
             auto &s = scene.UIInventory->getComponent<InventorySession>();
 
             if (s.mode == InventoryMode::PlaceItem && s.currentStand && s.currentStand->quantity > 0) {
-                // 1. Get the player's inventory
                 auto &playerInv = scene.playerEntity->getComponent<Inventory>();
-
-                // 2. Add the items from the display stand back to the player
                 playerInv.addItem(s.currentStand->item, s.currentStand->quantity);
 
-                //3. Clear the stand
                 s.currentStand->quantity = 0;
 
-                //Update Sprite
                 if (s.currentStand->owner) {
                     auto &standSprite = s.currentStand->owner->getComponent<Sprite>();
                     standSprite.src = s.currentStand->emptySrc;
                 }
-                //Sfx for picking up items
+
                 scene.world.getAudioEventQueue().push(std::make_unique<AudioEvent>("place"));
                 scene.world.getUIVisibilityManager().hide("inventory");
                 scene.world.getUIVisibilityManager().show("hud");
@@ -157,11 +145,9 @@ namespace InventoryUI {
         // --- 2. 4x4 GRID SETUP ---
         float padding = 40.0f;
         float gridStartX = baseX + padding;
-        float gridStartY = baseY + 80.0f; // just below title
+        float gridStartY = baseY + 80.0f;
 
         float menuHeight = overlaySprite.dst.h;
-
-        // Divide the full available width and height across 4 cols/rows
         float colSpacing = (menuWidth - (padding * 2.0f)) / 4.0f;
         float rowSpacing = (menuHeight - gridStartY + baseY - padding) / 4.0f;
 
@@ -170,7 +156,7 @@ namespace InventoryUI {
                 InventorySlotRefs slotRefs;
                 float iconSize = 48.0f;
                 float iconOffsetX = (colSpacing - iconSize) / 2.0f;
-                float iconOffsetY = (rowSpacing * 0.2f); // sits in upper portion of cell
+                float iconOffsetY = (rowSpacing * 0.2f);
 
                 float slotX = gridStartX + (col * colSpacing);
                 float slotY = gridStartY + (row * rowSpacing);
@@ -182,20 +168,16 @@ namespace InventoryUI {
                 slotRefs.container = &container;
 
                 // Icon
-
                 auto &iconEnt = scene.world.createEntity();
                 auto &iconTransform = iconEnt.addComponent<Transform>(
-                    Vector2D(slotX + iconOffsetX, slotY + iconOffsetY),
-                    0.0f, 1.0f);
+                    Vector2D(slotX + iconOffsetX, slotY + iconOffsetY), 0.0f, 1.0f);
                 SDL_FRect iconDst = {slotX + iconOffsetX, slotY + iconOffsetY, iconSize, iconSize};
-                iconEnt.addComponent<Sprite>(itemsTex, SDL_FRect{0, 0, 32, 32}, iconDst, RenderLayer::UI, false).visible
-                        =
-                        false;
+                iconEnt.addComponent<Sprite>(itemsTex, SDL_FRect{0, 0, 32, 32}, iconDst, RenderLayer::UI, false).visible = false;
                 slotRefs.icon = &iconEnt;
                 iconEnt.addComponent<Parent>(&container);
                 container.getComponent<Children>().children.push_back(&iconEnt);
 
-                // Label (Vertical stacking: Text sits below the icon for 4x4)
+                // Label
                 auto &labelEnt = scene.world.createEntity();
                 labelEnt.addComponent<Parent>(&container);
                 container.getComponent<Children>().children.push_back(&labelEnt);
@@ -203,14 +185,13 @@ namespace InventoryUI {
                     "Empty", AssetManager::getFont("arial-small"), {0, 0, 0, 255}, LabelType::Static,
                     "inv_" + std::to_string(row) + "_" + std::to_string(col)
                 };
-                lData.dirty = true;
-                lData.visible = false;
-                TextureManager::updateLabel(labelEnt.addComponent<Label>(lData));
-                // Offset label below icon
+
+                labelEnt.addComponent<Label>(lData);
+
                 labelEnt.addComponent<Transform>(Vector2D(slotX, slotY + iconOffsetY + iconSize + 6.0f), 0.0f, 1.0f);
                 slotRefs.label = &labelEnt;
 
-                //Clickable
+                // Clickable
                 int idx = row * 4 + col;
                 Entity *iconPtr = &iconEnt;
                 auto &iconClick = iconEnt.addComponent<Clickable>();
@@ -219,7 +200,6 @@ namespace InventoryUI {
                     auto &s = scene.UIInventory->getComponent<InventorySession>();
                     if (s.mode != InventoryMode::PlaceItem) return;
 
-                    // 2. Only shrink if the item exists and is in stock
                     if (idx < s.cachedInventory.size() && s.cachedInventory[idx].quantity > 0) {
                         iconPtr->getComponent<Transform>().scale = 0.9f;
                     }
@@ -229,7 +209,6 @@ namespace InventoryUI {
                     auto &s = scene.UIInventory->getComponent<InventorySession>();
                     if (s.mode != InventoryMode::PlaceItem) return;
 
-                    // 3. Only grow back if it was allowed to shrink in the first place
                     if (idx < s.cachedInventory.size() && s.cachedInventory[idx].quantity > 0) {
                         iconPtr->getComponent<Transform>().scale = 1.0f;
                     }
@@ -245,15 +224,12 @@ namespace InventoryUI {
                         auto &entry = s.cachedInventory[idx];
 
                         if (entry.quantity > 0) {
-                            // Reset the scale back to normal before changing screens
                             iconPtr->getComponent<Transform>().scale = 1.0f;
 
-                            // 1. Hide the Inventory Screen
                             scene.world.getUIVisibilityManager().hide("inventory");
 
                             int maxToPlace = std::min(entry.quantity, 4);
 
-                            // 2. Open the completely separate Quantity Screen
                             InventoryUI::openQuantityScreen(
                                 scene,
                                 entry,
@@ -296,12 +272,9 @@ namespace InventoryUI {
         session.currentStand = targetStand;
         session.mode = mode;
 
-        // 1. FORCE OPEN FIRST! Let the manager make everything visible.
-        // (Make sure you register this panel as "inventory" in createInventoryUI!)
         scene.world.getUIVisibilityManager().show("inventory");
         scene.world.getUIVisibilityManager().hide("hud");
 
-        // 2. Sort the entire 16-item list
         auto sortedInv = inventoryData;
         std::sort(sortedInv.begin(), sortedInv.end(), [](const InventoryEntry &a, const InventoryEntry &b) {
             if (a.item.type != b.item.type) return static_cast<int>(a.item.type) < static_cast<int>(b.item.type);
@@ -309,7 +282,6 @@ namespace InventoryUI {
         });
         session.cachedInventory = sortedInv;
 
-        // 3. Map to the 16 slots (This will now safely hide empty slots)
         for (size_t i = 0; i < session.slots.size(); ++i) {
             auto &slot = session.slots[i];
             if (i < sortedInv.size()) {
@@ -328,26 +300,22 @@ namespace InventoryUI {
                 float iconX = slot.icon->getComponent<Transform>().position.x;
                 label.dst.x = (iconX + 24.0f) - (label.dst.w / 2.0f);
 
-                // Set Clickables
                 bool isClickable = (entry.quantity > 0 && session.mode == InventoryMode::PlaceItem);
                 if (slot.icon->hasComponent<Collider>()) {
                     slot.icon->getComponent<Collider>().enabled = isClickable;
                 }
             } else {
-                // Hide the extra slots
                 slot.icon->getComponent<Sprite>().visible = false;
                 slot.label->getComponent<Label>().visible = false;
                 if (slot.icon->hasComponent<Collider>()) slot.icon->getComponent<Collider>().enabled = false;
             }
         }
 
-        // 4. APPLY VISIBILITY OVERRIDES (This will now safely hide the button!)
         if (session.targetStockIconRef && session.targetStockLabelRef) {
             auto &iconSprite = session.targetStockIconRef->getComponent<Sprite>();
             auto &labelComp = session.targetStockLabelRef->getComponent<Label>();
 
-            bool shelfHasItems = (mode == InventoryMode::PlaceItem && targetStand != nullptr && targetStand->quantity >
-                                  0);
+            bool shelfHasItems = (mode == InventoryMode::PlaceItem && targetStand != nullptr && targetStand->quantity > 0);
 
             if (mode == InventoryMode::PlaceItem && targetStand != nullptr) {
                 labelComp.visible = true;
@@ -368,7 +336,6 @@ namespace InventoryUI {
                 labelComp.visible = false;
             }
 
-            // Apply Retrieve Button State
             if (session.retrieveAllBtnRef) {
                 session.retrieveAllBtnRef->getComponent<Sprite>().visible = shelfHasItems;
                 if (session.retrieveAllBtnRef->hasComponent<Collider>()) {
@@ -381,7 +348,6 @@ namespace InventoryUI {
     }
 
     Entity &createQuantityScreen(Scene &scene, int windowWidth, int windowHeight, Entity *&outUIQuantityScreen) {
-        // 1. Create a fresh base menu overlay
         auto &mainOverlay = BaseUI::createBaseMenuOverlay(scene, windowWidth, windowHeight);
         mainOverlay.getComponent<Sprite>().visible = false;
 
@@ -397,8 +363,7 @@ namespace InventoryUI {
         auto &iconEnt = scene.world.createEntity();
         iconEnt.addComponent<Transform>(Vector2D(centerX - 80.0f, baseY + 80.0f), 0.0f, 1.0f);
         SDL_Texture *itemsTex = TextureManager::load("../asset/items.png");
-        iconEnt.addComponent<Sprite>(itemsTex, SDL_FRect{0, 0, 32, 32}, SDL_FRect{0, 0, 48, 48}, RenderLayer::UI,
-                                     false);
+        iconEnt.addComponent<Sprite>(itemsTex, SDL_FRect{0, 0, 32, 32}, SDL_FRect{0, 0, 48, 48}, RenderLayer::UI, false);
         iconEnt.addComponent<Parent>(&mainOverlay);
         mainOverlay.getComponent<Children>().children.push_back(&iconEnt);
         session.itemIconRef = &iconEnt;
@@ -407,7 +372,8 @@ namespace InventoryUI {
         Label nameData = {
             "Item Name", AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "qtyScreenName"
         };
-        TextureManager::updateLabel(nameEnt.addComponent<Label>(nameData));
+        auto& nameComp = nameEnt.addComponent<Label>(nameData);
+        TextureManager::updateLabel(nameComp); // STATIC: Render once to get width
         nameEnt.addComponent<Transform>(Vector2D(centerX - 20.0f, baseY + 90.0f), 0.0f, 1.0f);
         nameEnt.addComponent<Parent>(&mainOverlay);
         mainOverlay.getComponent<Children>().children.push_back(&nameEnt);
@@ -419,14 +385,14 @@ namespace InventoryUI {
             "How many to place?", AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "qtyScreenPrompt"
         };
         auto &promptComp = promptEnt.addComponent<Label>(promptData);
-        TextureManager::updateLabel(promptComp);
+        TextureManager::updateLabel(promptComp); // STATIC: Need width to center
+
         promptEnt.addComponent<Transform>(Vector2D(centerX - (promptComp.dst.w / 2.0f), baseY + 180.0f), 0.0f, 1.0f);
         promptEnt.addComponent<Parent>(&mainOverlay);
         mainOverlay.getComponent<Children>().children.push_back(&promptEnt);
+
         // --- THE 4 BUTTON POOL ---
         SDL_Texture *btnTex = TextureManager::load("../asset/ui/Buttons.png");
-
-        // Scale up the 32x16 source image so it's easy to click
         float btnSizeW = 96.0f;
         float btnSizeH = 48.0f;
 
@@ -434,7 +400,6 @@ namespace InventoryUI {
             auto &btn = scene.world.createEntity();
             btn.addComponent<Transform>(Vector2D(0, 0), 0.0f, 1.0f);
 
-            // Determine exact X and Y on the sprite sheet based on the button number
             float srcX = (q == 1 || q == 3) ? 0.0f : 33.0f;
             float srcY = (q == 1 || q == 2) ? 64.0f : 80.0f;
 
@@ -444,9 +409,6 @@ namespace InventoryUI {
             btn.addComponent<Sprite>(btnTex, srcRect, dstRect, RenderLayer::UI, false).visible = false;
             btn.addComponent<Collider>("ui", dstRect).enabled = false;
 
-            // (We completely removed the numEnt Label creation here!)
-
-            // Click Logic
             auto &bClick = btn.addComponent<Clickable>();
             Entity *btnPtr = &btn;
             bClick.onPressed = [btnPtr] { btnPtr->getComponent<Transform>().scale = 0.9f; };
@@ -489,10 +451,8 @@ namespace InventoryUI {
             rBtnPtr->getComponent<Transform>().scale = 1.0f;
             scene.world.getAudioEventQueue().push(std::make_unique<AudioEvent>("clickSoft"));
 
-            // Hide this screen
             scene.world.getUIVisibilityManager().hide("quantity");
 
-            // Trigger cancel callback (which will reopen the inventory)
             auto &s = scene.UIQuantityScreen->getComponent<QuantityScreenSession>();
             if (s.onCancel) s.onCancel();
         };
@@ -525,19 +485,16 @@ namespace InventoryUI {
             TextureManager::updateLabel(lbl);
         }
 
-        // 1. Force the menu on
         scene.world.getUIVisibilityManager().show("quantity");
         scene.world.getUIVisibilityManager().hide("hud");
 
-        // 2. Layout the buttons
         auto &overlaySprite = UIQuantityScreen->getComponent<Sprite>();
         auto &overlayTransform = UIQuantityScreen->getComponent<Transform>();
         float centerX = overlayTransform.position.x + overlaySprite.dst.w / 2.0f;
         float containerY = overlayTransform.position.y + 240.0f;
 
-        int count = std::min(maxQty, 4); // Capped at 4!
+        int count = std::min(maxQty, 4);
 
-        // Adjust spacing to account for the wider 96x48 buttons
         float btnSizeW = 96.0f;
         float btnSpacing = 110.0f;
         float totalWidth = count * btnSpacing - (btnSpacing - btnSizeW);
