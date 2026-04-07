@@ -1428,7 +1428,7 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
 
     // --- PAYMENT WARNING LABEL (below wallet) ---
     auto& warningEnt = world.createEntity();
-    Label warnData = {"Rent Due Today: 0G", AssetManager::getFont("arial-small"), {211, 47, 47, 255}, LabelType::Static, "orderWarning"};
+    Label warnData = {"", AssetManager::getFont("arial-small"), {211, 47, 47, 255}, LabelType::Static, "orderWarning"};
     auto& warnComp = warningEnt.addComponent<Label>(warnData);
     warnComp.dirty = true;
     warnComp.visible = false; // Hidden by default!
@@ -1645,6 +1645,7 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
             warnLbl.visible = true;
         } else {
             // Not payday, hide the warning.
+            warnLbl.text = ""; // <--- ADD THIS LINE TO PHYSICALLY CLEAR IT
             warnLbl.visible = false;
         }
 
