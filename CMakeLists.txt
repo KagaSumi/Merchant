@@ -71,9 +71,9 @@ target_link_libraries(Project
 
 if (WIN32)
     add_custom_command(TARGET Project POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${PROJECT_SOURCE_DIR}/asset
-    $<TARGET_FILE_DIR:Project>/asset
-    COMMENT "Copying assets to build output"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${PROJECT_SOURCE_DIR}/asset
+            $<TARGET_FILE_DIR:Project>/asset
+            COMMENT "Copying assets to build output"
     )
 endif ()
