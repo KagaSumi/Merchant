@@ -15,11 +15,9 @@
 #include "CustomerSpawnerSystem.h"
 #include "DayCycleSystem.h"
 #include "DebtSystem.h"
-#include "DestructionSystem.h"
 #include "Entity.h"
 #include "EventResponseSystem.h"
 #include "HaggleSystem.h"
-#include "HUDSystem.h"
 #include "Items.h"
 #include "event/EventManager.h"
 #include "KeyboardInputSystem.h"
@@ -35,9 +33,8 @@
 #include "PreRenderSystem.h"
 #include "ReputationSystem.h"
 #include "ResultMenuSystem.h"
+#include "event/AudioEventQueue.h"
 #include "manager/UIVisibilityManager.h"
-
-void printCollision(const CollisionEvent& collision);
 
 class World {
     Map map;
@@ -53,6 +50,7 @@ class World {
     EventManager eventManager;
     SpawnTimerSystem spawnTimerSystem;
     EventResponseSystem eventResponseSystem{*this};
+    AudioEventQueue audioEventQueue;
     MainMenuSystem mainMenuSystem;
     UIRenderSystem uiRenderSystem;
     MouseInputSystem mouseInputSystem;
@@ -93,6 +91,7 @@ class World {
 
 
         mouseInputSystem.update(*this,event);
+        audioEventQueue.process();
         preRenderSystem.update(entities);
 
         synchronizeEntities();
@@ -163,6 +162,7 @@ class World {
     CustomerSpawnerSystem& getCustomerSpawnerSystem() { return customerSpawnerSystem; }
     UIVisibilityManager& getUIVisibilityManager() { return uiVisibilityManager; }
     ReputationSystem& getReputationSystem() { return reputationSystem; }
+    AudioEventQueue& getAudioEventQueue() { return audioEventQueue; }
 };
 
 #endif //PROJECT_WORLD_H

@@ -348,8 +348,9 @@ Entity &Scene::createPriceSelection(Entity &overlay) {
         auto &clickUp = btnUp.addComponent<Clickable>();
         clickUp.onPressed = [&btnUpTransform] { btnUpTransform.scale = 0.8f; };
         clickUp.onCancel = [&btnUpTransform] { btnUpTransform.scale = 1.0f; };
-        clickUp.onReleased = [&overlay, i, &btnUpTransform]() {
+        clickUp.onReleased = [&overlay, i, &btnUpTransform, this]() {
             btnUpTransform.scale = 1.0f;
+            world.getAudioEventQueue().push(std::make_unique<AudioEvent>("clickSoft"));
             auto& s = overlay.getComponent<HaggleSession>();
             s.digits[i]++;
             propagateCarry(s);
@@ -712,7 +713,7 @@ void Scene::createDaySummaryFooter(Entity &overlay, const DaySummaryData &data,D
     float btnWidth = 160.0f;
     float btnHeight = 40.0f;
     float btnX = baseX + overlaySprite.dst.w - btnWidth - 30.0f;
-    float btnY = footerY + (footerHeight / 2.0f) - (btnHeight / 2.0f);
+    float btnY = footerY + (footerHeight / 2.0f) - (btnHeight / 2.0f) - 20.0f;
 
     auto &btnTransform = btnEnt.addComponent<Transform>(Vector2D(btnX, btnY), 0.0f, 1.0f);
 
@@ -730,6 +731,7 @@ void Scene::createDaySummaryFooter(Entity &overlay, const DaySummaryData &data,D
     clickable.onCancel = [&btnTransform] { btnTransform.scale = 1.0f; };
     clickable.onReleased = [&overlay, &btnTransform, this, &dayCycle]() {
         btnTransform.scale = 1.0f;
+        world.getAudioEventQueue().push(std::make_unique<AudioEvent>("clickHard"));
         world.getUIVisibilityManager().hide("summary");
         world.getUIVisibilityManager().show("hud");
         updateHUD(storeEntity->getComponent<Wallet>(), dayCycle);
@@ -816,6 +818,9 @@ Entity &Scene::updateDaySummaryUI(const DaySummaryData &data) {
 
     // 4. Open the menu (Show everything)
     world.getUIVisibilityManager().show("summary");
+    //Page flip noise
+    world.getAudioEventQueue().push(std::make_unique<AudioEvent>("summary"));
+
 
     //Hide Hud
     world.getUIVisibilityManager().hide("hud");
@@ -923,7 +928,7 @@ Entity &Scene::createInventoryUI(int windowWidth, int windowHeight) {
     mainOverlay.getComponent<Children>().children.push_back(&stockLabel);
     session.targetStockLabelRef = &stockLabel;
 
-    // --- 1.6 NEW: RETRIEVE ALL BUTTON (-) ---
+    // --- 1.6 RETRIEVE ALL BUTTON (-) ---
     auto &retrieveBtn = world.createEntity();
 
     // 2. Adjust dimensions
@@ -946,6 +951,7 @@ Entity &Scene::createInventoryUI(int windowWidth, int windowHeight) {
     retClick.onCancel = [retBtnPtr] { retBtnPtr->getComponent<Transform>().scale = 1.0f; };
     retClick.onReleased = [this, retBtnPtr]() {
         retBtnPtr->getComponent<Transform>().scale = 1.0f;
+        world.getAudioEventQueue().push(std::make_unique<AudioEvent>("clickHard"));
         auto &s = UIInventory->getComponent<InventorySession>();
 
         if (s.mode == InventoryMode::PlaceItem && s.currentStand && s.currentStand->quantity > 0) {
@@ -964,6 +970,8 @@ Entity &Scene::createInventoryUI(int windowWidth, int windowHeight) {
                 auto& standSprite = s.currentStand->owner->getComponent<Sprite>();
                 standSprite.src = s.currentStand->emptySrc;
             }
+            //Sfx for picking up items
+            world.getAudioEventQueue().push(std::make_unique<AudioEvent>("place"));
             world.getUIVisibilityManager().hide("inventory");
             world.getUIVisibilityManager().show("hud");
         }
@@ -1054,6 +1062,7 @@ Entity &Scene::createInventoryUI(int windowWidth, int windowHeight) {
 
             iconClick.onReleased = [this, iconPtr, idx]() {
                 auto &s = UIInventory->getComponent<InventorySession>();
+                world.getAudioEventQueue().push(std::make_unique<AudioEvent>("clickSoft"));
 
                 if (s.mode != InventoryMode::PlaceItem) return;
 
@@ -1270,7 +1279,10 @@ Entity &Scene::createQuantityScreen(int windowWidth, int windowHeight) {
 
             if (s.onConfirm) {
                 s.onConfirm(s.selectedItem, q);
+                world.getAudioEventQueue().push(std::make_unique<AudioEvent>("place"));
             }
+
+            world.getUIVisibilityManager().show("hud");
         };
 
         btn.addComponent<Parent>(&mainOverlay);
@@ -1295,6 +1307,7 @@ Entity &Scene::createQuantityScreen(int windowWidth, int windowHeight) {
     rClick.onCancel = [rBtnPtr] { rBtnPtr->getComponent<Transform>().scale = 1.0f; };
     rClick.onReleased = [this, rBtnPtr]() {
         rBtnPtr->getComponent<Transform>().scale = 1.0f;
+        world.getAudioEventQueue().push(std::make_unique<AudioEvent>("clickSoft"));
 
         // Hide this screen
         world.getUIVisibilityManager().hide("quantity");
@@ -1507,6 +1520,7 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
             bClick.onReleased = [this, slotIdx, &btnTransform]() {
                 btnTransform.scale = 1.0f;
                 if (!UIOrderScreen) return;
+                world.getAudioEventQueue().push(std::make_unique<AudioEvent>("clickHard"));
 
                 auto& s = UIOrderScreen->getComponent<OrderSession>();
                 if (!s.inventoryRef || !s.walletRef) return;
@@ -1586,6 +1600,7 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
         cTransform.scale = 1.0f;
         world.getUIVisibilityManager().hide("order");
         world.getUIVisibilityManager().show("hud");
+        world.getAudioEventQueue().push(std::make_unique<AudioEvent>("clickSoft"));
 
         auto& s = UIOrderScreen->getComponent<OrderSession>();
         if (s.onContinue) s.onContinue();
@@ -1700,6 +1715,7 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
             auto &bTransform = slot.buyBtn->getComponent<Transform>();
             bClick.onReleased = [this, item, &bTransform, &wallet, &inv]() {
                 bTransform.scale = 1.0f;
+                world.getAudioEventQueue().push(std::make_unique<AudioEvent>("clickHard"));
                 float trendMod = world.getMarketTrendSystem().getModifier(item);
                 int trendPrice = static_cast<int>(item.basePrice * trendMod);
 
@@ -1807,6 +1823,7 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
             auto& s = UIOrderScreen->getComponent<OrderSession>();
             auto& sBtnTransform = s.shelfBuyBtn->getComponent<Transform>();
             sBtnTransform.scale = 1.0f;
+            world.getAudioEventQueue().push(std::make_unique<AudioEvent>("clickHard"));
 
             if (s.onBuyShelf) s.onBuyShelf();
 
@@ -1946,6 +1963,7 @@ Entity& Scene::createDialogueUI(int windowWidth, int windowHeight) {
     clickable.onReleased = [this, &btnTransform]() {
         btnTransform.scale = 1.0f;
         world.getUIVisibilityManager().hide("dialogue");
+        world.getAudioEventQueue().push(std::make_unique<AudioEvent>("clickSoft"));
 
         // Only restore HUD if no other full-screen UI is open
         auto& ui = world.getUIVisibilityManager();

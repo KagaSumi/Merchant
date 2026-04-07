@@ -16,6 +16,7 @@
 //GameObject *player = nullptr;
 
 GameState Game::gameState{};
+AudioManager Game::audioManager;
 bool Game::isRunning = true;
 std::function<void(std::string)> Game::onSceneChangeRequest;
 
@@ -62,7 +63,7 @@ void Game::init(const char *title, int width, int height, bool fullscreen) {
     audioManager.loadAudio("theme", "../asset/audio/果ての村.mp3");
     audioManager.loadAudio("morning", "../asset/audio/アルフヘイムの市場.mp3");
     audioManager.loadAudio("gameover", "../asset/audio/回顧録.mp3");
-    audioManager.loadAudio("shopOpen", "../asset/audio/市場でお開門.mp3");
+    audioManager.loadAudio("shopOpen", "../asset/audio/市場でお買いもの.mp3");
     audioManager.loadAudio("evening", "../asset/audio/旅支度_2.mp3");
     //UI SFX
     audioManager.loadAudio("summary", "../asset/audio/紙のページをめくる音.mp3");

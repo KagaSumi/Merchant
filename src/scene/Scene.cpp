@@ -236,6 +236,7 @@ void Scene::initHaggleSystem() {
         auto& rep = storeEntity->getComponent<ShopReputation>();
         auto& dc = storeEntity->getComponent<DayCycle>();
 
+        world.getAudioEventQueue().push(std::make_unique<AudioEvent>("sell"));
         wallet.balance += salePrice;
         wallet.dailyIncome += salePrice;
 
@@ -280,6 +281,9 @@ void Scene::initDayCycleCallbacks() {
         wallet.dailyExpenses = 0;
         world.getMarketTrendSystem().rollDailyTrend();
         updateHUD(wallet, dayCycle);
+
+        Game::audioManager.stopMusic(500);
+        Game::audioManager.playMusic("morning", 2000);
     };
 
     dayCycleSystem.onShopOpenStart = [this]() {
@@ -291,6 +295,10 @@ void Scene::initDayCycleCallbacks() {
         updateHUD(wallet, dayCycle);
 
         world.getCustomerSpawnerSystem().resetForNewDay();
+
+        Game::audioManager.stopMusic(500);
+        world.getAudioEventQueue().push(std::make_unique<AudioEvent>("doorBell"));
+        Game::audioManager.playMusic("shopOpen", 1500);
     };
 
     dayCycleSystem.onEveningStart = [this]() {
@@ -299,6 +307,9 @@ void Scene::initDayCycleCallbacks() {
         auto &debt = storeEntity->getComponent<Debt>();
         auto &rep = storeEntity->getComponent<ShopReputation>();
         updateHUD(wallet, dayCycle);
+        Game::audioManager.stopMusic(500);
+        world.getAudioEventQueue().push(std::make_unique<AudioEvent>("doorClose"));
+        Game::audioManager.playMusic("evening", 2000);
 
         bool isPaymentDay = (dayCycle.date > 0) && (dayCycle.date % 7 == 0);
         int snapshotDebt = world.getDebtSystem().getNextPayment(debt);
@@ -323,7 +334,7 @@ void Scene::initDayCycleCallbacks() {
 
         auto &inv = playerEntity->getComponent<Inventory>();
 
-        updateOrderUI(available, wallet, inv, snapshotDebt,
+        updateOrderUI(available, wallet, inv, (isPaymentDay ? snapshotDebt : 0),
                       // onContinue
                       [this, snapshotIncome, snapshotDebt, isPaymentDay, debt, bankrupt]() {
                           auto &wallet = storeEntity->getComponent<Wallet>();
@@ -411,6 +422,7 @@ void Scene::initEntities() {
         e.addComponent<Sprite>(tex, anim.clips[anim.currentClip].frameIndicies[0],
                                SDL_FRect{-16.0f, -16.0f, 64, 64});
 
+        world.getAudioEventQueue().push(std::make_unique<AudioEvent>("customerSpawn"));
         world.getDayCycleSystem().customerSpawned();
     });
 

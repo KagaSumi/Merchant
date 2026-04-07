@@ -48,7 +48,7 @@ public:
     }
     SDL_Renderer* renderer = nullptr;
 
-    AudioManager audioManager;
+    static AudioManager audioManager;
     SceneManager sceneManager;
 
     static std::function<void(std::string)> onSceneChangeRequest;

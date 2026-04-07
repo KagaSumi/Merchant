@@ -130,6 +130,7 @@ struct PlayerTag {
 };
 
 enum class DayPhase {
+    Init,
     Morning,
     ShopOpen,
     Evening,
@@ -138,7 +139,7 @@ enum class DayPhase {
 };
 
 struct DayCycle {
-    DayPhase currentPhase = DayPhase::Morning;
+    DayPhase currentPhase = DayPhase::Init;
     int date = {};
     int weekDay = 0; //0 Sunday, 6 =Saturday
     SDL_Texture *mapTilesetTexture = nullptr;

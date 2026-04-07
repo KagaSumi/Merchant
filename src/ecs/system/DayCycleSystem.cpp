@@ -19,6 +19,14 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
     }
 
     switch (cycle->currentPhase) {
+        case DayPhase::Init:
+            // The game just booted up. Instantly transition to Morning!
+            cycle->currentPhase = DayPhase::Morning;
+            if (onMorningStart) {
+                onMorningStart();
+            }
+            break;
+
         case DayPhase::Morning:
             if (cycle->phaseSwapReady == true) {
                 cycle->phaseSwapReady = false;
