@@ -11,34 +11,6 @@
 #include  "SceneType.h"
 
 class Scene {
-    struct HaggleSession {
-        ItemDef currentItem;
-        std::vector<int> digits = {0, 0, 0, 0, 0};
-
-        // Cached entity references for fast UI updates when switching items
-        Entity* percentLabelRef = nullptr;
-        Entity* itemNameRef = nullptr;
-        Entity* itemIconRef = nullptr;
-        Entity* itemBaseValRef = nullptr;
-        Entity* digitRefs[5] = {nullptr, nullptr, nullptr, nullptr, nullptr};
-        float columnCenters[5] = {0, 0, 0, 0, 0};
-
-        int getProposedPrice() const {
-            int finalPrice = 0;
-            int multiplier = 10000;
-            for (int i = 0; i < 5; ++i) {
-                finalPrice += digits[i] * multiplier;
-                multiplier /= 10;
-            }
-            return finalPrice;
-        }
-
-        int getPercentage() const {
-            if (currentItem.basePrice <= 0) return 0;
-            return static_cast<int>(((float)getProposedPrice() / currentItem.basePrice) * 100.0f);
-        }
-    };
-
     //Data Packages
     struct DaySummaryData {
         int grossSales = 0;
@@ -170,6 +142,8 @@ class Scene {
     };
 
 public:
+    Entity* UIMenu = nullptr; //Haggle
+
     Scene(SceneType sceneType, const char* sceneName, const char* mapPath, int windowWidth, int windowHeight);
 
 
@@ -189,6 +163,7 @@ public:
     void openInventory(const std::vector<InventoryEntry>& items, InventoryMode mode) {
         updateInventoryUI(items,mode);
     }
+    Entity& createBaseMenuOverlay(int windowWidth, int windowHeight);
 
 private:
     std::string name;
@@ -230,17 +205,9 @@ private:
     Entity& createCogButton(int windowWidth, int windowHeight, Entity& overlay);
 
     //Base Layer (Reuseable)
-    Entity& createBaseMenuOverlay(int windowWidth, int windowHeight);
     Entity& createConfirmButton(int windowWidth, int windowHeight, Entity& overlay);
 
     //Haggling UI
-    Entity* UIMenu = nullptr;
-    Entity& updateHaggleUI(ItemDef &item);
-    Entity& createHaggleUI(int windowWidth, int windowHeight);
-    Entity& createItemHaggleDisplay(Entity& parent); // Item Overlay
-    Entity& createPriceSelection(Entity &overlay); //Price Selection
-    Entity& createHaggleButton(Entity &overlay); // Confirm Button
-    static void propagateCarry(HaggleSession& s); //Helper for roll over
 
     //Inventory UI
     Entity& createInventoryUI(int windowWidth, int windowHeight);

@@ -6,6 +6,7 @@
 #include "DebtSystem.h"
 #include "../manager/AssetManager.h"
 #include "Game.h"
+#include "UI/HaggleUI.h"
 
 Scene::Scene(SceneType sceneType, const char *sceneName, const char *mapPath, int windowWidth,
              int windowHeight) : name(sceneName), type(sceneType) {
@@ -85,7 +86,7 @@ void Scene::initAssets(const char *mapPath) {
 }
 
 void Scene::initUI(int windowWidth, int windowHeight) {
-    createHaggleUI(windowWidth, windowHeight);
+    HaggleUI::create(*this, windowWidth, windowHeight, this->UIMenu);
 
     auto &inventoryUIRef = createInventoryUI(windowWidth, windowHeight);
     createQuantityScreen(windowWidth, windowHeight);
@@ -223,7 +224,7 @@ void Scene::initHaggleSystem() {
     };
     haggleSystem.onShowHaggleUI = [this](const ItemDef &item) {
         ItemDef copy = item;
-        updateHaggleUI(copy);
+        HaggleUI::update(*this, copy, this->UIMenu);
     };
 
     // CustomerDialogueSystem provides the lines
