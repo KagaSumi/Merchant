@@ -51,7 +51,6 @@ add_executable(Project src/main.cpp
         src/ecs/system/DebtSystem.cpp
         src/ecs/system/CustomerSpawnerSystem.cpp
         src/Items.cpp
-        src/scene/SceneUI.cpp
         src/scene/SceneDisplayCase.cpp
         src/ecs/system/HaggleSystem.cpp
         src/ecs/system/MarketTrendSystem.cpp
@@ -61,6 +60,20 @@ add_executable(Project src/main.cpp
         src/manager/UIVisibilityManager.cpp
         src/ecs/system/ReputationSystem.cpp
         src/manager/AudioManager.cpp
+        src/scene/UI/BaseUI.cpp
+        src/scene/UI/BaseUI.h
+        src/scene/UI/HaggleUI.cpp
+        src/scene/UI/HaggleUI.h
+        src/scene/UI/InventoryUI.cpp
+        src/scene/UI/InventoryUI.h
+        src/scene/UI/OrderUI.cpp
+        src/scene/UI/OrderUI.h
+        src/scene/UI/DaySummaryUI.cpp
+        src/scene/UI/DaySummaryUI.h
+        src/scene/UI/DialogueUI.cpp
+        src/scene/UI/DialogueUI.h
+        src/scene/UI/HudUI.cpp
+        src/scene/UI/HudUI.h
 )
 
 target_link_libraries(Project

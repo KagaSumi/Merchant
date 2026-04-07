@@ -3,6 +3,8 @@
 //
 
 #include "HaggleUI.h"
+
+#include "BaseUI.h"
 #include "../manager/AssetManager.h"
 
 // Define the struct methods
@@ -362,7 +364,7 @@ namespace {
 namespace HaggleUI {
     Entity &create(Scene &scene, int windowWidth, int windowHeight, Entity *&outUIMenu) {
         // Assuming createBaseMenuOverlay is moved to a shared BaseUI.h or kept public in Scene
-        auto &mainOverlay = scene.createBaseMenuOverlay(windowWidth, windowHeight);
+        auto &mainOverlay = BaseUI::createBaseMenuOverlay(scene, windowWidth, windowHeight);
         mainOverlay.getComponent<Sprite>().visible = false;
 
         if (!mainOverlay.hasComponent<Children>()) {

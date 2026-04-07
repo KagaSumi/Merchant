@@ -6,7 +6,14 @@
 #include "DebtSystem.h"
 #include "../manager/AssetManager.h"
 #include "Game.h"
+
+// UI Headers
 #include "UI/HaggleUI.h"
+#include "UI/InventoryUI.h"
+#include "UI/OrderUI.h"
+#include "UI/DialogueUI.h"
+#include "UI/HudUI.h"
+#include "UI/DaySummaryUI.h"
 
 Scene::Scene(SceneType sceneType, const char *sceneName, const char *mapPath, int windowWidth,
              int windowHeight) : name(sceneName), type(sceneType) {
@@ -39,9 +46,6 @@ void Scene::initMainMenu(int windowWidth, int windowHeight) {
     SDL_FRect menuSrc{0, 0, (float) 800, (float) 597};
     SDL_FRect menuDst{0, 0, (float) windowWidth, (float) windowHeight};
     menu.addComponent<Sprite>(texture, menuSrc, menuDst);
-
-    // auto &settingsOverlay = createSettingsOverlay(windowWidth, windowHeight);
-    // createCogButton(windowWidth, windowHeight, settingsOverlay);
 }
 
 void Scene::initLose(int windowWidth, int windowHeight) {
@@ -88,37 +92,38 @@ void Scene::initAssets(const char *mapPath) {
 void Scene::initUI(int windowWidth, int windowHeight) {
     HaggleUI::create(*this, windowWidth, windowHeight, this->UIMenu);
 
-    auto &inventoryUIRef = createInventoryUI(windowWidth, windowHeight);
-    createQuantityScreen(windowWidth, windowHeight);
-    auto &invSession = inventoryUIRef.getComponent<InventorySession>();
+    // Create Inventory and Quantity screens
+    InventoryUI::createGrid(*this, windowWidth, windowHeight, this->UIInventory);
+    InventoryUI::createQuantityScreen(*this, windowWidth, windowHeight, this->UIQuantityScreen);
+
+    auto &invSession = UIInventory->getComponent<InventorySession>();
     if (invSession.quantityPanelRef) {
-        bool hide = false;
         world.getUIVisibilityManager().hide("quantity");
     }
 
-    createOrderUI(windowWidth, windowHeight);
+    OrderUI::create(*this, windowWidth, windowHeight, this->UIOrderScreen);
     auto &orderSession = UIOrderScreen->getComponent<OrderSession>();
     orderSession.getShelfPrice = [](int currentCount) -> int {
         switch (currentCount) {
-            case 3:  return 150;   // 4th Shelf: Easy Day 1 buy. Leaves 350G for inventory.
-            case 4:  return 250;   // 5th Shelf: Very affordable Day 2/3 upgrade.
-            case 5:  return 400;   // 6th Shelf: Starts to require saving a bit.
-            case 6:  return 600;   // 7th Shelf: Week 2 early upgrade.
-            case 7:  return 850;   // 8th Shelf
-            case 8:  return 1150;  // 9th Shelf
-            case 9:  return 1500;  // 10th Shelf: Mid-Week 2 goal.
-            case 10: return 1900;  // 11th Shelf
-            case 11: return 2400;  // 12th Shelf
-            case 12: return 3000;  // 13th Shelf: Entering Week 3 luxury territory.
-            case 13: return 3700;  // 14th Shelf
-            case 14: return 4500;  // 15th Shelf: The ultimate flex for a perfect run.
+            case 3:  return 150;
+            case 4:  return 250;
+            case 5:  return 400;
+            case 6:  return 600;
+            case 7:  return 850;
+            case 8:  return 1150;
+            case 9:  return 1500;
+            case 10: return 1900;
+            case 11: return 2400;
+            case 12: return 3000;
+            case 13: return 3700;
+            case 14: return 4500;
             default: return 999999;
         }
     };
     orderSession.currentShelfPrice = orderSession.getShelfPrice(Game::gameState.displayCasesUnlocked);
 
-    createDialogueUI(windowWidth, windowHeight);
-    createHUD(windowWidth, windowHeight);
+    DialogueUI::create(*this, windowWidth, windowHeight, this->UIDialogue, this->simpleDialogueConfirm);
+    HudUI::create(*this, windowWidth, windowHeight, this->UIHud);
 }
 
 void Scene::initWorld(int windowWidth, int windowHeight) {
@@ -153,14 +158,13 @@ void Scene::initWorld(int windowWidth, int windowHeight) {
     dayCycle.date = Game::gameState.dayCount;
 
     // Day summary needs dayCycle ref at create time
-    createDaySummaryUI(windowWidth, windowHeight, dayCycle);
+    DaySummaryUI::create(*this, windowWidth, windowHeight, dayCycle, this->UIDaySummary);
 
-    updateHUD(wallet, dayCycle);
+    HudUI::update(*this, wallet, dayCycle, this->UIHud);
 }
 
 void Scene::initPlayer() {
     SDL_Point door = world.getMap().Door;
-    auto &inv_ui = *UIInventory;
 
     auto &player = world.createEntity();
     playerEntity = &player;
@@ -193,8 +197,7 @@ void Scene::initPlayer() {
             ui.show("hud");
         } else {
             // 2. If it's closed, update and open it!
-            // Note: Pass nullptr for the targetStand since we are just browsing
-            updateInventoryUI(items, InventoryMode::Browse, nullptr);
+            InventoryUI::updateGrid(*this, items, InventoryMode::Browse, nullptr, this->UIInventory);
         }
     };
 
@@ -218,10 +221,10 @@ void Scene::initHaggleSystem() {
 
     // Scene provides the actual UI calls
     haggleSystem.onShowDialogue = [this](const std::string &msg) {
-        //Hide HUD
         world.getUIVisibilityManager().hide("hud");
-        updateDialogueUI(msg);
+        DialogueUI::update(*this, msg, this->UIDialogue);
     };
+
     haggleSystem.onShowHaggleUI = [this](const ItemDef &item) {
         ItemDef copy = item;
         HaggleUI::update(*this, copy, this->UIMenu);
@@ -243,7 +246,7 @@ void Scene::initHaggleSystem() {
 
         bool leveledUp = world.getReputationSystem().onSale(salePrice, profitMargin, rep);
 
-        updateHUD(wallet, dc);
+        HudUI::update(*this, wallet, dc, this->UIHud);
 
         int basePrice = salePrice - profitMargin;
         std::string successLine = dialogue.getSuccessLine(salePrice, basePrice);
@@ -281,7 +284,8 @@ void Scene::initDayCycleCallbacks() {
         wallet.dailyIncome = 0;
         wallet.dailyExpenses = 0;
         world.getMarketTrendSystem().rollDailyTrend();
-        updateHUD(wallet, dayCycle);
+
+        HudUI::update(*this, wallet, dayCycle, this->UIHud);
 
         Game::audioManager.stopMusic(500);
         Game::audioManager.playMusic("morning", 2000);
@@ -293,7 +297,8 @@ void Scene::initDayCycleCallbacks() {
         if (playerEntity && playerEntity->hasComponent<PlayerTag>()) {
             playerEntity->getComponent<PlayerTag>().movementLocked = true;
         }
-        updateHUD(wallet, dayCycle);
+
+        HudUI::update(*this, wallet, dayCycle, this->UIHud);
 
         world.getCustomerSpawnerSystem().resetForNewDay();
 
@@ -307,7 +312,9 @@ void Scene::initDayCycleCallbacks() {
         auto &dayCycle = storeEntity->getComponent<DayCycle>();
         auto &debt = storeEntity->getComponent<Debt>();
         auto &rep = storeEntity->getComponent<ShopReputation>();
-        updateHUD(wallet, dayCycle);
+
+        HudUI::update(*this, wallet, dayCycle, this->UIHud);
+
         Game::audioManager.stopMusic(500);
         world.getAudioEventQueue().push(std::make_unique<AudioEvent>("doorClose"));
         Game::audioManager.playMusic("evening", 2000);
@@ -322,7 +329,6 @@ void Scene::initDayCycleCallbacks() {
 
         int snapshotIncome = wallet.dailyIncome;
 
-
         Game::gameState.walletBalance = wallet.balance;
         Game::gameState.debtTotal = debt.amount;
         Game::gameState.dayCount = dayCycle.date;
@@ -335,7 +341,7 @@ void Scene::initDayCycleCallbacks() {
 
         auto &inv = playerEntity->getComponent<Inventory>();
 
-        updateOrderUI(available, wallet, inv, (isPaymentDay ? snapshotDebt : 0),
+        OrderUI::update(*this, available, wallet, inv, (isPaymentDay ? snapshotDebt : 0),
                       // onContinue
                       [this, snapshotIncome, snapshotDebt, isPaymentDay, debt, bankrupt]() {
                           auto &wallet = storeEntity->getComponent<Wallet>();
@@ -351,7 +357,8 @@ void Scene::initDayCycleCallbacks() {
                           summary.daysUntilPayment = isPaymentDay ? 0 : (7 - (dayCycle.date % 7));
                           summary.isBankrupt = bankrupt;
                           summary.isGameWon = (debt.amount <= 0);
-                          updateDaySummaryUI(summary);
+
+                          DaySummaryUI::update(*this, summary, this->UIDaySummary);
                       },
                       // onBuyShelf
                       [this]() {
@@ -378,15 +385,16 @@ void Scene::initDayCycleCallbacks() {
                           }
                           Game::gameState.displayCasesUnlocked = nextIdx;
                           std::cout << "Purchased shelf #" << nextIdx << "\n";
-                      }
+                      },
+                      this->UIOrderScreen
         );
     };
 
     dayCycleSystem.onHudVisibilityChange = [this](bool visible) {
         if (visible) {
             world.getUIVisibilityManager().show("hud");
-            updateHUD(storeEntity->getComponent<Wallet>(),
-                      storeEntity->getComponent<DayCycle>());
+            HudUI::update(*this, storeEntity->getComponent<Wallet>(),
+                          storeEntity->getComponent<DayCycle>(), this->UIHud);
         } else {
             world.getUIVisibilityManager().hide("hud");
         }
@@ -466,7 +474,7 @@ void Scene::initEntities() {
     auto &bulletinBoard = world.createEntity();
     bulletinBoard.addComponent<Transform>(Vector2D(17 * 32, 5 * 32), 1.0f);
     bulletinBoard.addComponent<Interaction>([this]() {
-        showSimpleDialogue(world.getMarketTrendSystem().getActiveTrend().blurb);
+        DialogueUI::showSimple(*this, world.getMarketTrendSystem().getActiveTrend().blurb, this->UIDialogue, this->simpleDialogueConfirm, this->playerEntity);
     });
 
     // Scene state
