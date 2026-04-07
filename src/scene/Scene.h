@@ -9,7 +9,6 @@
 #include "Vector2D.h"
 #include "World.h"
 #include  "SceneType.h"
-#include "UI/InventoryUI.h"
 
 class Scene {
 public:
