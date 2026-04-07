@@ -75,7 +75,7 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
                 cycle->currentPhase = DayPhase::FadeToBlack;
                 fadeTimer = 0.0f;
                 holdTimer = 0.0f;
-                fadeInTimer = 0.0f; // Good practice to ensure these are reset
+                fadeInTimer = 0.0f;
                 fadedToBlack = false;
                 fadingIn = false;
 

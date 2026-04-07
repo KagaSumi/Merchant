@@ -29,7 +29,8 @@ if (WIN32)
     )
 endif ()
 
-add_executable(Project WIN32 src/main.cpp
+#add_executable(Project WIN32 src/main.cpp
+add_executable(Project src/main.cpp
         src/Game.cpp
         src/TextureManager.cpp
         src/Map.cpp
@@ -69,11 +70,11 @@ target_link_libraries(Project
     SDL3_mixer
 )
 
-if (WIN32)
-    add_custom_command(TARGET Project POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${PROJECT_SOURCE_DIR}/asset
-            $<TARGET_FILE_DIR:Project>/asset
-            COMMENT "Copying assets to build output"
-    )
-endif ()
+#if (WIN32)
+#    add_custom_command(TARGET Project POST_BUILD
+#            COMMAND ${CMAKE_COMMAND} -E copy_directory
+#            ${PROJECT_SOURCE_DIR}/asset
+#            $<TARGET_FILE_DIR:Project>/asset
+#            COMMENT "Copying assets to build output"
+#    )
+#endif ()

@@ -8,7 +8,7 @@
 
 Entity &Scene::createSettingsOverlay(int windowWidth, int windowHeight) {
     auto &overlay(world.createEntity());
-    SDL_Texture *overlayTex = TextureManager::load("asset/ui/settings.jpg");
+    SDL_Texture *overlayTex = TextureManager::load("../asset/ui/settings.jpg");
     SDL_FRect overlaySrc{0, 0, windowWidth * 0.85f, windowHeight * 0.85f};
     SDL_FRect overlayDest{
         (float) windowWidth / 2 - overlaySrc.w / 2, (float) windowHeight / 2 - overlaySrc.h / 2, overlaySrc.w,
@@ -27,7 +27,7 @@ Entity &Scene::createCogButton(int windowWidth, int windowHeight, Entity &overla
     auto &cogTransform = cog.addComponent<Transform>(Vector2D((float) windowWidth - 50, (float) windowHeight - 50),
                                                      0.0f, 1.0f);
 
-    SDL_Texture *texture = TextureManager::load("asset/ui/cog.png");
+    SDL_Texture *texture = TextureManager::load("../asset/ui/cog.png");
     SDL_FRect cogSrc{0, 0, 32, 32};
     SDL_FRect cogDest{cogTransform.position.x, cogTransform.position.y, cogSrc.w, cogSrc.h};
     cog.addComponent<Sprite>(texture, cogSrc, cogDest, RenderLayer::UI);
@@ -65,7 +65,7 @@ void Scene::createSettingsUIComponents(Entity &overlay) {
     auto &closeTransform = closeButton.addComponent<Transform>(Vector2D(baseX + overlaySprite.dst.w - 40, baseY + 10),
                                                                0.0f, 1.0f);
 
-    SDL_Texture *texture = TextureManager::load("asset/ui/close.png");
+    SDL_Texture *texture = TextureManager::load("../asset/ui/close.png");
     SDL_FRect closeSrc{0, 0, 32, 32};
     SDL_FRect closeDest{closeTransform.position.x, closeTransform.position.y, closeSrc.w, closeSrc.h};
     closeButton.addComponent<Sprite>(texture, closeSrc, closeDest, RenderLayer::UI, false);
@@ -90,7 +90,7 @@ void Scene::createSettingsUIComponents(Entity &overlay) {
 
 Entity &Scene::createBaseMenuOverlay(int windowWidth, int windowHeight) {
     auto &overlay(world.createEntity());
-    SDL_Texture *overlayTex = TextureManager::load("asset/ui/UI-Base.png");
+    SDL_Texture *overlayTex = TextureManager::load("../asset/ui/UI-Base.png");
     SDL_FRect overlaySrc{0, 0, windowWidth * 0.85f, windowHeight * 0.85f};
     SDL_FRect overlayDest{
         (float) windowWidth / 2 - overlaySrc.w / 2, (float) windowHeight / 2 - overlaySrc.h / 2, overlaySrc.w,
@@ -125,7 +125,7 @@ Entity &Scene::createItemHaggleDisplay(Entity &parent) {
     // 2. Assign the absolute position to the Transform
     subOverlay.addComponent<Transform>(Vector2D(absoluteX, absoluteY), 0.0f, 1.0f);
 
-    SDL_Texture *subTex = TextureManager::load("asset/ui/UI-Sub.png");
+    SDL_Texture *subTex = TextureManager::load("../asset/ui/UI-Sub.png");
     SDL_FRect subSrc{0, 0, 21.0f, 21.0f};
 
     // 3. ZERO OUT the local x/y offset so the renderer doesn't push it twice
@@ -160,7 +160,7 @@ Entity &Scene::createItemHaggleDisplay(Entity &parent) {
         Vector2D(parentT.position.x + parentCenterX - (iconSize / 2.0f), parentT.position.y + 80), 0.0f, 1.0f);
 
     SDL_Texture *itemsTex = TextureManager::get("items");
-    if (!itemsTex) itemsTex = TextureManager::load("asset/items.png");
+    if (!itemsTex) itemsTex = TextureManager::load("../asset/items.png");
 
     SDL_FRect itemDst{0, 0, iconSize, iconSize};
     itemIcon.addComponent<Sprite>(itemsTex, session.currentItem.src, itemDst, RenderLayer::UI, false);
@@ -337,7 +337,7 @@ Entity &Scene::createPriceSelection(Entity &overlay) {
         // --- UP BUTTON (+) ---
         auto &btnUp = world.createEntity();
         auto &btnUpTransform = btnUp.addComponent<Transform>(Vector2D(colX, startY), 0.0f, 1.0f);
-        SDL_Texture *texButtons = TextureManager::load("asset/ui/Buttons.png");
+        SDL_Texture *texButtons = TextureManager::load("../asset/ui/Buttons.png");
 
         SDL_FRect srcUp{32, 0, 32, 16};
         SDL_FRect destUp{colX, startY, btnWidth, btnHeight}; // Rendered larger!
@@ -410,7 +410,7 @@ Entity &Scene::createHaggleButton(Entity &overlay) {
     float scaleY = (baseY + overlaySprite.dst.h) - (displaySize);
 
     auto &haggleTransform = haggleButton.addComponent<Transform>(Vector2D(scaleX, scaleY), 0.0f, 1.0f);
-    SDL_Texture *haggleTex = TextureManager::load("asset/ui/haggleButton.png");
+    SDL_Texture *haggleTex = TextureManager::load("../asset/ui/haggleButton.png");
 
     SDL_FRect haggleSrc{0, 0, 256, 256};
     SDL_FRect haggleDest{scaleX, scaleY, displaySize, displaySize};
@@ -641,7 +641,7 @@ void Scene::createDaySummaryFooter(Entity &overlay, const DaySummaryData &data,D
     // --- 1. DIVIDER LINE ---
     // Hack: Stretch a tiny UI texture to act as a 2-pixel tall separator line
     auto &lineEnt = world.createEntity();
-    SDL_Texture *texUI = TextureManager::load("asset/ui/UI-Sub.png");
+    SDL_Texture *texUI = TextureManager::load("../asset/ui/UI-Sub.png");
     SDL_FRect lineSrc{0, 0, 8, 8};
     SDL_FRect lineDst{baseX + 10.0f, footerY, overlaySprite.dst.w - 20.0f, 2.0f};
 
@@ -718,7 +718,7 @@ void Scene::createDaySummaryFooter(Entity &overlay, const DaySummaryData &data,D
     auto &btnTransform = btnEnt.addComponent<Transform>(Vector2D(btnX, btnY), 0.0f, 1.0f);
 
     // Assuming you have a standard button sprite texture
-    SDL_Texture *texBtn = TextureManager::load("asset/ui/Buttons.png");
+    SDL_Texture *texBtn = TextureManager::load("../asset/ui/Buttons.png");
     SDL_FRect btnSrc{0, 33, 64, 16}; // Adjust to your actual button source rect
     SDL_FRect btnDst{btnX, btnY, btnWidth, btnHeight};
 
@@ -871,7 +871,7 @@ Entity &Scene::createInventoryUI(int windowWidth, int windowHeight) {
 
     // --- 1.5 NEW: RETURN BUTTON (Top Left) ---
     // 1. Load your specific sprite (or your main sprite sheet if it's packed in there)
-    SDL_Texture* buttonTex = TextureManager::load("asset/ui/Buttons.png");
+    SDL_Texture* buttonTex = TextureManager::load("../asset/ui/Buttons.png");
 
     auto &returnBtn = world.createEntity();
 
@@ -911,7 +911,7 @@ Entity &Scene::createInventoryUI(int windowWidth, int windowHeight) {
 
     auto& stockIcon = world.createEntity();
     stockIcon.addComponent<Transform>(Vector2D(stockX, stockY), 0.0f, 1.0f);
-    SDL_Texture* itemsTex = TextureManager::load("asset/items.png");
+    SDL_Texture* itemsTex = TextureManager::load("../asset/items.png");
     stockIcon.addComponent<Sprite>(itemsTex, SDL_FRect{0,0,32,32}, SDL_FRect{stockX, stockY, 32, 32}, RenderLayer::UI, false).visible = false;
     stockIcon.addComponent<Parent>(&mainOverlay);
     mainOverlay.getComponent<Children>().children.push_back(&stockIcon);
@@ -1219,7 +1219,7 @@ Entity &Scene::createQuantityScreen(int windowWidth, int windowHeight) {
     // --- HEADER (Icon & Name) ---
     auto &iconEnt = world.createEntity();
     iconEnt.addComponent<Transform>(Vector2D(centerX - 80.0f, baseY + 80.0f), 0.0f, 1.0f);
-    SDL_Texture *itemsTex = TextureManager::load("asset/items.png");
+    SDL_Texture *itemsTex = TextureManager::load("../asset/items.png");
     iconEnt.addComponent<Sprite>(itemsTex, SDL_FRect{0, 0, 32, 32}, SDL_FRect{0, 0, 48, 48}, RenderLayer::UI, false);
     iconEnt.addComponent<Parent>(&mainOverlay);
     mainOverlay.getComponent<Children>().children.push_back(&iconEnt);
@@ -1244,7 +1244,7 @@ Entity &Scene::createQuantityScreen(int windowWidth, int windowHeight) {
     promptEnt.addComponent<Parent>(&mainOverlay);
     mainOverlay.getComponent<Children>().children.push_back(&promptEnt);
     // --- THE 4 BUTTON POOL ---
-    SDL_Texture *btnTex = TextureManager::load("asset/ui/Buttons.png");
+    SDL_Texture *btnTex = TextureManager::load("../asset/ui/Buttons.png");
 
     // Scale up the 32x16 source image so it's easy to click
     float btnSizeW = 96.0f;
@@ -1452,9 +1452,9 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
     float colW = menuWidth / cols;
     float rowH = gridH / rows;
 
-    SDL_Texture* tilemapTex = TextureManager::load("asset/SpriteSheet.png");
-    SDL_Texture* itemsTex = TextureManager::load("asset/items.png");
-    SDL_Texture* btnTex = TextureManager::load("asset/ui/Buttons.png");
+    SDL_Texture* tilemapTex = TextureManager::load("../asset/SpriteSheet.png");
+    SDL_Texture* itemsTex = TextureManager::load("../asset/items.png");
+    SDL_Texture* btnTex = TextureManager::load("../asset/ui/Buttons.png");
 
     for (int row = 0; row < rows; ++row) {
         for (int col = 0; col < cols; ++col) {
@@ -1918,7 +1918,7 @@ Entity& Scene::createDialogueUI(int windowWidth, int windowHeight) {
     float boxX = (windowWidth - boxW) / 2.0f;
     float boxY = windowHeight - boxH - 20.0f;
 
-    SDL_Texture* bgTex = TextureManager::load("asset/ui/UI-Base.png");
+    SDL_Texture* bgTex = TextureManager::load("../asset/ui/UI-Base.png");
     SDL_FRect src{0, 0, boxW, boxH};
     SDL_FRect dst{boxX, boxY, boxW, boxH};
 
@@ -1951,7 +1951,7 @@ Entity& Scene::createDialogueUI(int windowWidth, int windowHeight) {
     float btnY = boxY + boxH - btnH - 20.0f;
 
     auto& btnTransform = btnEnt.addComponent<Transform>(Vector2D(btnX, btnY), 0.0f, 1.0f);
-    SDL_Texture* btnTex = TextureManager::load("asset/ui/Buttons.png");
+    SDL_Texture* btnTex = TextureManager::load("../asset/ui/Buttons.png");
     SDL_FRect btnSrc{0, 33, 64, 16};
     SDL_FRect btnDst{btnX, btnY, btnW, btnH};
 
@@ -2052,7 +2052,7 @@ Entity& Scene::createHUD(int windowWidth, int windowHeight) {
     float barX = windowWidth - barW - 10.0f;
     float barY = 10.0f;
 
-    SDL_Texture* bgTex = TextureManager::load("asset/ui/UI-Base.png");
+    SDL_Texture* bgTex = TextureManager::load("../asset/ui/UI-Base.png");
     SDL_FRect src{0, 0, barW, barH};
     SDL_FRect dst{barX, barY, barW, barH};
 
@@ -2103,7 +2103,7 @@ Entity& Scene::createHUD(int windowWidth, int windowHeight) {
     float iconY = windowHeight - iconSize - 10.0f;
 
     auto& iconEnt = world.createEntity();
-    SDL_Texture* coinTex = TextureManager::load("asset/ui/Gold.png");
+    SDL_Texture* coinTex = TextureManager::load("../asset/ui/Gold.png");
     iconEnt.addComponent<Transform>(Vector2D(iconX, iconY), 0.0f, 1.0f);
     iconEnt.addComponent<Sprite>(
         coinTex,
