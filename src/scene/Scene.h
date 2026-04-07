@@ -9,140 +9,25 @@
 #include "Vector2D.h"
 #include "World.h"
 #include  "SceneType.h"
+#include "UI/InventoryUI.h"
 
 class Scene {
-    //Data Packages
-    struct DaySummaryData {
-        int grossSales = 0;
-        int orderExpenses = 0;
-        int currentBalance = 0;
-        int weeklyPayment = 0;
-        int weeklyPaymentAmount = 0;
-        int daysUntilPayment = 0;
-        int totalDebt = 0;
-
-        bool isBankrupt = false;
-        bool isGameWon = false;
-
-        int getGrossProfit() const {
-            return grossSales - orderExpenses - weeklyPayment;
-        }
-    };
-
-    struct DaySummarySession {
-        DaySummaryData currentData;
-
-        // Cached references to the dynamic text entities
-        Entity* grossSalesValRef = nullptr;
-        Entity* customerPurchasesValRef = nullptr;
-        Entity* grossProfitValRef = nullptr;
-
-        Entity* weeklyPaymentLabelRef = nullptr;
-        Entity* weeklyPaymentValRef = nullptr;
-
-        Entity* debtSubTextRef = nullptr;
-        Entity* balanceTextRef = nullptr;
-        Entity* totalDebtTextRef = nullptr;
-    };
-
-    struct InventorySlotRefs {
-        Entity* container = nullptr;
-        Entity* icon = nullptr;
-        Entity* label = nullptr;
-    };
-
-    struct QuantityScreenSession {
-        InventoryEntry selectedItem;
-
-        // Callbacks to tell the Scene what to do when the screen closes
-        std::function<void(InventoryEntry, int)> onConfirm;
-        std::function<void()> onCancel;
-
-        Entity* itemIconRef = nullptr;
-        Entity* itemNameRef = nullptr;
-        std::vector<Entity*> quantityButtonRefs;
-    };
-
-    struct QuantitySession {
-        InventoryEntry selectedItem;
-        int maxQuantity = 0;
-
-        Entity* itemIconRef = nullptr;
-        Entity* itemNameRef = nullptr;
-        Entity* quantityButtonContainer = nullptr; // parent of the number buttons
-        std::vector<Entity*> quantityButtonRefs;   // the clickable number buttons
-
-        std::function<void(InventoryEntry, int)> onConfirm; // fires when player picks qty
-    };
-
-    enum class InventoryUIState {
-        Grid,
-        QuantitySelect
-    };
-
-    enum class InventoryMode {
-        Browse,      // opened via I key - view only
-        PlaceItem    // opened via display case - clickable
-    };
-    struct InventorySession {
-        std::vector<InventoryEntry> cachedInventory;
-        std::vector<InventorySlotRefs> slots;
-        InventoryMode mode = InventoryMode::Browse;
-
-        InventoryUIState state = InventoryUIState::Grid;
-        QuantitySession quantitySession;
-
-        Entity* targetStockIconRef = nullptr;
-        Entity* targetStockLabelRef = nullptr;
-        DisplayStand* currentStand = nullptr;
-
-        // grid root container ref so you can hide/show the whole grid at once
-        Entity* gridContainerRef = nullptr;
-        // quantity panel root ref
-        Entity* quantityPanelRef = nullptr;
-        Entity* retrieveAllBtnRef = nullptr;
-    };
-
-    // Order UI
-    struct OrderSlotRefs {
-        Entity* icon = nullptr;
-        Entity* nameLabel = nullptr;
-        Entity* priceLabel = nullptr;
-        Entity* buyBtn = nullptr;
-        Entity* buyLabel = nullptr;
-        Entity* buyBtnCollider = nullptr; // for enable/disable
-    };
-
-    struct OrderSession {
-        std::vector<OrderSlotRefs> slots;
-        std::vector<ItemDef> currentItems;
-        Entity* walletLabelRef = nullptr;
-        int* walletRef = nullptr; // live pointer to game wallet
-        Inventory* inventoryRef = nullptr;
-        std::function<void()> onContinue;
-        Entity* shelfBuyBtn = nullptr;
-        Entity* shelfPriceLabel = nullptr;
-        Entity* paymentWarningLabelRef = nullptr;
-        int currentShelfPrice = 500;
-        std::function<int(int currentCount)> getShelfPrice;
-        std::function<void()> onBuyShelf;
-    };
-
-    struct DialogueSession {
-        std::string currentMessage;
-        Entity* messageLabelRef = nullptr;
-        Entity* confirmBtnRef = nullptr;
-    };
-
-    struct HUDSession {
-        Entity* dayLabelRef = nullptr;
-        Entity* phaseLabelRef = nullptr;
-        Entity* walletLabelRef = nullptr;
-        Entity* walletIconRef = nullptr;
-    };
-
 public:
+    //UI Entity References
     Entity* UIMenu = nullptr; //Haggle
+    Entity* UIDaySummary = nullptr;
+    Entity* UIQuantityScreen = nullptr;
+    Entity* UIOrderScreen = nullptr;
+    Entity* UIDialogue = nullptr;
+    Entity* UIHud = nullptr;
+    Entity* UIInventory = nullptr;
+    std::function<void()> simpleDialogueConfirm = nullptr;
+
+    //Entity References
+    Entity* storeEntity = nullptr;
+    Entity* playerEntity = nullptr;
+    Entity* spawnerEntity = nullptr;
+    SDL_Texture* tilemapTex = nullptr;
 
     Scene(SceneType sceneType, const char* sceneName, const char* mapPath, int windowWidth, int windowHeight);
 
@@ -159,16 +44,9 @@ public:
 
     const std::string& getName() const {return name;}
 
-    Entity* UIInventory = nullptr;
-    void openInventory(const std::vector<InventoryEntry>& items, InventoryMode mode) {
-        updateInventoryUI(items,mode);
-    }
-    Entity& createBaseMenuOverlay(int windowWidth, int windowHeight);
-
 private:
     std::string name;
     SceneType type;
-    //void createProjectile(Vector2D pos, Vector2D dir, int speed);
 
     void initMainMenu(int windowWidth, int windowHeight);
     void initLose(int windowWidth, int windowHeight);
@@ -186,69 +64,18 @@ private:
     void initDayCycleCallbacks();
     void initEntities();
     //Cached pointers
-    Entity* storeEntity = nullptr;
-    Entity* playerEntity = nullptr;
-    Entity* spawnerEntity = nullptr;
-    SDL_Texture* tilemapTex = nullptr;
 
 
 
     //Helper Function
     Entity& createDisplaycase(Vector2D location, SDL_Texture* texture,SDL_FRect src, SDL_FRect dst, DayCycle& dayCycle,Entity* playerRef);
 
-    //HUD
-    Entity& createhudOverlay(int windowWidth, int windowHeight);
 
     //UI
     // ==================
-    Entity& createSettingsOverlay(int windowWidth, int windowHeight);
-    Entity& createCogButton(int windowWidth, int windowHeight, Entity& overlay);
 
     //Base Layer (Reuseable)
     Entity& createConfirmButton(int windowWidth, int windowHeight, Entity& overlay);
-
-    //Haggling UI
-
-    //Inventory UI
-    Entity& createInventoryUI(int windowWidth, int windowHeight);
-    Entity& updateInventoryUI(const std::vector<InventoryEntry>& inventoryData, InventoryMode mode, DisplayStand* targetStand = nullptr);
-
-    //Summary UI
-    Entity* UIDaySummary = nullptr;
-    Entity& createDaySummaryUI(int windowWidth, int windowHeight, DayCycle& dayCycle);
-    Entity& updateDaySummaryUI(const DaySummaryData& data);
-    void createDaySummaryContent(Entity& parent, const DaySummaryData& data);
-    void createDaySummaryFooter(Entity& parent, const DaySummaryData& data,DayCycle& dayCycle);
-
-    //Select UI (Display Case)
-    Entity* UIQuantityScreen = nullptr;
-    Entity& createQuantityScreen(int windowWidth, int windowHeight);
-    void openQuantityScreen(const InventoryEntry& item, int maxQty,
-                            std::function<void(InventoryEntry, int)> onConfirm,
-                            std::function<void()> onCancel);
-
-    //Order Screen
-    Entity* UIOrderScreen = nullptr;
-    Entity& createOrderUI(int windowWidth, int windowHeight);
-    Entity& updateOrderUI(std::vector<ItemDef> availableItems,
-                              Wallet& wallet, Inventory& inv,
-                              int paymentDueToday,
-                              std::function<void()> onContinue,
-                              std::function<void()> onBuyShelf);
-    //Dialogue Screen
-    Entity* UIDialogue = nullptr;
-    Entity& createDialogueUI(int windowWidth, int windowHeight);
-    Entity& updateDialogueUI(const std::string &message);
-    std::function<void()> simpleDialogueConfirm;
-    void showSimpleDialogue(const std::string& message); // One off UI
-
-    //HUD
-    Entity* UIHud = nullptr;
-    Entity& createHUD(int windowWidth, int windowHeight);
-    void updateHUD(const Wallet &wallet, const DayCycle &dayCycle);
-
-
-    void createSettingsUIComponents(Entity& overlay);
 };
 
 #endif //PROJECT_SCENE_H

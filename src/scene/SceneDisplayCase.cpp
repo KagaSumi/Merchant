@@ -85,7 +85,7 @@ Entity &Scene::createDisplaycase(Vector2D location, SDL_Texture *texture, SDL_FR
         };
 
         // Open the inventory menu and pass the Display Stand so the Top-Right UI updates!
-        updateInventoryUI(inv.items, InventoryMode::PlaceItem, &dc);
+        InventoryUI::updateGrid(*this, inv.items, InventoryMode::PlaceItem, &dc, UIInventory);
     });
     return displayCase;
 }
