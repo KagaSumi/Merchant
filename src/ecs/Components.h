@@ -135,7 +135,6 @@ enum class DayPhase {
     ShopOpen,
     Evening,
     FadeToBlack,
-    GameOver
 };
 
 struct DayCycle {

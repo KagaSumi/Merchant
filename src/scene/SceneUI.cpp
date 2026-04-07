@@ -2160,7 +2160,6 @@ void Scene::updateHUD(const Wallet& wallet, const DayCycle& dayCycle) {
             case DayPhase::ShopOpen:     lbl.text = "Open";    break;
             case DayPhase::Evening:      lbl.text = "Evening"; break;
             case DayPhase::FadeToBlack:  lbl.text = "...";     break;
-            case DayPhase::GameOver:     lbl.text = "Game Over"; break;
         }
         // Right-align phase label inside the bar
         auto& barSprite = UIHud->getComponent<Sprite>();

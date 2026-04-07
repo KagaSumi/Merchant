@@ -129,8 +129,5 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
             }
             break;
         }
-
-        case DayPhase::GameOver:
-            break;
     }
 }
