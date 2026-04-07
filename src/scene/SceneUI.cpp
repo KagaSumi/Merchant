@@ -1428,7 +1428,7 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
 
     // --- PAYMENT WARNING LABEL (below wallet) ---
     auto& warningEnt = world.createEntity();
-    Label warnData = {"", AssetManager::getFont("arial-small"), {211, 47, 47, 255}, LabelType::Static, "orderWarning"};
+    Label warnData = {" ", AssetManager::getFont("arial-small"), {211, 47, 47, 255}, LabelType::Static, "orderWarning"};
     auto& warnComp = warningEnt.addComponent<Label>(warnData);
     warnComp.dirty = true;
     warnComp.visible = false; // Hidden by default!
