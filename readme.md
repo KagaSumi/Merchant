@@ -5,7 +5,7 @@ A 2D shop management game built from the ground up in C++ using SDL. Step into t
 ## 🛠️ Tech Stack & Architecture
 
 * **Language:** C++
-* **Rendering & Input:** SDL2
+* **Rendering & Input:** SDL3
 * **Architecture:** Custom Entity Component System (ECS)
 * **Design Patterns:** Scene Management, State Machine (for Customer AI)
 
@@ -18,6 +18,12 @@ A 2D shop management game built from the ground up in C++ using SDL. Step into t
 * **Scene Management:** Seamless transitions between main menus, the shop floor, and end-of-day result screens.
 
 ## 🚀 Getting Started
+### Download
+Download the latest release from the [releases page](https://github.com/KagaSumi/Merchant/releases).
+
+Run the executable file to play the game.
+
+## Building from Source
 
 ### Prerequisites
 
@@ -25,11 +31,12 @@ To build and run this project, you will need the following installed on your sys
 
 * A C++17 (or newer) compatible compiler (e.g., GCC, Clang, or MSVC)
 * [CMake](https://cmake.org/) (Version 3.10+)
-* [SDL2](https://libsdl.org/) development libraries
-* [SDL2_image](https://github.com/libsdl-org/SDL_image) (if handling PNG/JPG assets)
-* [SDL2_ttf](https://github.com/libsdl-org/SDL_ttf) (for text rendering)
+* [SDL3.4](https://libsdl.org/) development libraries
+* [SDL3.26_image](https://github.com/libsdl-org/SDL_image) (if handling PNG/JPG assets)
+* [SDL3_ttf](https://github.com/libsdl-org/SDL_ttf) (for text rendering)
+* [SDL3.2_mixer](https://github.com/libsdl-org/SDL_mixer/releases) (for audio playback)
 
-### Building from Source
+### Building
 
 1. **Clone the repository:**
    ```bash
@@ -43,7 +50,7 @@ To build and run this project, you will need the following installed on your sys
 * **WASD:** Move the player.
 * **E:** Interact.
 * **I:** Open Inventory.
-* **Mouse:** Interact with Menus around.
+* **Mouse:** Interact with Menus.
 
 ## 📂 Project Structure
 
