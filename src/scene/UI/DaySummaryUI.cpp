@@ -21,10 +21,7 @@ namespace {
         Label tData = {
             "Today's Report", AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "reportTitle"
         };
-        tData.dirty = true;
-        tData.visible = false;
         auto &tComp = titleLabel.addComponent<Label>(tData);
-        TextureManager::updateLabel(tComp);
 
         titleLabel.addComponent<Transform>(Vector2D(centerLineX - (tComp.dst.w / 2.0f), baseY + 30.0f), 0.0f, 1.0f);
         titleLabel.addComponent<Parent>(&overlay);
@@ -46,9 +43,7 @@ namespace {
             // Left Label
             auto &textEnt = scene.world.createEntity();
             Label lData = {labelText, AssetManager::getFont("arial"), colorNeutral, LabelType::Static, labelText};
-            lData.dirty = true;
-            lData.visible = false;
-            TextureManager::updateLabel(textEnt.addComponent<Label>(lData));
+            textEnt.addComponent<Label>(lData);
             textEnt.addComponent<Transform>(Vector2D(leftColX, yPos), 0.0f, 1.0f);
             textEnt.addComponent<Parent>(&overlay);
             overlay.getComponent<Children>().children.push_back(&textEnt);
@@ -60,9 +55,6 @@ namespace {
 
             Label vData = {valString, AssetManager::getFont("arial"), valColor, LabelType::Static, labelText + "_val"};
             auto &vComp = valEnt.addComponent<Label>(vData);
-            vComp.dirty = true;
-            vComp.visible = false;
-            TextureManager::updateLabel(vComp);
 
             // Right-align math: Anchor X minus the width of the generated text
             valEnt.addComponent<Transform>(Vector2D(rightColX - vComp.dst.w, yPos), 0.0f, 1.0f);
@@ -117,9 +109,7 @@ namespace {
     Label dtData = {
         "Weekly Payment", AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "debtTitleText"
     };
-    dtData.dirty = true;
-    dtData.visible = false;
-    TextureManager::updateLabel(debtTitleEnt.addComponent<Label>(dtData));
+    debtTitleEnt.addComponent<Label>(dtData);
 
     // Position the title near the top of the footer
     debtTitleEnt.addComponent<Transform>(Vector2D(baseX + 30.0f, footerY + 15.0f), 0.0f, 1.0f);
@@ -132,9 +122,7 @@ namespace {
     std::string debtSubText = "In " + std::to_string(data.daysUntilPayment) + " days: " + std::to_string(
                                   data.weeklyPaymentAmount) + "g";
     Label dsData = {debtSubText, AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "debtSubText"};
-    dsData.dirty = true;
-    dsData.visible = false;
-    TextureManager::updateLabel(debtSubEnt.addComponent<Label>(dsData));
+    debtSubEnt.addComponent<Label>(dsData);
 
     // Position the subtitle directly below the title (Y offset + 35.0f)
     debtSubEnt.addComponent<Transform>(Vector2D(baseX + 30.0f, footerY + 50.0f), 0.0f, 1.0f);
@@ -146,9 +134,7 @@ namespace {
     session.balanceTextRef = &balEnt;
     std::string balText = "Current Balance: " + std::to_string(data.currentBalance) + "g";
     Label bData = {balText, AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "balText"};
-    bData.dirty = true;
-    bData.visible = false;
-    TextureManager::updateLabel(balEnt.addComponent<Label>(bData));
+    balEnt.addComponent<Label>(bData);
 
     balEnt.addComponent<Transform>(Vector2D(baseX + (overlaySprite.dst.w * 0.45f), footerY + 20.0f), 0.0f, 1.0f);
     balEnt.addComponent<Parent>(&overlay);
@@ -160,9 +146,7 @@ namespace {
     std::string tdText = "Total Debt: " + std::to_string(data.totalDebt) + "g";
     // Using your UI's red color {211, 47, 47, 255} so it looks like a debt
     Label tdData = {tdText, AssetManager::getFont("arial"), {211, 47, 47, 255}, LabelType::Static, "totalDebtText"};
-    tdData.dirty = true;
-    tdData.visible = false;
-    TextureManager::updateLabel(totalDebtEnt.addComponent<Label>(tdData));
+    totalDebtEnt.addComponent<Label>(tdData);
 
     // Place it exactly below the Current Balance text
     totalDebtEnt.addComponent<Transform>(Vector2D(baseX + (overlaySprite.dst.w * 0.45f), footerY + 50.0f), 0.0f, 1.0f);
