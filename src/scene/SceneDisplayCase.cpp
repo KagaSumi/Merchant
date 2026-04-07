@@ -8,7 +8,7 @@ Entity &Scene::createDisplaycase(Vector2D location, SDL_Texture *texture, SDL_FR
                                  DayCycle &dayCycle, Entity *playerRef) {
     auto &displayCase(world.createEntity());
     displayCase.addComponent<Transform>(location, 0.0f, 1.0f);
-    displayCase.addComponent<DisplayStand>();
+    displayCase.addComponent<DisplayStand>().owner = &displayCase;
     auto &c = displayCase.addComponent<Collider>("wall");
     c.rect.w = 96;
     c.rect.h = 48;

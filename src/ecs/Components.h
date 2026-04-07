@@ -161,6 +161,7 @@ struct DisplayStand {
     int quantity = 0;
     int reserved_quantity = 0; //incremented to prevent more than 1 customer buying the same item.
     SDL_FRect emptySrc = {};
+    Entity* owner = nullptr;
 };
 
 struct Customer {

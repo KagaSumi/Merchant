@@ -323,7 +323,7 @@ void Scene::initDayCycleCallbacks() {
 
         auto &inv = playerEntity->getComponent<Inventory>();
 
-        updateOrderUI(available, wallet, inv,
+        updateOrderUI(available, wallet, inv, snapshotDebt,
                       // onContinue
                       [this, snapshotIncome, snapshotDebt, isPaymentDay, debt, bankrupt]() {
                           auto &wallet = storeEntity->getComponent<Wallet>();

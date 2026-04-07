@@ -959,6 +959,11 @@ Entity &Scene::createInventoryUI(int windowWidth, int windowHeight) {
             //3. Clear the stand
             s.currentStand->quantity = 0;
 
+            //Update Sprite
+            if (s.currentStand->owner) {
+                auto& standSprite = s.currentStand->owner->getComponent<Sprite>();
+                standSprite.src = s.currentStand->emptySrc;
+            }
             world.getUIVisibilityManager().hide("inventory");
             world.getUIVisibilityManager().show("hud");
         }
@@ -1108,6 +1113,7 @@ Entity &Scene::updateInventoryUI(const std::vector<InventoryEntry> &inventoryDat
     // 1. FORCE OPEN FIRST! Let the manager make everything visible.
     // (Make sure you register this panel as "inventory" in createInventoryUI!)
     world.getUIVisibilityManager().show("inventory");
+    world.getUIVisibilityManager().hide("hud");
 
     // 2. Sort the entire 16-item list
     auto sortedInv = inventoryData;
@@ -1328,6 +1334,7 @@ void Scene::openQuantityScreen(const InventoryEntry &item, int maxQty,
 
     // 1. Force the menu on
     world.getUIVisibilityManager().show("quantity");
+    world.getUIVisibilityManager().hide("hud");
 
     // 2. Layout the buttons
     auto &overlaySprite = UIQuantityScreen->getComponent<Sprite>();
@@ -1405,6 +1412,20 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
     walletEnt.addComponent<Parent>(&mainOverlay);
     mainOverlay.getComponent<Children>().children.push_back(&walletEnt);
     session.walletLabelRef = &walletEnt;
+
+    // --- PAYMENT WARNING LABEL (below wallet) ---
+    auto& warningEnt = world.createEntity();
+    Label warnData = {"Rent Due Today: 0G", AssetManager::getFont("arial-small"), {211, 47, 47, 255}, LabelType::Static, "orderWarning"};
+    auto& warnComp = warningEnt.addComponent<Label>(warnData);
+    warnComp.dirty = true;
+    warnComp.visible = false; // Hidden by default!
+    TextureManager::updateLabel(warnComp);
+
+    // Placed slightly lower on the Y-axis than the wallet label
+    warningEnt.addComponent<Transform>(Vector2D(baseX + 30.0f, baseY + 65.0f), 0.0f, 1.0f);
+    warningEnt.addComponent<Parent>(&mainOverlay);
+    mainOverlay.getComponent<Children>().children.push_back(&warningEnt);
+    session.paymentWarningLabelRef = &warningEnt;
 
     // --- GRID: 4 cols x 4 rows = 16 slots ---
     // Reserve bottom strip for Continue button
@@ -1579,6 +1600,7 @@ Entity& Scene::createOrderUI(int windowWidth, int windowHeight) {
 
 Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
                               Wallet& wallet, Inventory& inv,
+                              int paymentDueToday,
                               std::function<void()> onContinue,
                               std::function<void()> onBuyShelf
                               ) {
@@ -1596,6 +1618,23 @@ Entity& Scene::updateOrderUI(std::vector<ItemDef> availableItems,
         lbl.text = "Wallet: " + std::to_string(wallet.balance) + "G";
         lbl.dirty = true;
         TextureManager::updateLabel(lbl);
+    }
+
+    // --- UPDATE PAYMENT WARNING ---
+    if (session.paymentWarningLabelRef) {
+        auto& warnLbl = session.paymentWarningLabelRef->getComponent<Label>();
+
+        if (paymentDueToday > 0) {
+            // It's payday! Show the warning.
+            warnLbl.text = "Debt Paid Today: " + std::to_string(-paymentDueToday) + "G";
+            warnLbl.visible = true;
+        } else {
+            // Not payday, hide the warning.
+            warnLbl.visible = false;
+        }
+
+        warnLbl.dirty = true;
+        TextureManager::updateLabel(warnLbl);
     }
 
     // Populate slots

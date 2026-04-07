@@ -150,6 +150,7 @@ class Scene {
         std::function<void()> onContinue;
         Entity* shelfBuyBtn = nullptr;
         Entity* shelfPriceLabel = nullptr;
+        Entity* paymentWarningLabelRef = nullptr;
         int currentShelfPrice = 500;
         std::function<int(int currentCount)> getShelfPrice;
         std::function<void()> onBuyShelf;
@@ -264,6 +265,7 @@ private:
     Entity& createOrderUI(int windowWidth, int windowHeight);
     Entity& updateOrderUI(std::vector<ItemDef> availableItems,
                               Wallet& wallet, Inventory& inv,
+                              int paymentDueToday,
                               std::function<void()> onContinue,
                               std::function<void()> onBuyShelf);
     //Dialogue Screen
