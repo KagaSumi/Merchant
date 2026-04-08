@@ -1,5 +1,7 @@
 # Relics & Receipts
-
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/9950609a-2c71-41dc-ab87-195d1d2195d1" width="800" />
+</p>
 A 2D shop management game built from scratch in C++ using SDL3. Play as a shopkeeper — manage your stockroom, haggle with customers, track your finances, and pay off your debt before time runs out.
 
 ---
@@ -57,7 +59,7 @@ src/
 
 ### Download
 
-Grab the latest build from the [Releases page](https://github.com/KagaSumi/Merchant/releases) and run the executable.
+Grab the latest build from the [Releases page](https://github.com/KagaSumi/Relics_and_Receipts/releases) and run the executable.
 
 ### Building from Source
 
@@ -73,7 +75,7 @@ Grab the latest build from the [Releases page](https://github.com/KagaSumi/Merch
 **Steps**
 
 ```bash
-git clone https://github.com/KagaSumi/Merchant.git
+git clone https://github.com/KagaSumi/Relics_and_Receipts.git
 cd Merchant
 cmake -S . -B build
 cmake --build build
@@ -90,5 +92,6 @@ cmake --build build
 | `WASD` | Move |
 | `E` | Interact |
 | `I` | Open inventory |
+| `LShift` | Sprint |
 | `Mouse` | Navigate menus |
 
