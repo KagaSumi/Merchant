@@ -15,11 +15,9 @@
 #include "CustomerSpawnerSystem.h"
 #include "DayCycleSystem.h"
 #include "DebtSystem.h"
-#include "DestructionSystem.h"
 #include "Entity.h"
 #include "EventResponseSystem.h"
 #include "HaggleSystem.h"
-#include "HUDSystem.h"
 #include "Items.h"
 #include "event/EventManager.h"
 #include "KeyboardInputSystem.h"
@@ -30,12 +28,13 @@
 #include "RenderSystem.h"
 #include "SpawnTimerSystem.h"
 #include "scene/SceneType.h"
-#include  "UIRenderSystem.h"
-#include  "MouseInputSystem.h"
+#include "UIRenderSystem.h"
+#include "MouseInputSystem.h"
 #include "PreRenderSystem.h"
+#include "ReputationSystem.h"
 #include "ResultMenuSystem.h"
-
-void printCollision(const CollisionEvent& collision);
+#include "event/AudioEventQueue.h"
+#include "manager/UIVisibilityManager.h"
 
 class World {
     Map map;
@@ -51,13 +50,13 @@ class World {
     EventManager eventManager;
     SpawnTimerSystem spawnTimerSystem;
     EventResponseSystem eventResponseSystem{*this};
+    AudioEventQueue audioEventQueue;
     MainMenuSystem mainMenuSystem;
     UIRenderSystem uiRenderSystem;
     MouseInputSystem mouseInputSystem;
     DayCycleSystem  dayCycleSystem;
     CustomerAISystem customerAISystem;
     PathfindingSystem pathfindingSystem;
-    HUDSystem hudSystem;
     CustomerSpawnerSystem customerSpawnerSystem;
     PreRenderSystem preRenderSystem;
     DebtSystem debtSystem;
@@ -65,6 +64,8 @@ class World {
     MarketTrendSystem marketTrendSystem;
     CustomerDialogueSystem customerDialogueSystem;
     ResultMenuSystem resultMenuSystem;
+    UIVisibilityManager uiVisibilityManager;
+    ReputationSystem reputationSystem;
 
     public:
     World() = default;
@@ -86,11 +87,11 @@ class World {
             haggleSystem.update();
             cameraSystem.update(entities);
             customerSpawnerSystem.update(entities, dt);
-            hudSystem.update(entities);
         }
 
 
         mouseInputSystem.update(*this,event);
+        audioEventQueue.process();
         preRenderSystem.update(entities);
 
         synchronizeEntities();
@@ -159,6 +160,9 @@ class World {
     MarketTrendSystem& getMarketTrendSystem() { return marketTrendSystem; }
     CustomerDialogueSystem& getCustomerDialogueSystem() { return customerDialogueSystem; }
     CustomerSpawnerSystem& getCustomerSpawnerSystem() { return customerSpawnerSystem; }
+    UIVisibilityManager& getUIVisibilityManager() { return uiVisibilityManager; }
+    ReputationSystem& getReputationSystem() { return reputationSystem; }
+    AudioEventQueue& getAudioEventQueue() { return audioEventQueue; }
 };
 
 #endif //PROJECT_WORLD_H

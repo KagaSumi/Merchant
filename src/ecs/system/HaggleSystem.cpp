@@ -36,6 +36,14 @@ void HaggleSystem::submitOffer(int offeredPrice) {
         customer.displayStand->quantity--;
         customer.displayStand->reserved_quantity--;
 
+        //Update Sprite if stand is now empty
+        if (customer.displayStand->quantity <= 0 && customer.displayStandEntity) {
+            if (customer.displayStandEntity->hasComponent<Sprite>()) {
+                customer.displayStandEntity->getComponent<Sprite>().src =
+                    customer.displayStand->emptySrc;
+            }
+        }
+
         // 2. Clean up AI state
         ai.isWaiting = false;
         ai.currentState = CustomerAIState::LeavingStore;
@@ -147,7 +155,13 @@ bool HaggleSystem::willAccept(const Customer& customer, const ItemDef& item, int
 }
 
 int HaggleSystem::getMaxAcceptablePrice(const Customer& customer, const ItemDef& item) {
-    float moodMultiplier = 1.0f + (customer.mood * 0.5f);
+    // Base: customers accept up to 130% of base price (30% base profit)
+    // Mood bonus: up to additional 30% (so 160% at max mood)
+    // Trend bonus: market modifier on top of everything
+    float baseLeniency = 1.30f;
+    float moodBonus = customer.mood * 0.30f;
+    float moodMultiplier = baseLeniency + moodBonus;
+
     float trendMultiplier = getPriceModifier ? getPriceModifier(item) : 1.0f;
     return static_cast<int>(item.basePrice * moodMultiplier * trendMultiplier);
 }

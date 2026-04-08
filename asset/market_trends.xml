@@ -1,109 +1,61 @@
 <marketTrends>
 
-    <!-- CONSUMABLE TRENDS -->
     <trend id="1">
-        <name>Plague Scare</name>
-        <blurb>Illness spreads through the lower districts. Healing supplies are flying off shelves.</blurb>
-        <modifier type="Consumable" tag="Healing" multiplier="1.5"/>
-        <modifier type="Consumable" tag="Medicine" multiplier="1.4"/>
+        <name>Bandit Blockade</name>
+        <blurb>Bandits are blocking the main roads. People want weapons, and merchants are panic-selling imported luxuries they can't transport.</blurb>
+        <modifier type="Equipment" tag="Weapon" multiplier="1.5"/>
+        <modifier type="Equipment" tag="Armor" multiplier="1.5"/>
+        <modifier type="Luxury" multiplier="0.6"/>
+        <modifier type="Material" tag="Rare" multiplier="0.7"/>
     </trend>
 
     <trend id="2">
-        <name>Mage Convention</name>
-        <blurb>Scholars from the Academy have arrived in town. Magical goods are in high demand.</blurb>
-        <modifier type="Consumable" tag="Magic" multiplier="1.4"/>
-        <modifier type="Equipment" tag="Magic" multiplier="1.3"/>
-        <modifier type="Material" tag="Magic" multiplier="1.35"/>
+        <name>Mana Surge</name>
+        <blurb>The local leylines are overflowing. Mages are paying top dollar for magical goods, but standard steel is practically being given away.</blurb>
+        <modifier type="Consumable" tag="Magic" multiplier="1.6"/>
+        <modifier type="Equipment" tag="Magic" multiplier="1.6"/>
+        <modifier type="Luxury" tag="Artifact" multiplier="1.8"/>
+        <modifier type="Equipment" tag="Metal" multiplier="0.5"/>
     </trend>
 
     <trend id="3">
-        <name>Tavern Special</name>
-        <blurb>The local tavern is running a "Brave Hero" promotion. Potions selling fast tonight.</blurb>
-        <modifier type="Consumable" tag="Liquid" multiplier="1.25"/>
+        <name>Fever Epidemic</name>
+        <blurb>A terrible fever has hit the town. Healing items are scarce, while monster hunters have abandoned their posts, leaving their haul behind.</blurb>
+        <modifier type="Consumable" tag="Healing" multiplier="1.8"/>
+        <modifier type="Consumable" tag="Medicine" multiplier="1.7"/>
+        <modifier type="Material" tag="Monster" multiplier="0.4"/>
     </trend>
 
     <trend id="4">
-        <name>Alchemist Shortage</name>
-        <blurb>The town alchemist has closed his doors. Consumables are scarce and buyers will pay more.</blurb>
-        <modifier type="Consumable" multiplier="1.35"/>
+        <name>Inquisitor's Visit</name>
+        <blurb>The High Inquisitor is in town looking for heresy. Holy relics are prized, while alchemists are desperately dumping their sketchy ingredients to avoid suspicion.</blurb>
+        <modifier type="Luxury" tag="Artifact" multiplier="2.0"/>
+        <modifier type="Material" tag="Alchemical" multiplier="0.5"/>
+        <modifier type="Consumable" tag="Liquid" multiplier="0.7"/>
     </trend>
 
-    <!-- EQUIPMENT TRENDS -->
     <trend id="5">
-        <name>Bandit Trouble</name>
-        <blurb>Bandits on the eastern road have travelers spooked. Weapons and armor moving quickly.</blurb>
+        <name>Bumper Crop</name>
+        <blurb>An incredibly successful harvest has flooded the market with cheap organic goods, leaving townsfolk feeling wealthy enough to buy fine weapons.</blurb>
         <modifier type="Equipment" tag="Weapon" multiplier="1.4"/>
-        <modifier type="Equipment" tag="Armor" multiplier="1.3"/>
+        <modifier type="Equipment" tag="Wood" multiplier="0.6"/>
+        <modifier type="Luxury" tag="Paper" multiplier="0.5"/>
     </trend>
 
     <trend id="6">
-        <name>Hunting Season</name>
-        <blurb>The annual hunt has begun. Bows and light weapons are popular with the rangers.</blurb>
-        <modifier type="Equipment" tag="Wood" multiplier="1.3"/>
-        <modifier type="Equipment" tag="Weapon" multiplier="1.2"/>
+        <name>Foreign Fleet Docked</name>
+        <blurb>A fleet from across the sea has arrived. They are buying up local raw materials in bulk and dumping standard consumables at wholesale prices.</blurb>
+        <modifier type="Material" multiplier="1.5"/>
+        <modifier type="Consumable" multiplier="0.6"/>
     </trend>
 
     <trend id="7">
-        <name>Iron Surplus</name>
-        <blurb>A merchant caravan flooded the market with cheap iron. Metal goods fetch less today.</blurb>
-        <modifier type="Equipment" tag="Metal" multiplier="0.75"/>
-    </trend>
-
-    <trend id="8">
-        <name>Tournament Week</name>
-        <blurb>Knights have gathered for the regional tournament. Fine weapons are highly sought after.</blurb>
-        <modifier type="Equipment" tag="Weapon" multiplier="1.5"/>
-        <modifier type="Equipment" tag="Metal" multiplier="1.3"/>
-    </trend>
-
-    <!-- MATERIAL TRENDS -->
-    <trend id="9">
-        <name>Collector's Fair</name>
-        <blurb>A traveling collector is paying handsomely for rare curiosities and exotic materials.</blurb>
-        <modifier type="Material" tag="Rare" multiplier="1.5"/>
-        <modifier type="Luxury" tag="Rare" multiplier="1.4"/>
-    </trend>
-
-    <trend id="10">
-        <name>Monster Sighting</name>
-        <blurb>Something large was spotted near the forest. Monster materials are fetching high prices.</blurb>
-        <modifier type="Material" tag="Monster" multiplier="1.6"/>
-        <modifier type="Material" tag="Rare" multiplier="1.3"/>
-    </trend>
-
-    <!-- QUIET DAYS -->
-    <trend id="11">
-        <name>Quiet Day</name>
-        <blurb>Nothing unusual in the markets today. A steady day of trade.</blurb>
-        <!-- No modifiers, normal prices -->
-    </trend>
-
-    <trend id="12">
-        <name>Festival Preparations</name>
-        <blurb>Townsfolk are preparing for the harvest festival. Luxury goods are popular gifts.</blurb>
-        <modifier type="Luxury" multiplier="1.45"/>
-    </trend>
-
-    <trend id="13">
-        <name>Trade Embargo</name>
-        <blurb>The eastern trade routes are blocked. Imported goods are worth more than usual.</blurb>
-        <modifier type="Material" multiplier="1.3"/>
-        <modifier type="Luxury" multiplier="1.2"/>
-    </trend>
-
-    <trend id="14">
-        <name>Economic Slump</name>
-        <blurb>Coin is tight across the district. Buyers are reluctant and budgets are thin.</blurb>
-        <modifier type="Consumable" multiplier="0.8"/>
-        <modifier type="Equipment" multiplier="0.8"/>
-        <modifier type="Luxury" multiplier="0.7"/>
-    </trend>
-
-    <trend id="15">
-        <name>Adventurers' Guild Contract</name>
-        <blurb>The guild posted a high-value contract. Adventurers are gearing up and spending freely.</blurb>
-        <modifier type="Equipment" multiplier="1.35"/>
+        <name>Grand Melee</name>
+        <blurb>The seasonal fighting tournament is today! Potions and steel are selling fast, but nobody cares about dusty old relics or magic tricks right now.</blurb>
+        <modifier type="Equipment" tag="Metal" multiplier="1.5"/>
         <modifier type="Consumable" tag="Healing" multiplier="1.4"/>
+        <modifier type="Equipment" tag="Magic" multiplier="0.6"/>
+        <modifier type="Luxury" tag="Artifact" multiplier="0.5"/>
     </trend>
 
 </marketTrends>

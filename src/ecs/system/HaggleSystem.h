@@ -7,6 +7,8 @@
 #include <string>
 #include <functional>
 
+#include "Components.h"
+
 class Entity;
 class Scene;
 struct Customer;

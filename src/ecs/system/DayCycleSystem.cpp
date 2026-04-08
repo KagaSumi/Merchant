@@ -19,6 +19,14 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
     }
 
     switch (cycle->currentPhase) {
+        case DayPhase::Init:
+            // The game just booted up. Instantly transition to Morning!
+            cycle->currentPhase = DayPhase::Morning;
+            if (onMorningStart) {
+                onMorningStart();
+            }
+            break;
+
         case DayPhase::Morning:
             if (cycle->phaseSwapReady == true) {
                 cycle->phaseSwapReady = false;
@@ -30,15 +38,17 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
             if (!spawnerRef) break; // Safety bailout if spawner doesn't exist yet
 
             // 2. Lock in the daily total on the very first frame of the phase
-            if (totalCustomersForDay == 0 && spawnerRef->spawnCount > 0) {
-                totalCustomersForDay = spawnerRef->spawnCount;
+            if (totalCustomersForDay == 0 && spawnerRef->maxSpawns > 0) {
+                totalCustomersForDay = spawnerRef->maxSpawns;
                 customersServed = 0; // Reset just to be safe
+                activeCustomers = 0;
             }
 
             // 3. Calculate Lerp progress (0.0f to 1.0f)
             float progress = 0.0f;
             if (totalCustomersForDay > 0) {
                 progress = static_cast<float>(customersServed) / totalCustomersForDay;
+                if (progress > 1.0f) progress = 1.0f;
             }
 
             // 4. Apply the gradual tint
@@ -46,12 +56,13 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
             applyTint(entities, current_tint);
 
             // 5. Check if the day is completely over!
-            // If the spawner is done, AND everyone who entered has now left...
-            if (spawnerRef->isFinished && customersServed >= totalCustomersForDay) {
+            // If everyone who entered has now left...
+            if (spawnerRef->isFinished && activeCustomers == 0) {
 
                 // Reset our tracking variables for tomorrow
                 totalCustomersForDay = 0;
                 customersServed = 0;
+                activeCustomers = 0;
 
                 finishShop(); // Transition to evening
             }
@@ -65,7 +76,7 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
                 cycle->currentPhase = DayPhase::FadeToBlack;
                 fadeTimer = 0.0f;
                 holdTimer = 0.0f;
-                fadeInTimer = 0.0f; // Good practice to ensure these are reset
+                fadeInTimer = 0.0f;
                 fadedToBlack = false;
                 fadingIn = false;
 
@@ -119,8 +130,5 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
             }
             break;
         }
-
-        case DayPhase::GameOver:
-            break;
     }
 }

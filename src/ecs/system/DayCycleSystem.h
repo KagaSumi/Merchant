@@ -56,8 +56,10 @@ public:
         // Phase stays FadeToBlack — the fade-in case will set it to Morning when done
     }
 
+    void customerSpawned(){activeCustomers++;}
     void customerDeparted() {
         customersServed++;
+        activeCustomers--;
     }
 
     void applyTint(const std::vector<std::unique_ptr<Entity> > &entities, const rgba rgba) {
@@ -114,5 +116,6 @@ private:
 
     int totalCustomersForDay = 0;
     int customersServed = 0;
+    int activeCustomers = 0;
 };
 #endif //PROJECT_DAYCYCLESYSTEM_H

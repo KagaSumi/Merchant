@@ -19,6 +19,7 @@ SDL_Texture *TextureManager::load(const char *path) {
     if (it != textures.end()) {
         return it->second;
     }
+
     //A surface represent an image in ram
     SDL_Surface *tempSurface = IMG_Load(path);
     //Do we want to do any pre-process before offloading to GPU?
@@ -69,12 +70,25 @@ void TextureManager::updateLabel(Label& label) {
         label.texture = nullptr;
     }
 
-    SDL_Surface* tempSurface = TTF_RenderText_Blended(
-        label.font,
-        label.text.c_str(),
-        label.text.size(),
-        label.color);
+    SDL_Surface* tempSurface = nullptr;
 
+    if (label.wrapLength > 0) {
+        tempSurface = TTF_RenderText_Blended_Wrapped(
+            label.font,
+            label.text.c_str(),
+            label.text.size(),
+            label.color,
+            label.wrapLength
+        );
+    } else {
+        // Fall back to standard single-line rendering
+        tempSurface = TTF_RenderText_Blended(
+            label.font,
+            label.text.c_str(),
+            label.text.size(),
+            label.color
+        );
+    }
         if (!tempSurface) {
             std::cerr << "Failed to load surface: " << label.textureCacheKey << std::endl;
         }

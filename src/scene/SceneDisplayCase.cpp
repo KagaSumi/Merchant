@@ -3,12 +3,13 @@
 //
 #include "Scene.h"
 #include "../manager/AssetManager.h"
+#include "UI/InventoryUI.h"
 
 Entity &Scene::createDisplaycase(Vector2D location, SDL_Texture *texture, SDL_FRect src, SDL_FRect dst,
                                  DayCycle &dayCycle, Entity *playerRef) {
     auto &displayCase(world.createEntity());
     displayCase.addComponent<Transform>(location, 0.0f, 1.0f);
-    displayCase.addComponent<DisplayStand>();
+    displayCase.addComponent<DisplayStand>().owner = &displayCase;
     auto &c = displayCase.addComponent<Collider>("wall");
     c.rect.w = 96;
     c.rect.h = 48;
@@ -31,8 +32,9 @@ Entity &Scene::createDisplaycase(Vector2D location, SDL_Texture *texture, SDL_FR
     SDL_FRect emptySrc = src;
 
     // 2. PASS `emptySrc` INTO THIS LAMBDA
-    displayCase.addComponent<Interaction>([casePtr, cyclePtr, playerRef, emptySrc, this]() {
+    displayCase.addComponent<Interaction>([casePtr, cyclePtr, playerRef, emptySrc, this, src]() {
         auto &dc = casePtr->getComponent<DisplayStand>();
+        dc.emptySrc = src;
 
         if (cyclePtr->currentPhase != DayPhase::Morning) return;
         if (!playerRef || !playerRef->hasComponent<Inventory>()) return;
@@ -84,7 +86,7 @@ Entity &Scene::createDisplaycase(Vector2D location, SDL_Texture *texture, SDL_FR
         };
 
         // Open the inventory menu and pass the Display Stand so the Top-Right UI updates!
-        updateInventoryUI(inv.items, InventoryMode::PlaceItem, &dc);
+        InventoryUI::updateGrid(*this, inv.items, InventoryMode::PlaceItem, &dc, UIInventory);
     });
     return displayCase;
 }

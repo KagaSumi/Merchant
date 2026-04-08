@@ -4,45 +4,55 @@
 //
 // Created by Curry on 2026-03-25.
 //
-
 bool DebtSystem::payDebt(Wallet &wallet, Debt &debt) {
-    weeksPassed++;
+    // 1. Ask our helper function EXACTLY how much is owed right now
+    // This uses the switch statement, so it perfectly matches the UI!
+    int weeklyPayment = calculatePayment(debt);
 
-    // Payment grows each week
-    int weeklyPayment = basePayment + (weeklyIncrement * (weeksPassed - 1));
-    if (weeklyPayment > debt.amount) weeklyPayment = debt.amount; // cap to remaining debt
-
+    // 2. Check if the player can afford it
     if (wallet.balance >= weeklyPayment) {
         wallet.balance -= weeklyPayment;
         debt.amount -= weeklyPayment;
-        std::cout << "Week " << weeksPassed
-                << ": Paid " << weeklyPayment
-                << ". Remaining debt: " << debt.amount << "\n";
-        return true;
-    } else {
-        std::cout << "Game Over! Cannot pay debt.\n";
-        return false;
-    }
-}
-int DebtSystem::getNextPayment(const Debt& debt) const {
-    // Preview what NEXT week's payment will be
-    int nextPayment = basePayment + (weeklyIncrement * weeksPassed);
 
-    return std::min(nextPayment, debt.amount);
+        std::cout << "Week " << (weeksPassed + 1)
+                  << ": Paid " << weeklyPayment
+                  << "G. Remaining debt: " << debt.amount << "G\n";
+
+        // 3. Increment the week ONLY after a successful payment
+        weeksPassed++;
+
+        return true;
+    }
+    std::cout << "Game Over! Cannot pay debt.\n";
+    return false;
+}
+
+int DebtSystem::getNextPayment(const Debt& debt) const {
+    // Preview what the payment will be for the current week
+    int expectedPayment = 0;
+
+    switch (weeksPassed) {
+        case 0: expectedPayment = 500;  break; // Week 1 goal
+        case 1: expectedPayment = 1500; break; // Week 2 goal
+        case 2: expectedPayment = 3000; break; // Week 3 goal
+        default: expectedPayment = 3000; break; // Fallback
+    }
+
+    // Never preview a payment larger than the remaining debt
+    return std::min(expectedPayment, debt.amount);
 }
 
 int DebtSystem::calculatePayment(const Debt& debt) const {
-    // Calculate the expected payment based on how many weeks have passed
-    int expectedPayment = basePayment + (weeklyIncrement * weeksPassed);
+    // Calculate the actual payment due right now
+    int expectedPayment = 0;
 
-    // Get the total remaining debt (assuming your Debt class has a getter like this)
-    int remainingDebt = debt.amount;
-
-    // If the expected payment is larger than the remaining debt,
-    // just return the remaining debt so the player doesn't overpay.
-    if (expectedPayment > remainingDebt) {
-        return remainingDebt;
+    switch (weeksPassed) {
+        case 0: expectedPayment = 500;  break;
+        case 1: expectedPayment = 1500; break;
+        case 2: expectedPayment = 3000; break;
+        default: expectedPayment = 3000; break;
     }
 
-    return expectedPayment;
+    // Never charge more than the remaining debt
+    return std::min(expectedPayment, debt.amount);
 }

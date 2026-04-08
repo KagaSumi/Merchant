@@ -80,8 +80,10 @@ struct TimedSpawner {
 
 struct Spawner {
     std::function<void()> spawnCallback{};
-    bool isFinished = (bool) spawnCount;
     int spawnCount = 0;
+    int maxSpawns = 0;
+    float spawnInterval = 2.0f;
+    bool isFinished = false;
 };
 
 //Game State, scene because might have multiple scenes
@@ -106,7 +108,6 @@ struct Children {
 };
 
 enum class LabelType {
-    PlayerPosition,
     Static
 };
 
@@ -114,8 +115,10 @@ struct Label {
     std::string text;
     TTF_Font *font = nullptr;
     SDL_Color color{};
-    LabelType type = LabelType::PlayerPosition;
+    LabelType type = LabelType::Static;
     std::string textureCacheKey{};
+    float wrapLength = 0;
+
     SDL_Texture *texture = nullptr;
     SDL_FRect dst{};
     bool visible = true;
@@ -127,15 +130,15 @@ struct PlayerTag {
 };
 
 enum class DayPhase {
+    Init,
     Morning,
     ShopOpen,
     Evening,
     FadeToBlack,
-    GameOver
 };
 
 struct DayCycle {
-    DayPhase currentPhase = DayPhase::Morning;
+    DayPhase currentPhase = DayPhase::Init;
     int date = {};
     int weekDay = 0; //0 Sunday, 6 =Saturday
     SDL_Texture *mapTilesetTexture = nullptr;
@@ -157,10 +160,13 @@ struct DisplayStand {
     ItemDef item = {};
     int quantity = 0;
     int reserved_quantity = 0; //incremented to prevent more than 1 customer buying the same item.
+    SDL_FRect emptySrc = {};
+    Entity* owner = nullptr;
 };
 
 struct Customer {
-    DisplayStand *displayStand;
+    Entity* displayStandEntity = nullptr;
+    DisplayStand *displayStand = nullptr;
     int budget{}; // Maybe simplify and remove budget rng, and just deal with basevalue manip
     float mood{}; // Maybe simplify and remove budget rng, and just deal with basevalue manip
     int patience = 3;
@@ -195,7 +201,6 @@ struct InventoryEntry {
 
 struct Inventory {
     std::vector<InventoryEntry> items;
-    Entity* uiRef = nullptr;
     std::function<void(const std::vector<InventoryEntry>&)> onOpenUI;
 
     void openUI() {

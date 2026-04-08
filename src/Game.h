@@ -10,6 +10,7 @@
 #pragma once
 #include <SDL3/SDL.h>
 #include "World.h"
+#include "manager/AudioManager.h"
 #include "manager/SceneManager.h"
 
 struct GameState {
@@ -17,7 +18,7 @@ struct GameState {
     int currentRepXP = 0;
     int xpToNextLevel = 100;
     int displayCasesUnlocked = 3;
-    int walletBalance = 1000;
+    int walletBalance = 500;
     int debtTotal = 5000;
     int dayCount = 1;
 };
@@ -45,8 +46,11 @@ public:
     static void setRunning(bool state) {
         isRunning = state;
     }
-    SDL_Renderer* renderer = nullptr;
 
+    SDL_Window* getWindow() const { return window; }
+
+    SDL_Renderer* renderer = nullptr;
+    static AudioManager audioManager;
     SceneManager sceneManager;
 
     static std::function<void(std::string)> onSceneChangeRequest;

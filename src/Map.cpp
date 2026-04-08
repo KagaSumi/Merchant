@@ -48,7 +48,6 @@ void Map::load(const char *path, SDL_Texture *ts) {
                 for (int j = 0; j < width; j++) {
                     std::string val;
                     if (!std::getline(ss, val, ',')) { break; }
-                    // Removed the broken if(tileData[]) line
                     wallData[i][j] = std::stoi(val);
                 }
             }
@@ -148,11 +147,10 @@ void Map::load(const char *path, SDL_Texture *ts) {
     }
 }
 
-// Update your header file to match this signature too!
 void Map::drawLayer(const std::vector<std::vector<int> > &layer, const Camera &cam, int firstGid) {
     SDL_FRect src{}, dest{};
     const int tileSize = 32;
-    const int tilesetColumns = 32; // 1024 width / 32 = 32 columns. Your math here is perfect.
+    const int tilesetColumns = 32;
 
     src.w = src.h = tileSize;
     dest.w = dest.h = tileSize;
@@ -174,7 +172,6 @@ void Map::drawLayer(const std::vector<std::vector<int> > &layer, const Camera &c
             dest.x = std::round(worldX - cam.view.x);
             dest.y = std::round(worldY - cam.view.y);
 
-            // --- The Fixed Math ---
             // Subtract the actual GID offset provided by Tiled
             int tileIndex = type - firstGid;
 

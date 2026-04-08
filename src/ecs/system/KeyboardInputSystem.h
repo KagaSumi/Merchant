@@ -52,7 +52,7 @@ public:
                         }
                         case SDLK_LSHIFT: {
                             //Sprint
-                            v.speed = 200.0f;
+                            v.speed = 300.0f;
                         }
                     }
                 }
@@ -72,7 +72,7 @@ public:
                             v.direction.x = 0;
                             break;
                         case SDLK_LSHIFT: {
-                            v.speed = 150.0f;
+                            v.speed = 200.0f;
                         }
                         default:
                             break;
