@@ -42,7 +42,7 @@ void Scene::initMainMenu(int windowWidth, int windowHeight) {
     auto &menu(world.createEntity());
     menu.addComponent<Transform>(Vector2D(0, 0), 0.0f, 1.0f);
 
-    SDL_Texture *texture = TextureManager::load("../asset/menu.png");
+    SDL_Texture *texture = TextureManager::load("asset/menu.png");
     SDL_FRect menuSrc{0, 0, (float) 800, (float) 597};
     SDL_FRect menuDst{0, 0, (float) windowWidth, (float) windowHeight};
     menu.addComponent<Sprite>(texture, menuSrc, menuDst);
@@ -53,7 +53,7 @@ void Scene::initLose(int windowWidth, int windowHeight) {
     cam.addComponent<Camera>();
     auto &screen(world.createEntity());
     screen.addComponent<Transform>(Vector2D(0, 0), 0.0f, 1.0f);
-    SDL_Texture *texture = TextureManager::load("../asset/Lose.png");
+    SDL_Texture *texture = TextureManager::load("asset/Lose.png");
     SDL_FRect menuSrc{0, 0, (float) 800, (float) 597};
     SDL_FRect menuDst{0, 0, (float) windowWidth, (float) windowHeight};
     screen.addComponent<Sprite>(texture, menuSrc, menuDst);
@@ -66,7 +66,7 @@ void Scene::initWin(int windowWidth, int windowHeight) {
     cam.addComponent<Camera>();
     auto &screen(world.createEntity());
     screen.addComponent<Transform>(Vector2D(0, 0), 0.0f, 1.0f);
-    SDL_Texture *texture = TextureManager::load("../asset/Win.png");
+    SDL_Texture *texture = TextureManager::load("asset/Win.png");
     SDL_FRect menuSrc{0, 0, (float) 800, (float) 597};
     SDL_FRect menuDst{0, 0, (float) windowWidth, (float) windowHeight};
     screen.addComponent<Sprite>(texture, menuSrc, menuDst);
@@ -84,13 +84,13 @@ void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight)
 }
 
 void Scene::initAssets(const char *mapPath) {
-    tilemapTex = TextureManager::load("../asset/SpriteSheet.png");
+    tilemapTex = TextureManager::load("asset/SpriteSheet.png");
     world.getMap().load(mapPath, tilemapTex);
-    TextureManager::load("../asset/items.png");
-    world.getItems().load("../asset/items.xml");
-    world.getMarketTrendSystem().load("../asset/market_trends.xml");
+    TextureManager::load("asset/items.png");
+    world.getItems().load("asset/items.xml");
+    world.getMarketTrendSystem().load("asset/market_trends.xml");
     world.getMarketTrendSystem().rollDailyTrend();
-    world.getCustomerDialogueSystem().load("../asset/customer_dialogue.xml");
+    world.getCustomerDialogueSystem().load("asset/customer_dialogue.xml");
 }
 
 void Scene::initUI(int windowWidth, int windowHeight) {
@@ -180,7 +180,7 @@ void Scene::initPlayer() {
     Animation anim = AssetManager::getAnimation("customer");
     player.addComponent<Animation>(anim);
 
-    SDL_Texture *tex = TextureManager::load("../asset/animations/CustomerA.png");
+    SDL_Texture *tex = TextureManager::load("asset/animations/CustomerA.png");
     SDL_FRect playerDst{-16, -16, 64, 64};
     player.addComponent<Sprite>(tex, anim.clips[anim.currentClip].frameIndicies[0], playerDst);
 
@@ -412,8 +412,8 @@ void Scene::initEntities() {
 
     // Customer spawner
     std::vector<SDL_Texture *> customerTextures = {
-        TextureManager::load("../asset/animations/CustomerF.png"),
-        TextureManager::load("../asset/animations/CustomerM.png")
+        TextureManager::load("asset/animations/CustomerF.png"),
+        TextureManager::load("asset/animations/CustomerM.png")
     };
     int customerIndexCount = 0;
 

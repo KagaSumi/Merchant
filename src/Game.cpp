@@ -60,25 +60,25 @@ void Game::init(const char *title, int width, int height, bool fullscreen) {
     }
     //Load Audio
     //Music
-    audioManager.loadAudio("theme", "../asset/audio/果ての村.mp3");
-    audioManager.loadAudio("morning", "../asset/audio/アルフヘイムの市場.mp3");
-    audioManager.loadAudio("gameover", "../asset/audio/回顧録.mp3");
-    audioManager.loadAudio("shopOpen", "../asset/audio/市場でお買いもの.mp3");
-    audioManager.loadAudio("evening", "../asset/audio/旅支度_2.mp3");
+    audioManager.loadAudio("theme", "asset/audio/果ての村.mp3");
+    audioManager.loadAudio("morning", "asset/audio/アルフヘイムの市場.mp3");
+    audioManager.loadAudio("gameover", "asset/audio/回顧録.mp3");
+    audioManager.loadAudio("shopOpen", "asset/audio/市場でお買いもの.mp3");
+    audioManager.loadAudio("evening", "asset/audio/旅支度_2.mp3");
 
     //UI SFX
-    audioManager.loadAudio("summary", "../asset/audio/紙のページをめくる音.mp3");
-    audioManager.loadAudio("clickHard", "../asset/audio/click-hard.ogg");
-    audioManager.loadAudio("clickSoft", "../asset/audio/click-soft.ogg");
-    audioManager.loadAudio("sell", "../asset/audio/sell.mp3");
+    audioManager.loadAudio("summary", "asset/audio/紙のページをめくる音.mp3");
+    audioManager.loadAudio("clickHard", "asset/audio/click-hard.ogg");
+    audioManager.loadAudio("clickSoft", "asset/audio/click-soft.ogg");
+    audioManager.loadAudio("sell", "asset/audio/sell.mp3");
 
     //Transition Noises
-    audioManager.loadAudio("doorClose", "../asset/audio/DoorClose.mp3");
-    audioManager.loadAudio("doorBell", "../asset/audio/ウエスタンドアを開くと鳴る入店音.mp3");
+    audioManager.loadAudio("doorClose", "asset/audio/DoorClose.mp3");
+    audioManager.loadAudio("doorBell", "asset/audio/ウエスタンドアを開くと鳴る入店音.mp3");
 
     //Environmental SFX
-    audioManager.loadAudio("place", "../asset/audio/Placing Object.mp3");
-    audioManager.loadAudio("customerSpawn", "../asset/audio/shopBell.ogg");
+    audioManager.loadAudio("place", "asset/audio/Placing Object.mp3");
+    audioManager.loadAudio("customerSpawn", "asset/audio/shopBell.ogg");
 
 
     //Start Music
@@ -86,15 +86,15 @@ void Game::init(const char *title, int width, int height, bool fullscreen) {
 
 
     //load fonts
-    AssetManager::loadFont("arial","../asset/fonts/arial.ttf",16);
-    AssetManager::loadFont("arial-small", "../asset/fonts/arial.ttf", 13);
+    AssetManager::loadFont("arial","asset/fonts/arial.ttf",16);
+    AssetManager::loadFont("arial-small", "asset/fonts/arial.ttf", 13);
 
     //load asset
-    AssetManager::loadAnimation("customer","../asset/animations/customer_animations.xml");
+    AssetManager::loadAnimation("customer","asset/animations/customer_animations.xml");
 
     //load scenes
     sceneManager.loadScene(SceneType::MainMenu,"mainmenu",nullptr,width,height);
-    sceneManager.loadScene(SceneType::Gameplay,"shop","../asset/Shop.tmx",width,height);
+    sceneManager.loadScene(SceneType::Gameplay,"shop","asset/Shop.tmx",width,height);
     sceneManager.loadScene(SceneType::Victory,"victory",nullptr,width,height);
     sceneManager.loadScene(SceneType::GameOver,"gameover",nullptr,width,height);
 

@@ -24,7 +24,7 @@ namespace {
         });
     }
     void buildQuantityHeader(Scene& scene, Entity& overlay, QuantityScreenSession& session, float centerX, float baseY) {
-        SDL_Texture *itemsTex = TextureManager::load("../asset/items.png");
+        SDL_Texture *itemsTex = TextureManager::load("asset/items.png");
 
         // --- ITEM ICON (32x32) ---
         auto& icon = scene.world.createEntity();
@@ -54,7 +54,7 @@ namespace {
         // Shelf Icon (32x32)
         auto &stockIcon = scene.world.createEntity();
         stockIcon.addComponent<Transform>(Vector2D(stockX, stockY), 0.0f, 1.0f);
-        SDL_Texture *itemsTex = TextureManager::load("../asset/items.png");
+        SDL_Texture *itemsTex = TextureManager::load("asset/items.png");
         stockIcon.addComponent<Sprite>(itemsTex, SDL_FRect{0, 0, 32, 32}, SDL_FRect{stockX, stockY, 32, 32}, RenderLayer::UI, false).visible = false;
         stockIcon.addComponent<Parent>(&overlay);
         overlay.getComponent<Children>().children.push_back(&stockIcon);
@@ -85,7 +85,7 @@ namespace {
         float gridStartY = baseY + 100.0f; // More spacing for title
         float colSpacing = (menuWidth - (padding * 2.0f)) / 4.0f;
         float rowSpacing = (menuHeight - (gridStartY - baseY) - padding) / 4.0f;
-        SDL_Texture *itemsTex = TextureManager::load("../asset/items.png");
+        SDL_Texture *itemsTex = TextureManager::load("asset/items.png");
 
         for (int row = 0; row < 4; ++row) {
             for (int col = 0; col < 4; ++col) {

@@ -15,7 +15,7 @@ namespace DialogueUI {
         float boxX = (windowWidth - boxW) / 2.0f;
         float boxY = windowHeight - boxH - 20.0f;
 
-        SDL_Texture* bgTex = TextureManager::load("../asset/ui/UI-Base.png");
+        SDL_Texture* bgTex = TextureManager::load("asset/ui/UI-Base.png");
         SDL_FRect src{0, 0, boxW, boxH};
         SDL_FRect dst{boxX, boxY, boxW, boxH};
 
@@ -50,7 +50,7 @@ namespace DialogueUI {
         float btnY = boxY + boxH - btnH - 20.0f;
 
         auto& btnTransform = btnEnt.addComponent<Transform>(Vector2D(btnX, btnY), 0.0f, 1.0f);
-        SDL_Texture* btnTex = TextureManager::load("../asset/ui/Buttons.png");
+        SDL_Texture* btnTex = TextureManager::load("asset/ui/Buttons.png");
         SDL_FRect btnSrc{0, 33, 64, 16};
         SDL_FRect btnDst{btnX, btnY, btnW, btnH};
 

@@ -15,7 +15,7 @@ namespace HudUI {
         float barX = windowWidth - barW - 10.0f;
         float barY = 10.0f;
 
-        SDL_Texture* bgTex = TextureManager::load("../asset/ui/UI-Base.png");
+        SDL_Texture* bgTex = TextureManager::load("asset/ui/UI-Base.png");
         overlay.addComponent<Transform>(Vector2D(barX, barY), 0.0f, 1.0f);
         overlay.addComponent<Sprite>(bgTex, SDL_FRect{0, 0, barW, barH}, SDL_FRect{barX, barY, barW, barH}, RenderLayer::UI, true);
         overlay.addComponent<Children>();
@@ -47,7 +47,7 @@ namespace HudUI {
         float iconY = windowHeight - iconSize - 10.0f;
 
         auto& iconEnt = scene.world.createEntity();
-        SDL_Texture* coinTex = TextureManager::load("../asset/ui/Gold.png");
+        SDL_Texture* coinTex = TextureManager::load("asset/ui/Gold.png");
         iconEnt.addComponent<Transform>(Vector2D(iconX, iconY), 0.0f, 1.0f);
         iconEnt.addComponent<Sprite>(coinTex, SDL_FRect{0, 0, 256, 256}, SDL_FRect{0, 0, iconSize, iconSize}, RenderLayer::UI, true);
         iconEnt.addComponent<Parent>(&overlay);

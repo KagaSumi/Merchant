@@ -39,7 +39,7 @@ namespace {
     void buildFooter(Scene& scene, Entity& overlay, DaySummarySession& session, const DaySummaryData& data, float baseX, float menuWidth, float footerY, float footerHeight, DayCycle& dayCycle) {
         // Divider
         auto &lineEnt = scene.world.createEntity();
-        SDL_Texture *texUI = TextureManager::load("../asset/ui/UI-Sub.png");
+        SDL_Texture *texUI = TextureManager::load("asset/ui/UI-Sub.png");
         lineEnt.addComponent<Transform>(Vector2D(baseX + 10.0f, footerY), 0.0f, 1.0f);
         lineEnt.addComponent<Sprite>(texUI, SDL_FRect{0, 0, 8, 8}, SDL_FRect{0, 0, menuWidth - 20.0f, 2.0f}, RenderLayer::UI, false);
         lineEnt.addComponent<Parent>(&overlay);

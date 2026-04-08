@@ -89,7 +89,7 @@ namespace {
         subOverlay.addComponent<Children>();
         parent.getComponent<Children>().children.push_back(&subOverlay);
 
-        SDL_Texture *subTex = TextureManager::load("../asset/ui/UI-Sub.png");
+        SDL_Texture *subTex = TextureManager::load("asset/ui/UI-Sub.png");
         subOverlay.addComponent<Sprite>(subTex, SDL_FRect{0, 0, 21, 21}, SDL_FRect{0, 0, subWidth, subHeight},
                                         RenderLayer::UI, false);
 
@@ -105,7 +105,7 @@ namespace {
         float iconSize = 64.0f;
         itemIcon.addComponent<Transform>(Vector2D(session.absoluteX + (subWidth / 2.0f) - (iconSize / 2.0f), absoluteY + 45.0f), 0.0f, 1.0f);
 
-        SDL_Texture *itemsTex = TextureManager::load("../asset/items.png");
+        SDL_Texture *itemsTex = TextureManager::load("asset/items.png");
         itemIcon.addComponent<Sprite>(itemsTex, session.currentItem.src, SDL_FRect{0, 0, iconSize, iconSize}, RenderLayer::UI, false);
         itemIcon.addComponent<Parent>(&subOverlay);
         subOverlay.getComponent<Children>().children.push_back(&itemIcon);
@@ -199,7 +199,7 @@ namespace {
 
         auto &haggleButton = scene.world.createEntity();
         auto &haggleTransform = haggleButton.addComponent<Transform>(Vector2D(scaleX, scaleY), 0.0f, 1.0f);
-        SDL_Texture *haggleTex = TextureManager::load("../asset/ui/haggleButton.png");
+        SDL_Texture *haggleTex = TextureManager::load("asset/ui/haggleButton.png");
         haggleButton.addComponent<Sprite>(haggleTex, SDL_FRect{0, 0, 256, 256}, SDL_FRect{scaleX, scaleY, displaySize, displaySize}, RenderLayer::UI, false);
         haggleButton.addComponent<Collider>("ui", SDL_FRect{scaleX, scaleY, displaySize, displaySize}).enabled = false;
 

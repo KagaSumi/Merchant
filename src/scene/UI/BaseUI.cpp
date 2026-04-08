@@ -21,7 +21,7 @@ namespace {
         auto &closeTransform = closeButton.addComponent<Transform>(Vector2D(baseX + overlaySprite.dst.w - 40, baseY + 10),
                                                                    0.0f, 1.0f);
 
-        SDL_Texture *texture = TextureManager::load("../asset/ui/close.png");
+        SDL_Texture *texture = TextureManager::load("asset/ui/close.png");
         SDL_FRect closeSrc{0, 0, 32, 32};
         SDL_FRect closeDest{closeTransform.position.x, closeTransform.position.y, closeSrc.w, closeSrc.h};
         closeButton.addComponent<Sprite>(texture, closeSrc, closeDest, RenderLayer::UI, false);
@@ -48,7 +48,7 @@ namespace {
 namespace BaseUI {
     Entity& createSettingsOverlay(Scene& scene, int windowWidth, int windowHeight) {
         auto &overlay(scene.world.createEntity());
-        SDL_Texture *overlayTex = TextureManager::load("../asset/ui/settings.jpg");
+        SDL_Texture *overlayTex = TextureManager::load("asset/ui/settings.jpg");
         SDL_FRect overlaySrc{0, 0, windowWidth * 0.85f, windowHeight * 0.85f};
         SDL_FRect overlayDest{
             (float) windowWidth / 2 - overlaySrc.w / 2, (float) windowHeight / 2 - overlaySrc.h / 2, overlaySrc.w,
@@ -67,7 +67,7 @@ namespace BaseUI {
         auto &cogTransform = cog.addComponent<Transform>(Vector2D((float) windowWidth - 50, (float) windowHeight - 50),
                                                          0.0f, 1.0f);
 
-        SDL_Texture *texture = TextureManager::load("../asset/ui/cog.png");
+        SDL_Texture *texture = TextureManager::load("asset/ui/cog.png");
         SDL_FRect cogSrc{0, 0, 32, 32};
         SDL_FRect cogDest{cogTransform.position.x, cogTransform.position.y, cogSrc.w, cogSrc.h};
         cog.addComponent<Sprite>(texture, cogSrc, cogDest, RenderLayer::UI);
@@ -114,7 +114,7 @@ namespace BaseUI {
         auto& btnEnt = scene.world.createEntity();
 
         auto& btnTransform = btnEnt.addComponent<Transform>(pos, 0.0f, 1.0f);
-        SDL_Texture* texBtn = TextureManager::load("../asset/ui/Buttons.png");
+        SDL_Texture* texBtn = TextureManager::load("asset/ui/Buttons.png");
         SDL_FRect btnDst{pos.x, pos.y, width, height};
 
         btnEnt.addComponent<Sprite>(texBtn, spriteSrc, btnDst, RenderLayer::UI, false);
@@ -138,7 +138,7 @@ namespace BaseUI {
 
     Entity& createBaseMenuOverlay(Scene& scene, int windowWidth, int windowHeight) {
         auto &overlay(scene.world.createEntity());
-        SDL_Texture *overlayTex = TextureManager::load("../asset/ui/UI-Base.png");
+        SDL_Texture *overlayTex = TextureManager::load("asset/ui/UI-Base.png");
         SDL_FRect overlaySrc{0, 0, windowWidth * 0.85f, windowHeight * 0.85f};
         SDL_FRect overlayDest{
             (float) windowWidth / 2 - overlaySrc.w / 2, (float) windowHeight / 2 - overlaySrc.h / 2, overlaySrc.w,

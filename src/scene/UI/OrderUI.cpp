@@ -32,7 +32,7 @@ namespace {
         int cols = 4, rows = 4;
         float colW = menuWidth / cols;
         float rowH = gridH / rows;
-        SDL_Texture *itemsTex = TextureManager::load("../asset/items.png");
+        SDL_Texture *itemsTex = TextureManager::load("asset/items.png");
 
         for (int row = 0; row < rows; ++row) {
             for (int col = 0; col < cols; ++col) {
@@ -85,7 +85,7 @@ namespace {
                            float gridBottom) {
         float shelfX = baseX + 40.0f;
         float shelfY = gridBottom + 15.0f;
-        SDL_Texture *tilemapTex = TextureManager::load("../asset/SpriteSheet.png");
+        SDL_Texture *tilemapTex = TextureManager::load("asset/SpriteSheet.png");
 
         auto &icon = scene.world.createEntity();
         icon.addComponent<Transform>(Vector2D(shelfX, shelfY), 0.0f, 1.0f);
