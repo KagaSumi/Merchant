@@ -22,6 +22,9 @@ struct HaggleSession {
     Entity* digitRefs[5] = {nullptr, nullptr, nullptr, nullptr, nullptr};
     float columnCenters[5] = {0, 0, 0, 0, 0};
 
+    float subWidth = 180.0f;
+    float absoluteX = 0.0f;
+
     int getProposedPrice() const;
     int getPercentage() const;
 };

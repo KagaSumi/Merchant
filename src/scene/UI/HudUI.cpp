@@ -2,101 +2,67 @@
 // Created by Curry on 2026-04-07.
 //
 #include "HudUI.h"
+#include "BaseUI.h"
 #include "../manager/AssetManager.h"
 
 namespace HudUI {
     Entity& create(Scene& scene, int windowWidth, int windowHeight, Entity*& outUIHud) {
         auto& overlay = scene.world.createEntity();
 
-        // Top-right bar — thin strip like your mockup
+        // Top-right bar dimensions
         float barW = 280.0f;
         float barH = 40.0f;
         float barX = windowWidth - barW - 10.0f;
         float barY = 10.0f;
 
         SDL_Texture* bgTex = TextureManager::load("../asset/ui/UI-Base.png");
-        SDL_FRect src{0, 0, barW, barH};
-        SDL_FRect dst{barX, barY, barW, barH};
-
         overlay.addComponent<Transform>(Vector2D(barX, barY), 0.0f, 1.0f);
-        overlay.addComponent<Sprite>(bgTex, src, dst, RenderLayer::UI, true);
+        overlay.addComponent<Sprite>(bgTex, SDL_FRect{0, 0, barW, barH}, SDL_FRect{barX, barY, barW, barH}, RenderLayer::UI, true);
         overlay.addComponent<Children>();
 
         auto& session = overlay.addComponent<HUDSession>();
 
-        // --- DAY LABEL (left side of bar) ---
-        auto& dayEnt = scene.world.createEntity();
-        Label dayData = {
-            "Day 1", AssetManager::getFont("arial"),
-            {0, 0, 0, 255}, LabelType::Static, "hudDay"
-        };
-        auto& dayComp = dayEnt.addComponent<Label>(dayData);
-        dayComp.dirty = true;
-        dayComp.visible = true;
-        TextureManager::updateLabel(dayComp);
+        // --- 1. DAY LABEL (Left aligned in bar) ---
+        // We render on boot and set visible true immediately for the HUD
+        session.dayLabelRef = &BaseUI::createLabel(scene, overlay, "Day 1", Vector2D(barX + 15.0f, 0), {0, 0, 0, 255}, "hudDay", true);
+        session.dayLabelRef->getComponent<Label>().visible = true;
 
-        dayEnt.addComponent<Transform>(
-            Vector2D(barX + 15.0f, barY + (barH / 2) - (dayComp.dst.h / 2)),
-            0.0f, 1.0f);
-        dayEnt.addComponent<Parent>(&overlay);
-        overlay.getComponent<Children>().children.push_back(&dayEnt);
-        session.dayLabelRef = &dayEnt;
+        // Center vertically in bar
+        float dayH = session.dayLabelRef->getComponent<Label>().dst.h;
+        session.dayLabelRef->getComponent<Transform>().position.y = barY + (barH / 2.0f) - (dayH / 2.0f);
 
-        // --- PHASE LABEL (right side of bar) ---
-        auto& phaseEnt = scene.world.createEntity();
-        Label phaseData = {
-            "Morning", AssetManager::getFont("arial"),
-            {0, 0, 0, 255}, LabelType::Static, "hudPhase"
-        };
-        auto& phaseComp = phaseEnt.addComponent<Label>(phaseData);
-        phaseComp.dirty = true;
-        phaseComp.visible = true;
-        TextureManager::updateLabel(phaseComp);
+        // --- 2. PHASE LABEL (Right aligned in bar) ---
+        session.phaseLabelRef = &BaseUI::createLabel(scene, overlay, "Morning", Vector2D(0, 0), {0, 0, 0, 255}, "hudPhase", true);
+        session.phaseLabelRef->getComponent<Label>().visible = true;
 
-        phaseEnt.addComponent<Transform>(
-            Vector2D(barX + barW - phaseComp.dst.w - 15.0f,
-                     barY + (barH / 2) - (phaseComp.dst.h / 2)),
-            0.0f, 1.0f);
-        phaseEnt.addComponent<Parent>(&overlay);
-        overlay.getComponent<Children>().children.push_back(&phaseEnt);
-        session.phaseLabelRef = &phaseEnt;
+        auto& phComp = session.phaseLabelRef->getComponent<Label>();
+        session.phaseLabelRef->getComponent<Transform>().position = Vector2D(
+            barX + barW - phComp.dst.w - 15.0f,
+            barY + (barH / 2.0f) - (phComp.dst.h / 2.0f)
+        );
 
-        // --- WALLET ICON (bottom right, coin sprite) ---
+        // --- 3. WALLET ICON ---
         float iconSize = 40.0f;
         float iconX = windowWidth - iconSize - 10.0f;
         float iconY = windowHeight - iconSize - 10.0f;
 
         auto& iconEnt = scene.world.createEntity();
         SDL_Texture* coinTex = TextureManager::load("../asset/ui/Gold.png");
-
         iconEnt.addComponent<Transform>(Vector2D(iconX, iconY), 0.0f, 1.0f);
-        iconEnt.addComponent<Sprite>(
-            coinTex,
-            SDL_FRect{0, 0, 256, 256},
-            SDL_FRect{0, 0, iconSize, iconSize},
-            RenderLayer::UI, true);
+        iconEnt.addComponent<Sprite>(coinTex, SDL_FRect{0, 0, 256, 256}, SDL_FRect{0, 0, iconSize, iconSize}, RenderLayer::UI, true);
         iconEnt.addComponent<Parent>(&overlay);
         overlay.getComponent<Children>().children.push_back(&iconEnt);
         session.walletIconRef = &iconEnt;
 
-        // --- WALLET LABEL (left of coin icon) ---
-        auto& walletEnt = scene.world.createEntity();
-        Label walletData = {
-            "1000G", AssetManager::getFont("arial"),
-            {255, 215, 0, 255}, LabelType::Static, "hudWallet"
-        };
-        auto& walletComp = walletEnt.addComponent<Label>(walletData);
-        walletComp.dirty = true;
-        walletComp.visible = true;
-        TextureManager::updateLabel(walletComp);
+        // --- 4. WALLET LABEL (Left of icon) ---
+        session.walletLabelRef = &BaseUI::createLabel(scene, overlay, "1000G", Vector2D(0, 0), {255, 215, 0, 255}, "hudWallet", true);
+        session.walletLabelRef->getComponent<Label>().visible = true;
 
-        walletEnt.addComponent<Transform>(
-            Vector2D(iconX - walletComp.dst.w - 8.0f,
-                     iconY + (iconSize / 2) - (walletComp.dst.h / 2)),
-            0.0f, 1.0f);
-        walletEnt.addComponent<Parent>(&overlay);
-        overlay.getComponent<Children>().children.push_back(&walletEnt);
-        session.walletLabelRef = &walletEnt;
+        auto& wComp = session.walletLabelRef->getComponent<Label>();
+        session.walletLabelRef->getComponent<Transform>().position = Vector2D(
+            iconX - wComp.dst.w - 8.0f,
+            iconY + (iconSize / 2.0f) - (wComp.dst.h / 2.0f)
+        );
 
         outUIHud = &overlay;
         scene.world.getUIVisibilityManager().registerPanel("hud", outUIHud);
@@ -107,7 +73,7 @@ namespace HudUI {
         if (!UIHud) return;
         auto& session = UIHud->getComponent<HUDSession>();
 
-        // Update day label
+        // Update day
         if (session.dayLabelRef) {
             auto& lbl = session.dayLabelRef->getComponent<Label>();
             lbl.text = "Day " + std::to_string(dayCycle.date);
@@ -115,7 +81,7 @@ namespace HudUI {
             TextureManager::updateLabel(lbl);
         }
 
-        // Update phase label
+        // Update phase and re-right-align
         if (session.phaseLabelRef) {
             auto& lbl = session.phaseLabelRef->getComponent<Label>();
             switch (dayCycle.currentPhase) {
@@ -124,30 +90,25 @@ namespace HudUI {
                 case DayPhase::Evening:      lbl.text = "Evening"; break;
                 case DayPhase::FadeToBlack:  lbl.text = "...";     break;
             }
-
-            // Right-align phase label inside the bar
-            auto& barSprite = UIHud->getComponent<Sprite>();
-            auto& barTransform = UIHud->getComponent<Transform>();
             lbl.dirty = true;
             TextureManager::updateLabel(lbl);
 
-            auto& t = session.phaseLabelRef->getComponent<Transform>();
-            t.position.x = barTransform.position.x + barSprite.dst.w - lbl.dst.w - 15.0f;
+            auto& barT = UIHud->getComponent<Transform>();
+            auto& barS = UIHud->getComponent<Sprite>();
+            session.phaseLabelRef->getComponent<Transform>().position.x = barT.position.x + barS.dst.w - lbl.dst.w - 15.0f;
         }
 
-        // Update wallet label and re-right-align it
+        // Update wallet and re-right-align
         if (session.walletLabelRef && session.walletIconRef) {
             auto& lbl = session.walletLabelRef->getComponent<Label>();
             lbl.text = std::to_string(wallet.balance) + "G";
             lbl.dirty = true;
             TextureManager::updateLabel(lbl);
 
-            // Use transform position, not sprite dst
             auto& iconT = session.walletIconRef->getComponent<Transform>();
             auto& lblT = session.walletLabelRef->getComponent<Transform>();
-
             lblT.position.x = iconT.position.x - lbl.dst.w - 8.0f;
-            lblT.position.y = iconT.position.y + (40.0f / 2) - (lbl.dst.h / 2);
+            lblT.position.y = iconT.position.y + (40.0f / 2.0f) - (lbl.dst.h / 2.0f);
         }
     }
 }

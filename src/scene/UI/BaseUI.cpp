@@ -89,6 +89,52 @@ namespace BaseUI {
 
         return cog;
     }
+    Entity& createLabel(Scene& scene, Entity& parent, const std::string& text, Vector2D pos,
+                        SDL_Color color, const std::string& id, bool renderOnBoot) {
+        auto& ent = scene.world.createEntity();
+        Label lData = {text, AssetManager::getFont("arial"), color, LabelType::Static, id};
+        auto& lComp = ent.addComponent<Label>(lData);
+
+        // Start hidden so they don't pop in before the menu logic shows them
+        lComp.visible = false;
+
+        if (renderOnBoot) {
+            lComp.dirty = true;
+            TextureManager::updateLabel(lComp);
+        }
+
+        ent.addComponent<Transform>(pos, 0.0f, 1.0f);
+        ent.addComponent<Parent>(&parent);
+        parent.getComponent<Children>().children.push_back(&ent);
+        return ent;
+    }
+
+    Entity& createStandardButton(Scene& scene, Entity& parent, Vector2D pos, float width, float height,
+                                 SDL_FRect spriteSrc, std::function<void()> onReleased) {
+        auto& btnEnt = scene.world.createEntity();
+
+        auto& btnTransform = btnEnt.addComponent<Transform>(pos, 0.0f, 1.0f);
+        SDL_Texture* texBtn = TextureManager::load("../asset/ui/Buttons.png");
+        SDL_FRect btnDst{pos.x, pos.y, width, height};
+
+        btnEnt.addComponent<Sprite>(texBtn, spriteSrc, btnDst, RenderLayer::UI, false);
+        btnEnt.addComponent<Collider>("ui", btnDst).enabled = false;
+
+        auto& clickable = btnEnt.addComponent<Clickable>();
+        clickable.onPressed = [&btnTransform] { btnTransform.scale = 0.9f; };
+        clickable.onCancel = [&btnTransform] { btnTransform.scale = 1.0f; };
+
+        // Wrap the callback to also reset the scale
+        clickable.onReleased = [&btnTransform, onReleased]() {
+            btnTransform.scale = 1.0f;
+            if (onReleased) onReleased();
+        };
+
+        btnEnt.addComponent<Parent>(&parent);
+        parent.getComponent<Children>().children.push_back(&btnEnt);
+
+        return btnEnt;
+    }
 
     Entity& createBaseMenuOverlay(Scene& scene, int windowWidth, int windowHeight) {
         auto &overlay(scene.world.createEntity());

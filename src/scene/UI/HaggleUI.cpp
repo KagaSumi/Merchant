@@ -5,7 +5,7 @@
 #include "HaggleUI.h"
 #include "BaseUI.h"
 #include "../manager/AssetManager.h"
-#include <algorithm> // For std::max, std::min
+#include <algorithm>
 
 // Define the struct methods
 int HaggleSession::getProposedPrice() const {
@@ -25,19 +25,40 @@ int HaggleSession::getPercentage() const {
 
 namespace {
     void propagateCarry(HaggleSession &s) {
-        // Resolve carries left
-        for (int i = 4; i >= 0; --i) {
-            if (s.digits[i] > 9) {
-                s.digits[i] = 0;
-                if (i > 0) s.digits[i - 1]++;
-            } else if (s.digits[i] < 0) {
-                s.digits[i] = 9;
-                if (i > 0) s.digits[i - 1]--;
+        // 1. First, check if the total value would be negative
+        if (s.getProposedPrice() < 0) {
+            // Reset to absolute zero and stop
+            for (int i = 0; i < 5; ++i) s.digits[i] = 0;
+        } else {
+            // 2. Resolve carries (prevent massive 99999 wrap-around)
+            for (int i = 4; i >= 0; --i) {
+                if (s.digits[i] > 9) {
+                    s.digits[i] = 0;
+                    if (i > 0) s.digits[i - 1]++;
+                } else if (s.digits[i] < 0) {
+                    // Only borrow if there is a higher digit to borrow from
+                    bool hasHigherDigit = false;
+                    for (int j = 0; j < i; ++j) {
+                        if (s.digits[j] > 0) {
+                            hasHigherDigit = true;
+                            break;
+                        }
+                    }
+
+                    if (hasHigherDigit) {
+                        s.digits[i] = 9;
+                        if (i > 0) s.digits[i - 1]--;
+                    } else {
+                        s.digits[i] = 0;
+                    }
+                }
             }
         }
+
+        // Clamp the 10,000s place
         s.digits[0] = std::max(0, std::min(9, s.digits[0]));
 
-        // Update ALL digit labels and positions
+        // 3. Update ALL digit labels and positions
         for (int i = 0; i < 5; ++i) {
             if (!s.digitRefs[i]) continue;
             auto &lbl = s.digitRefs[i]->getComponent<Label>();
@@ -50,88 +71,55 @@ namespace {
         }
     }
 
-    Entity &createItemHaggleDisplay(Scene &scene, Entity &parent) {
+    void createItemHaggleDisplay(Scene &scene, Entity &parent) {
         auto &session = parent.getComponent<HaggleSession>();
-        auto &parentS = parent.getComponent<Sprite>();
         auto &parentT = parent.getComponent<Transform>();
-
-        float parentCenterX = parentS.dst.w / 2.0f;
-
-        auto &subOverlay = scene.world.createEntity();
-        subOverlay.addComponent<Parent>(&parent);
+        auto &parentS = parent.getComponent<Sprite>();
 
         float subWidth = 180.0f;
         float subHeight = 160.0f;
+        float parentCenterX = parentS.dst.w / 2.0f;
 
-        float absoluteX = parentT.position.x + parentCenterX - (subWidth / 2.0f);
-        float absoluteY = parentT.position.y + 30.0f;
+        session.absoluteX = parentT.position.x + parentCenterX - (subWidth / 2.0f);
+        float absoluteY = parentT.position.y + 40.0f;
 
-        subOverlay.addComponent<Transform>(Vector2D(absoluteX, absoluteY), 0.0f, 1.0f);
+        auto &subOverlay = scene.world.createEntity();
+        subOverlay.addComponent<Transform>(Vector2D(session.absoluteX, absoluteY), 0.0f, 1.0f);
+        subOverlay.addComponent<Parent>(&parent);
+        subOverlay.addComponent<Children>();
+        parent.getComponent<Children>().children.push_back(&subOverlay);
 
         SDL_Texture *subTex = TextureManager::load("../asset/ui/UI-Sub.png");
-        SDL_FRect subSrc{0, 0, 21.0f, 21.0f};
-        SDL_FRect subDst{0.0f, 0.0f, subWidth, subHeight};
-
-        subOverlay.addComponent<Sprite>(subTex, subSrc, subDst, RenderLayer::UI, false);
-        subOverlay.addComponent<Children>();
+        subOverlay.addComponent<Sprite>(subTex, SDL_FRect{0, 0, 21, 21}, SDL_FRect{0, 0, subWidth, subHeight},
+                                        RenderLayer::UI, false);
 
         // --- ITEM NAME ---
-        auto &nameLabel = scene.world.createEntity();
-        Label nameData = {
-            session.currentItem.name, AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "itemName",
-            subWidth - 20.0f
-        };
-        auto &nameLabelComp = nameLabel.addComponent<Label>(nameData);
-        nameLabelComp.visible = false;
-        nameLabelComp.dirty = true;
-        TextureManager::updateLabel(nameLabelComp);
+        session.itemNameRef = &BaseUI::createLabel(scene, subOverlay, session.currentItem.name,
+            Vector2D(0, absoluteY + 15.0f), {0, 0, 0, 255}, "itemName", true);
 
-        nameLabel.addComponent<Transform>(
-            Vector2D(absoluteX + (subWidth / 2.0f) - (nameLabelComp.dst.w / 2.0f),
-                     absoluteY + 10.0f), 0.0f, 1.0f);
-        nameLabel.addComponent<Parent>(&subOverlay);
-        subOverlay.getComponent<Children>().children.push_back(&nameLabel);
-
-        session.itemNameRef = &nameLabel;
+        auto& nameLbl = session.itemNameRef->getComponent<Label>();
+        session.itemNameRef->getComponent<Transform>().position.x =  session.absoluteX + (subWidth / 2.0f) - (nameLbl.dst.w / 2.0f);
 
         // --- ITEM ICON ---
         auto &itemIcon = scene.world.createEntity();
         float iconSize = 64.0f;
-        itemIcon.addComponent<Transform>(
-            Vector2D(parentT.position.x + parentCenterX - (iconSize / 2.0f), parentT.position.y + 80), 0.0f, 1.0f);
+        itemIcon.addComponent<Transform>(Vector2D(session.absoluteX + (subWidth / 2.0f) - (iconSize / 2.0f), absoluteY + 45.0f), 0.0f, 1.0f);
 
-        SDL_Texture *itemsTex = TextureManager::get("items");
-        if (!itemsTex) itemsTex = TextureManager::load("../asset/items.png");
-
-        SDL_FRect itemDst{0, 0, iconSize, iconSize};
-        itemIcon.addComponent<Sprite>(itemsTex, session.currentItem.src, itemDst, RenderLayer::UI, false);
+        SDL_Texture *itemsTex = TextureManager::load("../asset/items.png");
+        itemIcon.addComponent<Sprite>(itemsTex, session.currentItem.src, SDL_FRect{0, 0, iconSize, iconSize}, RenderLayer::UI, false);
         itemIcon.addComponent<Parent>(&subOverlay);
         subOverlay.getComponent<Children>().children.push_back(&itemIcon);
-
         session.itemIconRef = &itemIcon;
 
         // --- BASE VALUE ---
-        auto &baseValLabel = scene.world.createEntity();
-        std::string baseValText = "Base Value: " + std::to_string(session.currentItem.basePrice) + "G";
-        Label valData = {baseValText, AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "itemBaseVal"};
-        auto &valLabelComp = baseValLabel.addComponent<Label>(valData);
-        valLabelComp.visible = false;
-        valLabelComp.dirty = true;
-        TextureManager::updateLabel(valLabelComp);
+        session.itemBaseValRef = &BaseUI::createLabel(scene, subOverlay, "Base Value: " + std::to_string(session.currentItem.basePrice) + "G",
+            Vector2D(0, absoluteY + subHeight - 30.0f), {0, 0, 0, 255}, "itemBaseVal", true);
 
-        baseValLabel.addComponent<Transform>(Vector2D(parentT.position.x + parentCenterX - (valLabelComp.dst.w / 2.0f),
-                                                      parentT.position.y + 155), 0.0f, 1.0f);
-        baseValLabel.addComponent<Parent>(&subOverlay);
-        subOverlay.getComponent<Children>().children.push_back(&baseValLabel);
-
-        session.itemBaseValRef = &baseValLabel;
-
-        parent.getComponent<Children>().children.push_back(&subOverlay);
-
-        return subOverlay;
+        auto& valLbl = session.itemBaseValRef->getComponent<Label>();
+        session.itemBaseValRef->getComponent<Transform>().position.x = session.absoluteX + (subWidth / 2.0f) - (valLbl.dst.w / 2.0f);
     }
 
-    Entity &createPriceSelection(Scene &scene, Entity &overlay) {
+    void createPriceSelection(Scene &scene, Entity &overlay) {
         auto &session = overlay.getComponent<HaggleSession>();
         auto &overlayTransform = overlay.getComponent<Transform>();
         auto &overlaySprite = overlay.getComponent<Sprite>();
@@ -140,112 +128,30 @@ namespace {
         float baseY = overlayTransform.position.y;
         float centerLineX = baseX + (overlaySprite.dst.w / 2.0f);
 
-        float btnWidth = 48.0f;
-        float btnHeight = 24.0f;
-        float spacingX = 56.0f;
-
+        float btnWidth = 48.0f, btnHeight = 24.0f, spacingX = 56.0f;
         float startX = centerLineX - (2.0f * spacingX) - (btnWidth / 2.0f);
         float startY = baseY + 240.0f;
         float downBtnY = startY + 80.0f;
         float textCenterY = startY + btnHeight + ((downBtnY - (startY + btnHeight)) / 2.0f);
 
-        // --- 1. TITLE LABEL ---
-        auto &titleLabelEntity = scene.world.createEntity();
-        Label tLabel = {
-            "How much should I sell it for?", AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static,
-            "haggleTitle"
-        };
-        auto &tLabelComp = titleLabelEntity.addComponent<Label>(tLabel);
-        tLabelComp.dirty = true;
-        tLabelComp.visible = false;
-        TextureManager::updateLabel(tLabelComp);
+        // --- TITLES & LABELS ---
+        auto &title = BaseUI::createLabel(scene, overlay, "How much should I sell it for?", Vector2D(0, startY - 40.0f), {0, 0, 0, 255}, "haggleTitle", true);
+        title.getComponent<Transform>().position.x = centerLineX - (title.getComponent<Label>().dst.w / 2.0f);
 
-        titleLabelEntity.addComponent<Transform>(Vector2D(centerLineX - (tLabelComp.dst.w / 2.0f), startY - 40.0f), 0.0f, 1.0f);
-        titleLabelEntity.addComponent<Parent>(&overlay);
-        overlay.getComponent<Children>().children.push_back(&titleLabelEntity);
+        BaseUI::createLabel(scene, overlay, "Base Price:", Vector2D(startX - 20.0f, downBtnY + 40.0f), {0, 0, 0, 255}, "haggleBasePriceTxt", true);
 
-        // --- 2. BASE PRICE LABEL ---
-        auto &basePriceLabelEntity = scene.world.createEntity();
-        Label bpLabel = {
-            "Base Price:", AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "haggleBasePriceTxt"
-        };
-        auto &bpLabelComp = basePriceLabelEntity.addComponent<Label>(bpLabel);
-        bpLabelComp.dirty = true;
-        bpLabelComp.visible = false;
-        TextureManager::updateLabel(bpLabelComp);
+        session.percentLabelRef = &BaseUI::createLabel(scene, overlay, "100%", Vector2D(0, downBtnY + 40.0f), {0, 0, 0, 255}, "hagglePercent", true);
+        session.percentLabelRef->getComponent<Transform>().position.x = startX + (4 * spacingX) + btnWidth - session.percentLabelRef->getComponent<Label>().dst.w;
 
-        basePriceLabelEntity.addComponent<Transform>(Vector2D(startX - 20.0f, downBtnY + 40.0f), 0.0f, 1.0f);
-        basePriceLabelEntity.addComponent<Parent>(&overlay);
-        overlay.getComponent<Children>().children.push_back(&basePriceLabelEntity);
-
-        // --- 3. THE PERCENTAGE LABEL ---
-        auto &percentLabelEntity = scene.world.createEntity();
-        Label pLabel = {"100%", AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "hagglePercent"};
-        auto &pLabelComp = percentLabelEntity.addComponent<Label>(pLabel);
-        pLabelComp.dirty = true;
-        pLabelComp.visible = false;
-        TextureManager::updateLabel(pLabelComp);
-
-        float rightAlignX = startX + (4 * spacingX) + btnWidth - pLabelComp.dst.w;
-        percentLabelEntity.addComponent<Transform>(Vector2D(rightAlignX, downBtnY + 40.0f), 0.0f, 1.0f);
-        percentLabelEntity.addComponent<Parent>(&overlay);
-        overlay.getComponent<Children>().children.push_back(&percentLabelEntity);
-
-        session.percentLabelRef = &percentLabelEntity;
-
-        // --- 4. CURRENCY LABEL ("G") ---
-        auto &currencyLabelEntity = scene.world.createEntity();
-        Label gLabel = {"G", AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static, "haggleCurrencyTxt"};
-        auto &gLabelComp = currencyLabelEntity.addComponent<Label>(gLabel);
-        gLabelComp.dirty = true;
-        gLabelComp.visible = false;
-        TextureManager::updateLabel(gLabelComp);
-
-        currencyLabelEntity.addComponent<Transform>(
-            Vector2D(startX + (4 * spacingX) + btnWidth + 15.0f, textCenterY - (gLabelComp.dst.h / 2.0f)), 0.0f, 1.0f);
-        currencyLabelEntity.addComponent<Parent>(&overlay);
-        overlay.getComponent<Children>().children.push_back(&currencyLabelEntity);
-
-        // --- 5. GENERATE THE 5 COLUMNS ---
+        // --- COLUMNS ---
         for (int i = 0; i < 5; ++i) {
             float colX = startX + (i * spacingX);
             float columnCenter = colX + (btnWidth / 2.0f);
 
-            // --- DIGIT LABEL ---
-            auto &digitEntity = scene.world.createEntity();
-            Label dLabel = {
-                std::to_string(session.digits[i]), AssetManager::getFont("arial"), {0, 0, 0, 255}, LabelType::Static,
-                "digit_" + std::to_string(i)
-            };
-            auto &dLabelComp = digitEntity.addComponent<Label>(dLabel);
-            dLabelComp.visible = false;
-            dLabelComp.dirty = true;
-
-
-            digitEntity.addComponent<Transform>(Vector2D(colX, textCenterY), 0.0f, 1.0f);
-            digitEntity.addComponent<Parent>(&overlay);
-            overlay.getComponent<Children>().children.push_back(&digitEntity);
-
-            Entity *digitPtr = &digitEntity;
-            session.digitRefs[i] = digitPtr;
+            session.digitRefs[i] = &BaseUI::createLabel(scene, overlay, std::to_string(session.digits[i]), Vector2D(colX, textCenterY), {0, 0, 0, 255}, "digit_" + std::to_string(i), false);
             session.columnCenters[i] = columnCenter;
 
-            // --- UP BUTTON (+) ---
-            auto &btnUp = scene.world.createEntity();
-            auto &btnUpTransform = btnUp.addComponent<Transform>(Vector2D(colX, startY), 0.0f, 1.0f);
-            SDL_Texture *texButtons = TextureManager::load("../asset/ui/Buttons.png");
-
-            SDL_FRect srcUp{32, 0, 32, 16};
-            SDL_FRect destUp{colX, startY, btnWidth, btnHeight};
-
-            btnUp.addComponent<Sprite>(texButtons, srcUp, destUp, RenderLayer::UI, false);
-            btnUp.addComponent<Collider>("ui", destUp).enabled = false;
-
-            auto &clickUp = btnUp.addComponent<Clickable>();
-            clickUp.onPressed = [&btnUpTransform] { btnUpTransform.scale = 0.8f; };
-            clickUp.onCancel = [&btnUpTransform] { btnUpTransform.scale = 1.0f; };
-            clickUp.onReleased = [&overlay, i, &btnUpTransform, &scene]() {
-                btnUpTransform.scale = 1.0f;
+            BaseUI::createStandardButton(scene, overlay, Vector2D(colX, startY), btnWidth, btnHeight, {32, 0, 32, 16}, [&scene, &overlay, i]() {
                 scene.world.getAudioEventQueue().push(std::make_unique<AudioEvent>("clickSoft"));
                 auto &s = overlay.getComponent<HaggleSession>();
                 s.digits[i]++;
@@ -256,26 +162,9 @@ namespace {
                     pLbl.dirty = true;
                     TextureManager::updateLabel(pLbl);
                 }
-            };
-            btnUp.addComponent<Parent>(&overlay);
-            overlay.getComponent<Children>().children.push_back(&btnUp);
+            });
 
-            // --- DOWN BUTTON (-) ---
-            auto &btnDown = scene.world.createEntity();
-            auto &btnDownTransform = btnDown.addComponent<Transform>(Vector2D(colX, downBtnY), 0.0f, 1.0f);
-
-            SDL_FRect srcDown{32, 16, 32, 16};
-            SDL_FRect destDown{colX, downBtnY, btnWidth, btnHeight};
-
-            btnDown.addComponent<Sprite>(texButtons, srcDown, destDown, RenderLayer::UI, false);
-            btnDown.addComponent<Collider>("ui", destDown).enabled = false;
-
-            auto &clickDown = btnDown.addComponent<Clickable>();
-            clickDown.onPressed = [&btnDownTransform] { btnDownTransform.scale = 0.8f; };
-            clickDown.onCancel = [&btnDownTransform] { btnDownTransform.scale = 1.0f; };
-
-            clickDown.onReleased = [&overlay, i, &btnDownTransform, &scene]() {
-                btnDownTransform.scale = 1.0f;
+            BaseUI::createStandardButton(scene, overlay, Vector2D(colX, downBtnY), btnWidth, btnHeight, {32, 16, 32, 16}, [&scene, &overlay, i]() {
                 scene.world.getAudioEventQueue().push(std::make_unique<AudioEvent>("clickSoft"));
                 auto &s = overlay.getComponent<HaggleSession>();
                 s.digits[i]--;
@@ -286,36 +175,33 @@ namespace {
                     pLbl.dirty = true;
                     TextureManager::updateLabel(pLbl);
                 }
-            };
-            btnDown.addComponent<Parent>(&overlay);
-            overlay.getComponent<Children>().children.push_back(&btnDown);
+            });
         }
 
-        return overlay;
+        // --- CURRENCY LABEL ("G") ---
+        auto& gLabel = BaseUI::createLabel(scene, overlay, "G", Vector2D(0, 0), {0,0,0,255}, "haggleCurrencyTxt", true);
+        auto& gComp = gLabel.getComponent<Label>();
+        TextureManager::updateLabel(gComp);
+        gLabel.getComponent<Transform>().position = Vector2D(
+            startX + (4 * spacingX) + btnWidth + 5.0f,
+            textCenterY
+        );
+
     }
 
-    Entity &createHaggleButton(Scene &scene, Entity &overlay) {
-        auto &overlayTransform = overlay.getComponent<Transform>();
-        auto &overlaySprite = overlay.getComponent<Sprite>();
-
-        float baseX = overlayTransform.position.x;
-        float baseY = overlayTransform.position.y;
-        float centerLineX = baseX + (overlaySprite.dst.w / 2.0f);
-
-        auto &haggleButton = scene.world.createEntity();
+    void createHaggleButton(Scene &scene, Entity &overlay) {
+        auto &overlayT = overlay.getComponent<Transform>();
+        auto &overlayS = overlay.getComponent<Sprite>();
+        float centerLineX = overlayT.position.x + (overlayS.dst.w / 2.0f);
         float displaySize = 128.0f;
         float scaleX = centerLineX - (displaySize / 2.0f);
-        float scaleY = (baseY + overlaySprite.dst.h) - (displaySize);
+        float scaleY = (overlayT.position.y + overlayS.dst.h) - (displaySize);
 
+        auto &haggleButton = scene.world.createEntity();
         auto &haggleTransform = haggleButton.addComponent<Transform>(Vector2D(scaleX, scaleY), 0.0f, 1.0f);
         SDL_Texture *haggleTex = TextureManager::load("../asset/ui/haggleButton.png");
-
-        SDL_FRect haggleSrc{0, 0, 256, 256};
-        SDL_FRect haggleDest{scaleX, scaleY, displaySize, displaySize};
-
-        haggleButton.addComponent<Sprite>(haggleTex, haggleSrc, haggleDest, RenderLayer::UI, false);
-        haggleButton.addComponent<Collider>("ui", haggleDest).enabled = false;
-
+        haggleButton.addComponent<Sprite>(haggleTex, SDL_FRect{0, 0, 256, 256}, SDL_FRect{scaleX, scaleY, displaySize, displaySize}, RenderLayer::UI, false);
+        haggleButton.addComponent<Collider>("ui", SDL_FRect{scaleX, scaleY, displaySize, displaySize}).enabled = false;
 
         auto &clickable = haggleButton.addComponent<Clickable>();
         clickable.onPressed = [&haggleTransform] { haggleTransform.scale = 0.9f; };
@@ -323,32 +209,22 @@ namespace {
         clickable.onReleased = [&scene, &overlay, &haggleTransform]() {
             haggleTransform.scale = 1.0f;
             auto &session = overlay.getComponent<HaggleSession>();
-            int finalPrice = session.getProposedPrice();
             scene.world.getUIVisibilityManager().hide("haggle");
-            scene.world.getHaggleSystem().submitOffer(finalPrice);
+            scene.world.getHaggleSystem().submitOffer(session.getProposedPrice());
         };
 
         haggleButton.addComponent<Parent>(&overlay);
         overlay.getComponent<Children>().children.push_back(&haggleButton);
-
-        return haggleButton;
     }
 }
 
-// --- PUBLIC NAMESPACE FUNCTIONS ---
 namespace HaggleUI {
     Entity &create(Scene &scene, int windowWidth, int windowHeight, Entity *&outUIMenu) {
         auto &mainOverlay = BaseUI::createBaseMenuOverlay(scene, windowWidth, windowHeight);
         mainOverlay.getComponent<Sprite>().visible = false;
-
-        if (!mainOverlay.hasComponent<Children>()) {
-            mainOverlay.addComponent<Children>();
-        }
+        if (!mainOverlay.hasComponent<Children>()) mainOverlay.addComponent<Children>();
 
         auto &session = mainOverlay.addComponent<HaggleSession>();
-        session.currentItem.name = "Loading...";
-        session.currentItem.basePrice = 0;
-        session.currentItem.src = {0, 0, 32, 32};
         session.digits = {0, 0, 0, 0, 0};
 
         createItemHaggleDisplay(scene, mainOverlay);
@@ -362,49 +238,41 @@ namespace HaggleUI {
 
     Entity &update(Scene &scene, ItemDef &item, Entity *UIMenu) {
         if (!UIMenu) return *UIMenu;
-
         auto &session = UIMenu->getComponent<HaggleSession>();
         session.currentItem = item;
 
-        // 1. Reset digits based on new item's base price
         int tempPrice = item.basePrice;
         for (int i = 4; i >= 0; --i) {
             session.digits[i] = tempPrice % 10;
             tempPrice /= 10;
         }
 
-        // 2. Update Item Display Details using cached refs
         if (session.itemNameRef) {
-            auto &nameLabel = session.itemNameRef->getComponent<Label>();
-            nameLabel.text = item.name;
-            nameLabel.dirty = true;
-            TextureManager::updateLabel(nameLabel);
+            auto &lbl = session.itemNameRef->getComponent<Label>();
+            lbl.text = item.name; lbl.dirty = true;
+            TextureManager::updateLabel(lbl);
+            session.itemNameRef->getComponent<Transform>().position.x = session.absoluteX + ( session.subWidth / 2.0f) - (lbl.dst.w / 2.0f);
         }
 
         if (session.itemIconRef) {
-            auto &iconSprite = session.itemIconRef->getComponent<Sprite>();
-            iconSprite.src = item.src;
+            session.itemIconRef->getComponent<Sprite>().src = item.src;
         }
 
         if (session.itemBaseValRef) {
-            auto &baseValLabel = session.itemBaseValRef->getComponent<Label>();
-            baseValLabel.text = "Base Value: " + std::to_string(item.basePrice) + "G";
-            baseValLabel.dirty = true;
-            TextureManager::updateLabel(baseValLabel);
+            auto &lbl = session.itemBaseValRef->getComponent<Label>();
+            lbl.text = "Base Value: " + std::to_string(item.basePrice) + "G"; lbl.dirty = true;
+            TextureManager::updateLabel(lbl);
+            session.itemBaseValRef->getComponent<Transform>().position.x =session.absoluteX + (session.subWidth / 2.0f) - (lbl.dst.w / 2.0f);
         }
 
-        // 3. Update Digit Spinners (Using propagateCarry here ensures they are centered perfectly)
         propagateCarry(session);
 
-        // 4. Update Percentage
         if (session.percentLabelRef) {
-            auto &pLabel = session.percentLabelRef->getComponent<Label>();
-            pLabel.text = std::to_string(session.getPercentage()) + "%";
-            pLabel.dirty = true;
-            TextureManager::updateLabel(pLabel);
+            auto &lbl = session.percentLabelRef->getComponent<Label>();
+            lbl.text = std::to_string(session.getPercentage()) + "%"; lbl.dirty = true;
+            TextureManager::updateLabel(lbl);
         }
 
-        // 5. Open the menu
         scene.world.getUIVisibilityManager().show("haggle");
         scene.world.getUIVisibilityManager().hide("hud");
 

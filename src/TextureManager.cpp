@@ -19,6 +19,7 @@ SDL_Texture *TextureManager::load(const char *path) {
     if (it != textures.end()) {
         return it->second;
     }
+
     //A surface represent an image in ram
     SDL_Surface *tempSurface = IMG_Load(path);
     //Do we want to do any pre-process before offloading to GPU?
