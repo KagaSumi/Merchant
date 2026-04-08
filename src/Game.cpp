@@ -65,6 +65,7 @@ void Game::init(const char *title, int width, int height, bool fullscreen) {
     audioManager.loadAudio("gameover", "../asset/audio/回顧録.mp3");
     audioManager.loadAudio("shopOpen", "../asset/audio/市場でお買いもの.mp3");
     audioManager.loadAudio("evening", "../asset/audio/旅支度_2.mp3");
+
     //UI SFX
     audioManager.loadAudio("summary", "../asset/audio/紙のページをめくる音.mp3");
     audioManager.loadAudio("clickHard", "../asset/audio/click-hard.ogg");

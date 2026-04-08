@@ -57,6 +57,8 @@ void Scene::initLose(int windowWidth, int windowHeight) {
     SDL_FRect menuSrc{0, 0, (float) 800, (float) 597};
     SDL_FRect menuDst{0, 0, (float) windowWidth, (float) windowHeight};
     screen.addComponent<Sprite>(texture, menuSrc, menuDst);
+    Game::audioManager.stopMusic(500);
+    Game::audioManager.playMusic("gameover", 2000);
 }
 
 void Scene::initWin(int windowWidth, int windowHeight) {
@@ -68,6 +70,8 @@ void Scene::initWin(int windowWidth, int windowHeight) {
     SDL_FRect menuSrc{0, 0, (float) 800, (float) 597};
     SDL_FRect menuDst{0, 0, (float) windowWidth, (float) windowHeight};
     screen.addComponent<Sprite>(texture, menuSrc, menuDst);
+    Game::audioManager.stopMusic(500);
+    Game::audioManager.playMusic("theme", 2000);
 }
 
 void Scene::initGameplay(const char *mapPath, int windowWidth, int windowHeight) {

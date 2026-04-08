@@ -1,58 +1,94 @@
-# Relics and Receipts
+# Relics & Receipts
 
-A 2D shop management game built from the ground up in C++ using SDL. Step into the shoes of a shopkeeper to manage inventory, interact with customers, and build a thriving storefront.
+A 2D shop management game built from scratch in C++ using SDL3. Play as a shopkeeper — manage your stockroom, haggle with customers, track your finances, and pay off your debt before time runs out.
 
-## 🛠️ Tech Stack & Architecture
+---
 
-* **Language:** C++
-* **Rendering & Input:** SDL3
-* **Architecture:** Custom Entity Component System (ECS)
-* **Design Patterns:** Scene Management, State Machine (for Customer AI)
+## Tech Stack
 
-## ✨ Core Features
+| | |
+|---|---|
+| **Language** | C++17 |
+| **Rendering / Input / Audio** | SDL3, SDL3_image, SDL3_ttf, SDL3_mixer |
+| **Architecture** | Custom Entity Component System (ECS) |
+| **Build System** | CMake |
+| **XML Parsing** | tinyxml2 |
 
-* **Shop Management:** Run the day-to-day operations of a fantasy item shop.
-* **Customer AI:** Dynamic customer behaviors with pathfinding to navigate the store, browse items, and approach the counter.
-* **Inventory System:** Robust underlying item management and stock tracking.
-* **Custom ECS:** Highly modular and performant engine architecture separating data (components) from logic (systems).
-* **Scene Management:** Seamless transitions between main menus, the shop floor, and end-of-day result screens.
+---
 
-## 🚀 Getting Started
+## Features
+
+- **Haggle System** — Customers arrive with moods and patience. Propose a price; they accept or walk away based on mood, patience, and market trends.
+- **Customer AI** — State machine–driven customers pathfind through the store, browse display stands, and queue at the register.
+- **Inventory & Display Stands** — Stock items onto display cases from your backroom inventory. Track quantities and reservations per stand.
+- **Day Cycle** — Morning prep → shop open → evening close. Each phase locks/unlocks player actions and triggers events.
+- **Economy** — Earn gold from sales, spend it on restocking orders and new display shelves. Make weekly debt payments or face game over.
+- **Reputation System** — Profitable sales grow your shop reputation, unlocking higher-tier items in the order catalogue.
+- **Market Trends** — Daily trend rolls modify item price modifiers, rewarding players who read the market.
+- **Order System** — End-of-day ordering screen lets you restock from available items gated by your current reputation level.
+- **Custom ECS Engine** — Components hold data, systems hold logic. No inheritance chains — entities are just IDs with attached components.
+
+---
+
+## Project Structure
+
+```
+src/
+├── ecs/
+│   ├── event/          # Audio event queue, base events
+│   ├── system/         # All game systems (AI, haggle, day cycle, rendering, etc.)
+│   ├── Components.h    # All component definitions
+│   ├── Entity.h
+│   └── World.h         # System registry and entity management
+├── manager/            # Asset, audio, scene, and UI visibility managers
+├── scene/
+│   ├── UI/             # All UI builders (HaggleUI, InventoryUI, HudUI, etc.)
+│   ├── Scene.cpp/.h    # Scene init and system wiring
+│   └── SceneDisplayCase.cpp
+├── utils/              # Collision, Vector2D, render utilities
+├── vendor/             # tinyxml2
+├── Game.cpp/.h         # Entry point, game loop, global state
+└── main.cpp
+```
+
+---
+
+## Getting Started
+
 ### Download
-Download the latest release from the [releases page](https://github.com/KagaSumi/Merchant/releases).
 
-Run the executable file to play the game.
+Grab the latest build from the [Releases page](https://github.com/KagaSumi/Merchant/releases) and run the executable.
 
-## Building from Source
+### Building from Source
 
-### Prerequisites
+**Prerequisites**
 
-To build and run this project, you will need the following installed on your system:
+- C++17 compatible compiler (GCC, Clang, or MSVC)
+- [CMake](https://cmake.org/) 3.10+
+- SDL3 development libraries
+- SDL3_image
+- SDL3_ttf
+- SDL3_mixer
 
-* A C++17 (or newer) compatible compiler (e.g., GCC, Clang, or MSVC)
-* [CMake](https://cmake.org/) (Version 3.10+)
-* [SDL3.4](https://libsdl.org/) development libraries
-* [SDL3.26_image](https://github.com/libsdl-org/SDL_image) (if handling PNG/JPG assets)
-* [SDL3_ttf](https://github.com/libsdl-org/SDL_ttf) (for text rendering)
-* [SDL3.2_mixer](https://github.com/libsdl-org/SDL_mixer/releases) (for audio playback)
+**Steps**
 
-### Building
+```bash
+git clone https://github.com/KagaSumi/Merchant.git
+cd Merchant
+cmake -S . -B build
+cmake --build build
+```
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/KagaSumi/Merchant.git cd [YourRepoName]
-   ```
-2. Generate build files using CMake:
-3. Compile the game:
+> Make sure SDL3 and its extension libraries are findable by CMake. On Linux, install via your package manager. On Windows, point `CMAKE_PREFIX_PATH` at your SDL3 install directory.
 
-## 🎮 Controls
+---
 
-* **WASD:** Move the player.
-* **E:** Interact.
-* **I:** Open Inventory.
-* **Mouse:** Interact with Menus.
+## Controls
 
-## 📂 Project Structure
-
-- `/src`: Contains all C++ source files (.cpp).
+| Key | Action |
+|---|---|
+| `WASD` | Move |
+| `E` | Interact |
+| `I` | Open inventory |
+| `Mouse` | Navigate menus |
 
