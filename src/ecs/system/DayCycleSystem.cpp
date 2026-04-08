@@ -38,8 +38,8 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
             if (!spawnerRef) break; // Safety bailout if spawner doesn't exist yet
 
             // 2. Lock in the daily total on the very first frame of the phase
-            if (totalCustomersForDay == 0 && spawnerRef->spawnCount > 0) {
-                totalCustomersForDay = spawnerRef->spawnCount;
+            if (totalCustomersForDay == 0 && spawnerRef->maxSpawns > 0) {
+                totalCustomersForDay = spawnerRef->maxSpawns;
                 customersServed = 0; // Reset just to be safe
                 activeCustomers = 0;
             }
@@ -48,6 +48,7 @@ void DayCycleSystem::update(const std::vector<std::unique_ptr<Entity>> &entities
             float progress = 0.0f;
             if (totalCustomersForDay > 0) {
                 progress = static_cast<float>(customersServed) / totalCustomersForDay;
+                if (progress > 1.0f) progress = 1.0f;
             }
 
             // 4. Apply the gradual tint

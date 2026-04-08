@@ -57,7 +57,10 @@ public:
     }
 
     void customerSpawned(){activeCustomers++;}
-    void customerDeparted() {activeCustomers--;}
+    void customerDeparted() {
+        customersServed++;
+        activeCustomers--;
+    }
 
     void applyTint(const std::vector<std::unique_ptr<Entity> > &entities, const rgba rgba) {
         for (auto &entity: entities) {
