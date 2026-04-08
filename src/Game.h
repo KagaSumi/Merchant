@@ -46,8 +46,10 @@ public:
     static void setRunning(bool state) {
         isRunning = state;
     }
-    SDL_Renderer* renderer = nullptr;
 
+    SDL_Window* getWindow() const { return window; }
+
+    SDL_Renderer* renderer = nullptr;
     static AudioManager audioManager;
     SceneManager sceneManager;
 

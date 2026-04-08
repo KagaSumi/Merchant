@@ -18,6 +18,9 @@ int main(){
     game = new Game();
     game->init("Relics & Receipts", 800,600, false);
 
+    float titleTimer = 0.0f;
+    int frameCount = 0;
+
     while (game->running()) {
 
         Uint64 currentTicks = SDL_GetTicks();
@@ -29,6 +32,26 @@ int main(){
         game->render();
 
         actualFrameTime = SDL_GetTicks() - ticks;// Elapsed time in ms it took the frame
+
+        //Metric Tracking
+        titleTimer += deltaTime;
+        frameCount++;
+
+        if (titleTimer >= 1.0f) {
+            float fps = frameCount / titleTimer;
+            float avgFrameTime = (titleTimer / frameCount) * 1000.0f; // Convert back to ms
+
+            // Format the title (using substr to trim long decimals)
+            std::string newTitle = "Relics & Receipts | FPS: " + std::to_string((int)fps) +
+                                   " | FT: " + std::to_string(avgFrameTime).substr(0, 4) + "ms";
+
+            // Call SDL to update the title
+            SDL_SetWindowTitle(game->getWindow(), newTitle.c_str());
+
+            // Reset trackers for the next second
+            titleTimer = 0.0f;
+            frameCount = 0;
+        }
 
         //Frame Limiter
         if (actualFrameTime < desiredFrametime) {
